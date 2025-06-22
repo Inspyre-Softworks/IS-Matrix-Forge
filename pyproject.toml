@@ -1,15 +1,15 @@
 [project]
-name = "led-matrix-battery"
-version = "0.1.0"
+name = "IS-Matrix-Forge"
+version = "1.0.0-dev.2"
 description = ""
 authors = [
-    {name = "Taylor B.",email = "tayjaybabee@gmail.com"}
+    {name = "Taylor B.",email = "t.blackstone@inspyre.tech"}
 ]
 readme = "README.md"
 license = "MIT"
-keywords = ["led", "matrix", "battery", "framework", "hardware"]
-homepage = "https://github.com/Inspyre-Softworks/led-matrix-battery"
-repository = "https://github.com/Inspyre-Softworks/led-matrix-battery"
+keywords = ["led", "matrix", "framework", "hardware"]
+homepage = "https://github.com/Inspyre-Softworks/IS-Matrix-Forge"
+repository = "https://github.com/Inspyre-Softworks/IS-Matrix-Forge"
 requires-python = ">=3.12,<4.0"
 
 [[tool.poetry.source]]
@@ -29,8 +29,6 @@ inspy-logger = ">=3.2.3,<4.0.0"
 inspyre-toolbox = ">=1.6.0.dev23"
 pillow = ">=11.2.1,<12.0.0"
 opencv-python = ">=4.11.0.86,<5.0.0.0"
-pysimplegui-4-foss = ">=4.60.4.1,<5.0.0.0"
-tk = ">=0.1.0,<0.2.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
 
@@ -49,7 +47,7 @@ ipyboost = { version = "1.0.0.a3", source = "testpypi"}
 
 [tool.poetry.scripts]
 python-path = "Scripts.python_path:main"
-led-matrix-identify = 'led_matrix_battery.led_matrix.Scripts.identify_matrices:main'
+led-matrix-identify = 'is_matrix_forge.led_matrix.Scripts.identify_matrices:main'
 install-presets = "Scripts.install_presets:main"
 
 [[tool.poetry.include]]
