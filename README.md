@@ -1,3 +1,5 @@
+[![PyPI version](https://img.shields.io/pypi/v/IS-Matrix-Forge)](https://pypi.org/project/IS-Matrix-Forge)
+
 # LED Matrix Battery Monitor
 
 A Python application that displays your computer's battery status on an LED matrix display. The application monitors battery level and power state, providing visual feedback on an LED matrix and audio notifications when power is plugged or unplugged.
