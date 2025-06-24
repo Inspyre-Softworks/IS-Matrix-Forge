@@ -3,7 +3,7 @@ from .base import Frame
 from serial.tools.list_ports_common import ListPortInfo
 from is_matrix_forge.led_matrix.display.grid.helpers import is_valid_grid
 from is_matrix_forge.led_matrix.display.animations.errors import MalformedGridError
-from is_matrix_forge.led_matrix import render_matrix
+from is_matrix_forge.led_matrix.display.helpers import render_matrix
 
 
 running = False

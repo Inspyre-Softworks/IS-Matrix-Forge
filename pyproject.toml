@@ -1,6 +1,6 @@
 [project]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.2"
+version = "1.0.0-dev.4"
 description = ""
 authors = [
     {name = "Taylor B.",email = "t.blackstone@inspyre.tech"}

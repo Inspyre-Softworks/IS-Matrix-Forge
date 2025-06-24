@@ -1,7 +1,7 @@
 import difflib
 from typing import Any
 
-from .constants import PATTERN_MAP
+from .stencils.res import PATTERN_MAP
 
 
 class BuiltInPatterns:

@@ -1,9 +1,14 @@
 import threading
 import time
+import is_matrix_forge.led_matrix.display.helpers
 from is_matrix_forge.common.decorators import freeze_setter
+from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 
 
-class Breather:
+MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
+
+
+class Breather(Loggable):
     """
     Controls a “breathing” (fade in/out) effect on a controller’s brightness.
 
@@ -39,6 +44,7 @@ class Breather:
             step:           int   = 5,
             breathe_fps:    float = 30.0
     ):
+        super().__init__(MOD_LOGGER)
         self._controller     = None
         self._min_brightness = None
         self._max_brightness = None
@@ -46,13 +52,21 @@ class Breather:
         self._fps            = None
 
         self.controller      = controller
+        log = self.class_logger
+        log.debug(f'Controller: {controller}')
 
         self.__initial_brightness = self.controller.brightness
+        log.debug(f'Initial brightness: {self.__initial_brightness}')
 
         self.min_brightness  = min_brightness
         self.max_brightness  = max_brightness
+        log.debug(f'Min brightness: {self.min_brightness} | Max brightness: {self.max_brightness}')
+
         self.step            = step
+        log.debug(f'Step: {self.step}%')
+
         self.fps             = breathe_fps
+        log.debug(f'FPS: {self.fps}')
 
         self._breathing = False
         self._thread    = None
@@ -66,9 +80,13 @@ class Breather:
         if not isinstance(new, bool):
             raise TypeError(f'"breathing" must be of type `bool`, not {type(new)}')
 
+        self.method_logger.debug(f'Received new value for "breathing": {new}')
+
         if self.breathing and not new:
+            self.method_logger.debug('Stopping breathing')
             self.stop()
         elif not self.breathing and new:
+            self.method_logger.debug('Starting breathing')
             self.start()
 
         self._breathing = new
@@ -84,9 +102,12 @@ class Breather:
     @controller.setter
     @freeze_setter()
     def controller(self, new):
-        from is_matrix_forge.led_matrix import LEDMatrixController
+        from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
         if not isinstance(new, LEDMatrixController):
             raise TypeError(f'controller must be LEDMatrixController, not {type(new)}')
+
+        self.method_logger.debug(f'New controller: {new}')
+
         self._controller = new
 
     @property
@@ -113,6 +134,9 @@ class Breather:
             raise ValueError('"min_brightness" must be between 0 and 100')
         if self._max_brightness is not None and new > self._max_brightness:
             raise ValueError('"min_brightness" must be <= max_brightness')
+
+        self.method_logger.debug(f'New min brightness: {new}')
+
         self._min_brightness = new
 
     @property
@@ -130,6 +154,8 @@ class Breather:
             raise ValueError('"max_brightness" must be between 0 and 100')
         if self._min_brightness is not None and new < self._min_brightness:
             raise ValueError('"max_brightness" must be >= min_brightness')
+
+        self.method_logger.debug(f'New max brightness: {new}')
         self._max_brightness = new
 
     @property
@@ -145,6 +171,9 @@ class Breather:
             raise TypeError('"step" must be int')
         if new <= 0 or new > 100:
             raise ValueError('"step" must be > 0 and <= 100')
+
+        self.method_logger.debug(f'New step: {new}')
+
         self._step = new
 
     @property
@@ -160,13 +189,16 @@ class Breather:
             raise TypeError('"fps" must be a number')
         if new <= 0:
             raise ValueError('"fps" must be > 0')
+
+        self.method_logger.debug(f'New FPS: {new}')
+
         self._fps = float(new)
 
     def _breath_loop(self):
         interval = 1.0 / self._fps
         # start at current brightness, clamped
         current = max(self._min_brightness,
-                      min(self._controller.brightness, self._max_brightness))
+                      min(self.controller.brightness, self._max_brightness))
         going_up = True
 
         while self._breathing:
@@ -181,7 +213,7 @@ class Breather:
                     current = self._min_brightness
                     going_up = True
 
-            self._controller.brightness = current
+            self.controller.brightness = current
             time.sleep(interval)
 
     def start(self):

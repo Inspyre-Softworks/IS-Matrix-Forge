@@ -99,7 +99,7 @@ def disconnect_dev(dev: str) -> None:
         This function adds the device to a global list of disconnected devices
         to prevent further attempts to communicate with it.
     """
-    global DISCONNECTED_DEVS
+    from is_matrix_forge.led_matrix.constants import DISCONNECTED_DEVS
     if dev in DISCONNECTED_DEVS:
         return
 
@@ -145,6 +145,7 @@ def identify_devices(devices: Optional[List[ListPortInfo]] = None) -> None:
     import logging
 
     controllers = [LEDMatrixController(dev, 100) for dev in devices]
+
 
     def safe_identify(controller):
         try:

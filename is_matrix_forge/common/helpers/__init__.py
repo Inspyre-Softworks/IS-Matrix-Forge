@@ -3,6 +3,10 @@ from pathlib import Path
 from typing import Optional
 import requests
 from inspyre_toolbox.path_man import provision_path
+from is_matrix_forge.log_engine import ROOT_LOGGER
+
+
+MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
 
 
 def download_presets():
@@ -24,8 +28,12 @@ def calculate_checksum(file_path):
         str:
             The SHA-256 checksum of the file.
     """
+    log = MOD_LOGGER.get_child('calculate_checksum')
+
     if not isinstance(file_path, Path):
         file_path = provision_path(file_path)
+
+    log.debug(f'Calculating checksum for file: {file_path}')
 
     sha256 = hashlib.sha256()
 
@@ -76,6 +84,30 @@ def percentage_to_value(percent, max_value=255):
         raise ValueError(f'percent must be between 0 and 100, not {percent}')
 
     return int(round(percent * max_value / 100))
+
+
+def value_to_percentage(value, max_value=255):
+    """
+    Convert a value to its percentage representation relative to `max_value`.
+
+    Parameters:
+        value (int or float):
+            The value to convert.
+
+        max_value (int, optional):
+            The maximum possible value. Defaults to 255.
+
+    Returns:
+        float:
+            The percentage value between 0 and 100.
+    """
+    if not isinstance(value, (int, float)):
+        raise TypeError(f'value must be of type int or float, not {type(value)}')
+
+    if value < 0 or value > max_value:
+        raise ValueError(f'value must be between 0 and {max_value}, not {value}')
+
+    return (value / max_value) * 100
 
 
 def verify_checksum(remote_checksum, local_file_path):

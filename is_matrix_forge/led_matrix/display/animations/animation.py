@@ -6,9 +6,10 @@ from pathlib import Path
 
 from serial.tools.list_ports_common import ListPortInfo
 
-from is_matrix_forge.led_matrix import LEDMatrixController
+from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.helpers import get_json_from_file
+from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
 
 
 class Animation:
@@ -158,6 +159,11 @@ class Animation:
             raise IndexError(f"Cursor out of bounds. Must be between 0 and {len(self.__frames) - 1}.")
 
         self.__cursor = new_value
+
+    @property
+    def cursor_at_end(self) -> bool:
+        """Get whether the cursor is at the end of the animation sequence."""
+        return self.__cursor == len(self.__frames) - 1
 
     @property
     def devices(self) -> List[Any]:
@@ -341,6 +347,9 @@ class Animation:
             ValueError:
                 If the animation has no frames.
         """
+        if self.cursor_at_end:
+            raise AnimationFinishedError('Try rewinding the animation first.')
+
         self.__check_ready()
         devices = self.__normalize_devices(devices)
 
@@ -386,6 +395,9 @@ class Animation:
         """
         if self.is_empty:
             raise ValueError("Cannot play a frame from an animation with no frames.")
+
+        if self.cursor_at_end:
+            raise AnimationFinishedError('Try rewinding the animation first.')
 
         if frame_index is not None:
             if not (0 <= frame_index < len(self.__frames)):

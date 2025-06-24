@@ -6,7 +6,7 @@ from time import sleep
 from typing import List, Any, Union
 from is_matrix_forge.led_matrix.display.grid.helpers import is_valid_grid
 
-from is_matrix_forge.led_matrix import render_matrix
+from is_matrix_forge.led_matrix.display.helpers import render_matrix
 from is_matrix_forge.led_matrix.display.grid.grid import Grid
 from is_matrix_forge.led_matrix.display.grid.helpers import generate_blank_grid
 
