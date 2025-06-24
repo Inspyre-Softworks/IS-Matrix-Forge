@@ -131,4 +131,33 @@ def define_controllers(threaded=False):
 # CONTROLLERS = define_controllers()
 
 
+def brightness(dev, b: int):
+    """Adjust the brightness scaling of the entire screen."""
+    send_command(dev, CommandVals.Brightness, [b])
+
+
+def get_brightness(dev):
+    """Retrieve the current brightness value."""
+    res = send_command(dev, CommandVals.Brightness, with_response=True)
+    return int(res[0])
+
+
+def animate(dev, b: bool):
+    """Enable or disable animation."""
+    send_command(dev, CommandVals.Animate, [0x01 if b else 0x00])
+
+
+def get_animate(dev):
+    """Check if animation is enabled."""
+    res = send_command(dev, CommandVals.Animate, with_response=True)
+    return bool(res[0])
+
+
+def percentage(dev, p):
+    """Fill a percentage of the screen from bottom to top."""
+    from is_matrix_forge.inputmodule import PatternVals
+
+    send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
+
+
 
