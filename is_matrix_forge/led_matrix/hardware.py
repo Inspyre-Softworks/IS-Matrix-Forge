@@ -7,22 +7,11 @@ It includes functions for sending commands, controlling brightness, and other ba
 
 from is_matrix_forge.led_matrix.commands import send_command
 from is_matrix_forge.led_matrix.commands.map import CommandVals
-from is_matrix_forge.led_matrix.helpers.core.lazy_mod_load import LazyModuleLoader
+
 from enum import IntEnum
 
 
 # Import the necessary functions from the controller module
-
-
-class PatternVals(IntEnum):
-    Percentage = 0x00
-    Gradient = 0x01
-    DoubleGradient = 0x02
-    DisplayLotus = 0x03
-    ZigZag = 0x04
-    FullBrightness = 0x05
-    DisplayPanic = 0x06
-    DisplayLotus2 = 0x07
 
 
 class Game(IntEnum):
@@ -81,17 +70,6 @@ def bootloader_jump(dev):
     send_command(dev, CommandVals.BootloaderReset, [0x00])
 
 
-def brightness(dev, b: int):
-    """Adjust the brightness scaling of the entire screen."""
-    send_command(dev, CommandVals.Brightness, [b])
-
-
-def get_brightness(dev):
-    """Adjust the brightness scaling of the entire screen."""
-    res = send_command(dev, CommandVals.Brightness, with_response=True)
-    return int(res[0])
-
-
 def get_version(dev):
     """Get the device's firmware version"""
     res = send_command(dev, CommandVals.Version, with_response=True)
@@ -115,17 +93,6 @@ def send_serial(dev, s, command):
     except (IOError, OSError) as _ex:
         disconnect_dev(dev.device)
         # print("Error: ", ex)
-
-
-def animate(dev, b: bool):
-    """Enable/disable animation"""
-    send_command(dev, CommandVals.Animate, [0x01 if b else 0x00])
-
-
-def get_animate(dev):
-    """Check if animation is enabled"""
-    res = send_command(dev, CommandVals.Animate, with_response=True)
-    return bool(res[0])
 
 
 def get_pwm_freq(dev):
@@ -154,11 +121,6 @@ def pwm_freq(dev, freq):
         send_command(dev, CommandVals.PwmFreq, [2])
     elif freq == "900Hz":
         send_command(dev, CommandVals.PwmFreq, [3])
-
-
-def percentage(dev, p):
-    """Fill a percentage of the screen. Bottom to top"""
-    send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
 
 
 def define_controllers(threaded=False):

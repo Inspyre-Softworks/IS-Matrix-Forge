@@ -1,6 +1,6 @@
 from .layout import Layout as MainWindowLayout
 from ..base import WindowBase
-from is_matrix_forge.led_matrix.hardware import brightness
+from is_matrix_forge.led_matrix.display.helpers import brightness
 from is_matrix_forge.led_matrix.helpers.device import DEVICES
 from is_matrix_forge.monitor.monitor import PowerMonitor
 import time

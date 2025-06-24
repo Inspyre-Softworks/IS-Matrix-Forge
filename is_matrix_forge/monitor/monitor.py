@@ -9,6 +9,7 @@ from inspy_logger import Loggable
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from serial.tools.list_ports_common import ListPortInfo
 
+import is_matrix_forge.led_matrix.display.helpers
 from is_matrix_forge.common.helpers import percentage_to_value
 from is_matrix_forge.led_matrix import pattern, get_animate, animate, percentage, LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations import goodbye_animation
@@ -56,7 +57,7 @@ class PowerMonitor(Loggable):
         if unplugged_alert:
             self.unplugged_alert = unplugged_alert
 
-        self.dev.brightness = percentage_to_value(5)
+        is_matrix_forge.led_matrix.display.helpers.brightness = percentage_to_value(5)
         self.__battery_check_interval = battery_check_interval or self.DEFAULT_CHECK_INTERVAL
 
     @property

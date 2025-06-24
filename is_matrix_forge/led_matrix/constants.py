@@ -11,6 +11,7 @@ This module defines various constants used throughout the application, including
 """
 from is_matrix_forge.common.dirs import PRESETS_DIR
 
+
 # Hardware identifiers
 FWK_MAGIC = [0x32, 0xAC]
 PID       = 0x20
