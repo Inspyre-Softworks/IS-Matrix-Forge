@@ -385,7 +385,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
             enable (bool, optional):
                 Whether to enable or disable animation. Defaults to True.
         """
-        from is_matrix_forge.led_matrix.display.helpers import animate
+        from is_matrix_forge.led_matrix.hardware import animate
 
         # Call the low-level animate function to control animation on the device
         # The animate function also sets the status to 'animate' when enabled
@@ -430,7 +430,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
     @synchronized
     def draw_percentage(self, percentage: int, clear_first: bool = False):
-        from is_matrix_forge.led_matrix.display.helpers import percentage as _show_percentage_raw
+        from is_matrix_forge.led_matrix.hardware import percentage as _show_percentage_raw
         if not isinstance(percentage, int):
             if isinstance(percentage, (float, str)):
                 percentage = coerce_to_int(percentage)
@@ -562,7 +562,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
             InvalidBrightnessError:
                 If the brightness value is invalid.
         """
-        from is_matrix_forge.led_matrix.display.helpers import brightness as _set_brightness_raw
+        from is_matrix_forge.led_matrix.hardware import brightness as _set_brightness_raw
         from is_matrix_forge.led_matrix.errors import InvalidBrightnessError
         from is_matrix_forge.common.helpers import \
             percentage_to_value  # Converts percentage values to raw hardware values

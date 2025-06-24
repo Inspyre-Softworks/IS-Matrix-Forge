@@ -26,7 +26,7 @@ def keep_image(
         time_between_refreshes: seconds to sleep after one full breath cycle
                                  (or between redraws if not breathing)
     """
-    base_brightness = brightness
+    base_brightness = controller.brightness
     t = 0.0
     period = 1.0  # one full sine cycle = 1 second
     step = 1.0 / breathe_fps
@@ -108,28 +108,10 @@ def render_matrix(dev, matrix):
     send_command(dev, CommandVals.Draw, vals)
 
 
-def brightness(dev, b: int):
-    """Adjust the brightness scaling of the entire screen."""
-    send_command(dev, CommandVals.Brightness, [b])
-
-
-def get_brightness(dev):
-    """Adjust the brightness scaling of the entire screen."""
-    res = send_command(dev, CommandVals.Brightness, with_response=True)
-    return int(res[0])
-
-
-def animate(dev, b: bool):
-    """Enable/disable animation"""
-    send_command(dev, CommandVals.Animate, [0x01 if b else 0x00])
-
-
-def get_animate(dev):
-    """Check if animation is enabled"""
-    res = send_command(dev, CommandVals.Animate, with_response=True)
-    return bool(res[0])
-
-
-def percentage(dev, p):
-    """Fill a percentage of the screen. Bottom to top"""
-    send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
+from is_matrix_forge.led_matrix.hardware import (
+    brightness,
+    get_brightness,
+    animate,
+    get_animate,
+    percentage,
+)

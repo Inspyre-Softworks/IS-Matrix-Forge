@@ -1,6 +1,6 @@
 from time import sleep
 
-from is_matrix_forge.led_matrix.display.helpers import brightness
+from is_matrix_forge.led_matrix.hardware import brightness
 from is_matrix_forge.led_matrix.display.text import show_string
 
 
