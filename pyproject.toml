@@ -1,6 +1,6 @@
 [project]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.4"
+version = "1.0.0-dev.5"
 description = ""
 authors = [
     {name = "Taylor B.",email = "t.blackstone@inspyre.tech"}
@@ -31,6 +31,9 @@ pillow = ">=11.2.1,<12.0.0"
 opencv-python = ">=4.11.0.86,<5.0.0.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
+pysimplegui-4-foss = "==4.60.4.1"
+pysimpleguiweb = "==0.39.0"
+imapclient = "==3.0.1"
 
 [tool.poetry.extras]
 clipboard_support = ['clipboard']

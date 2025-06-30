@@ -1,7 +1,6 @@
 import time
 import math
 from is_matrix_forge.led_matrix.commands.map import CommandVals
-from is_matrix_forge.led_matrix.commands import send_command
 
 
 def keep_image(
@@ -113,5 +112,5 @@ from is_matrix_forge.led_matrix.hardware import (
     get_brightness,
     animate,
     get_animate,
-    percentage,
+    percentage, send_command,
 )

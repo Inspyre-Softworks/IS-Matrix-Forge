@@ -8,7 +8,7 @@ Project:
     led-matrix-battery
 
 File: 
-    is_matrix_forge/led_matrix/display/grid/presets/__init__.py
+    is_matrix_forge/led_matrix/display/grid/presets/grid.py
 
 Description:
     This module provides functionality for managing grid presets for the LED matrix display.

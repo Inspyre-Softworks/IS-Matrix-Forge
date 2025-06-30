@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Union, Optional, List, Any, ByteString
 
 
+DISCONNECTED_DEVS = []
+
+
 def get_json_from_file(path: Union[str, Path]) -> Any:
     """
     Load and parse a JSON file.

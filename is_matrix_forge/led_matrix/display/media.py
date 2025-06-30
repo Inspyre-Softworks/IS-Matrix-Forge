@@ -11,9 +11,8 @@ import cv2
 from PIL import Image
 
 from ..constants import WIDTH, HEIGHT
-from ..hardware import send_serial
+from ..hardware import send_serial, send_command
 from ..commands.map import CommandVals
-from ..commands import send_command
 from . import send_col, commit_cols
 from is_matrix_forge.led_matrix.helpers.status_handler import get_status, set_status
 

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import threading
 from time import sleep
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import add_aliases, method_alias
@@ -31,7 +31,7 @@ from is_matrix_forge.led_matrix.display.text import show_string as _show_string_
 from is_matrix_forge.led_matrix.controller import MultitonMeta
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.commands.map import CommandVals
-from is_matrix_forge.led_matrix.commands import send_command
+from is_matrix_forge.led_matrix.hardware import send_serial, send_command
 from is_matrix_forge.led_matrix.display.effects.breather import Breather
 from is_matrix_forge.led_matrix.display.text import show_string
 
@@ -215,6 +215,10 @@ class LEDMatrixController(metaclass=MultitonMeta):
         self.__brightness = new
 
     @property
+    def built_in_pattern_names(self) -> List:
+        return self.get_built_in_pattern_names()
+
+    @property
     def clear_on_init(self):
         return self.__init_clear
 
@@ -257,6 +261,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
             raise ValueError('Device cannot be None or empty.')
 
         self.__device = device
+
 
     @property
     def grid(self):
@@ -334,6 +339,9 @@ class LEDMatrixController(metaclass=MultitonMeta):
             text_animation.loop = True
         return self.play_animation(text_animation)
 
+    def show_text(self, text: str):
+        self.draw_text(text)
+
     @property
     def set_brightness_on_init(self):
         """
@@ -391,6 +399,24 @@ class LEDMatrixController(metaclass=MultitonMeta):
         # The animate function also sets the status to 'animate' when enabled
         animate(self.device, enable)
 
+    @synchronized
+    def clear_matrix(self) -> None:
+        """
+        Clear the LED matrix display.
+
+        Generates a blank grid and displays it on the LED matrix.
+        """
+        from is_matrix_forge.led_matrix.display.grid.helpers import generate_blank_grid
+        from is_matrix_forge.led_matrix.display.grid import Grid
+
+        data = generate_blank_grid()
+        self.__keep_image = False
+        grid = Grid(init_grid=data)
+        self.draw_grid(grid)
+
+    def clear(self):
+        self.clear_matrix()
+
     def draw(self, grid: 'Grid' = None) -> None:
         return self.draw_grid(grid)
 
@@ -445,20 +471,11 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
         _show_percentage_raw(self.device, percentage)
 
-    @synchronized
-    def clear(self) -> None:
-        """
-        Clear the LED matrix display.
+    def draw_string(self, text: str):
+        self.show_text(text)
 
-        Generates a blank grid and displays it on the LED matrix.
-        """
-        from is_matrix_forge.led_matrix.display.grid.helpers import generate_blank_grid
-        from is_matrix_forge.led_matrix.display.grid import Grid
-
-        data = generate_blank_grid()
-        self.__keep_image = False
-        grid = Grid(init_grid=data)
-        self.draw_grid(grid)
+    def draw_text(self, text: str):
+        self.show_text(text)
 
     @synchronized
     def display_location(self):
@@ -480,6 +497,12 @@ class LEDMatrixController(metaclass=MultitonMeta):
             None
         """
         _show_string_raw(self.device, self.name)
+
+    def get_built_in_pattern_names(self) -> List:
+        from is_matrix_forge.led_matrix.display.patterns.built_in.stencils.res import PATTERN_MAP
+
+        return list(PATTERN_MAP.keys())
+
 
     @synchronized
     def halt_animation(self) -> None:
@@ -549,6 +572,9 @@ class LEDMatrixController(metaclass=MultitonMeta):
         from is_matrix_forge.led_matrix.hardware import bootloader_jump
         bootloader_jump(self.device)
 
+    def list_patterns(self):
+        print
+
     @synchronized
     def set_brightness(self, brightness: Union[int, float], __from_setter=False) -> None:
         """
@@ -581,6 +607,22 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
         if not __from_setter:
             self.__brightness = brightness
+
+    def show_string(self, text: str) -> None:
+        """
+        Alias for LEDMatrixController.show_text.
+
+        See Also:
+            LEDMatrixController.show_text
+        """
+        self.show_text(text)
+
+    @synchronized
+    def show_text(self, text: str) -> None:
+        """
+        Show text on the LED matrix.
+        """
+        show_string(self.device, text)
 
     @staticmethod
     # Internal methods

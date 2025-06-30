@@ -7,7 +7,7 @@ It includes functions for rendering strings, fonts, and special symbols.
 """
 
 from is_matrix_forge.led_matrix import fonts as font
-from is_matrix_forge.led_matrix.commands import send_command
+from ...hardware import send_command
 from ...commands.map import CommandVals
 
 

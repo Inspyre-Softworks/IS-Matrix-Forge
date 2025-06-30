@@ -134,3 +134,25 @@ class TextScroller:
             [rows_grid[r][c] for r in range(self.rows)]
             for c in range(self.cols)
         ]
+
+
+def scroll_text_on_multiple_matrices(controllers, text, delay=0.1, skip_end_space=False, threaded=False):
+    import is_matrix_forge.led_matrix.fonts
+
+    if threaded:
+        from threading import Thread
+        threads = []
+
+        for controller in controllers:
+            threads.append(Thread(target=controller.scroll_text, args=(text, delay, skip_end_space)))
+
+        for thread in threads:
+            thread.start()
+
+        return threads
+    else:
+        for controller in controllers:
+            controller.scroll_text(text, delay, skip_end_space)
+
+    return None
+

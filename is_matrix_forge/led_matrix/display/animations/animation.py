@@ -90,7 +90,7 @@ class Animation:
         # detect if they already handed us Frame objects
         first = frame_data[0]
         if isinstance(first, Frame):
-            print('received list of frames')
+            # print('received list of frames')
             self.__frames = list(frame_data)  # shallow copy
             return
 
