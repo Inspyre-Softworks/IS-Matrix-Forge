@@ -25,7 +25,6 @@ from pathlib import Path
 from is_matrix_forge.monitor import run_power_monitor
 from is_matrix_forge.led_matrix.helpers.device import get_devices
 from is_matrix_forge.notify.sounds import Sound
-from is_matrix_forge.led_matrix.led_matrix import LEDMatrix
 
 
 def parse_arguments():
@@ -124,10 +123,7 @@ def main():
             else:
                 print(f"Warning: Unplugged sound file not found: {unplugged_path}")
                 print("Using default sound instead.")
-    
-    # Initialize the LED matrix with the specified brightness
-    led_matrix = LEDMatrix(device, args.brightness)
-    
+
     print(f"Starting battery monitor with device: {device.device}")
     print(f"Battery check interval: {args.interval} seconds")
     print(f"LED matrix brightness: {args.brightness}%")
