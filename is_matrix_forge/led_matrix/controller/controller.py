@@ -84,7 +84,8 @@ class LEDMatrixController(metaclass=MultitonMeta):
             init_grid:                    Optional[Grid] = None,
             do_not_show_grid_on_init:     Optional[bool] = False,
             thread_safe:                  Optional[bool] = False,
-            do_not_warn_on_thread_misuse: Optional[bool] = False
+            do_not_warn_on_thread_misuse: Optional[bool] = False,
+            hold_all:                     Optional[bool] = False
     ):
         """
         Initialize a new LED Matrix Controller.
@@ -105,13 +106,17 @@ class LEDMatrixController(metaclass=MultitonMeta):
         self.__built_in_patterns      = None
         self.__device                 = None
         self.__grid                   = None
+        self.__hold_all               = None
         self.__init_clear             = None
         self.__keep_image             = False
         self.__name                   = None
+        self.__image_retention_worker = None
         self.__set_brightness_on_init = None
         self.__show_grid_on_init      = None
         self._thread_safe             = None
         self._cmd_lock                = None
+
+        self.hold_all = hold_all or False
 
         if skip_init_brightness_set is not None:
             if not isinstance(skip_init_brightness_set, bool):
