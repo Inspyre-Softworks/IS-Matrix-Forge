@@ -40,22 +40,6 @@ PWM_FREQUENCIES = [
 ]
 
 
-def get_pwm_freq(dev):
-    """Adjust the brightness scaling of the entire screen."""
-    res = send_command(dev, CommandVals.PwmFreq, with_response=True)
-    freq = int(res[0])
-    if freq == 0:
-        return 29000
-    elif freq == 1:
-        return 3600
-    elif freq == 2:
-        return 1800
-    elif freq == 3:
-        return 900
-    else:
-        return None
-
-
 def percentage(dev, p):
     """Fill a percentage of the screen. Bottom to top"""
     send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])

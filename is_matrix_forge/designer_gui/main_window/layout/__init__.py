@@ -1,5 +1,6 @@
 import PySimpleGUI as sg
 from typing import List, Tuple, Any
+from is_matrix_forge.designer_gui.main_window.layout.button_grid.column import build_grid_frame
 
 
 class PixelGridLayout:
@@ -93,12 +94,7 @@ class PixelGridLayout:
         self.__button_list = value
 
     def build(self) -> List[List[Any]]:
-        grid = [
-            [sg.Button(' ', size=self.button_size, key=(col, row), pad=self.pad)
-             for col in range(self.width)]
-            for row in range(self.height)
-        ]
-        grid_column = sg.Column(grid)
+        grid_column = build_grid_frame(self.width, self.height, button_size=self.button_size, pad=self.pad)
 
         controls = [[sg.Button(btn)] for btn in self.button_list]
         control_column = sg.Column(controls, vertical_alignment='top')

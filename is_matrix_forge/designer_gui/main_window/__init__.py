@@ -4,12 +4,15 @@ import PySimpleGUI as sg
 import copy
 import os
 
-from ...led_matrix.helpers.device import DEVICES
+from is_matrix_forge.led_matrix.helpers.device import DEVICES
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.display.grid.helpers import is_valid_grid
 from is_matrix_forge.led_matrix.display.animations.frame.helpers import is_valid_frames
-from .layout import PixelGridLayout
-from is_matrix_forge.led_matrix import render_matrix
+from is_matrix_forge.designer_gui.main_window.layout import PixelGridLayout
+from is_matrix_forge.led_matrix.display.helpers import render_matrix
+
+
+sg.theme('DarkTeal2')
 
 
 def _normalize(key: Any) -> str:
@@ -139,6 +142,7 @@ class PixelGrid:
     def _toggle_pixel(self, key: Tuple[int, int]) -> None:
         col, row = key
         new = 1 - self.grid[col][row]
+        print(f'Pixel {col},{row} toggled from {self.grid[col][row]} to {new}')
         self.grid = [[new if (c==col and r==row) else self.grid[c][r]
                       for r in range(self.height)]
                      for c in range(self.width)]
@@ -250,3 +254,7 @@ class PixelGrid:
 
     def _validate(self, grid: Any) -> bool:
         return is_valid_grid(grid, self.width, self.height)
+
+
+if __name__ == '__main__':
+    PixelGrid().run()

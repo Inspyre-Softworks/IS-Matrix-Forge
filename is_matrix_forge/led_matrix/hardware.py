@@ -4,14 +4,23 @@ Hardware communication module for LED Matrix.
 This module provides low-level functions for communicating with LED matrix hardware.
 It includes functions for sending commands, controlling brightness, and other basic operations.
 """
+from enum import IntEnum
+from typing import List, Optional, ByteString, Union
 
-from is_matrix_forge.led_matrix.commands import send_command
+import serial
+from serial.tools.list_ports_common import ListPortInfo
+
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 
-from enum import IntEnum
+from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC
+from is_matrix_forge.led_matrix.helpers import disconnect_dev, DISCONNECTED_DEVS
+
+from is_matrix_forge.log_engine import ROOT_LOGGER
 
 
-# Import the necessary functions from the controller module
+MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.hardware')
+
+del ROOT_LOGGER
 
 
 class Game(IntEnum):
@@ -44,11 +53,14 @@ class GameOfLifeStartParam(IntEnum):
 
 
 class GameControlVal(IntEnum):
-    Up = 0
-    Down = 1
-    Left = 2
+    """
+    Controls for the game controller.
+    """
+    Up    = 0
+    Down  = 1
+    Left  = 2
     Right = 3
-    Quit = 4
+    Quit  = 4
 
 
 def disconnect_dev(dev):
@@ -86,18 +98,9 @@ def get_version(dev):
     return version
 
 
-def send_serial(dev, s, command):
-    """Send serial command by using existing serial connection"""
-    try:
-        s.write(command)
-    except (IOError, OSError) as _ex:
-        disconnect_dev(dev.device)
-        # print("Error: ", ex)
-
-
 def get_pwm_freq(dev):
-    """Adjust the brightness scaling of the entire screen."""
     res = send_command(dev, CommandVals.PwmFreq, with_response=True)
+
     freq = int(res[0])
     if freq == 0:
         return 29000
@@ -160,4 +163,109 @@ def percentage(dev, p):
     send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
 
 
+def send_serial(
+    controller: str,
+    command: Union[bytes, bytearray, list],
+    baud: int = 115200,
+    print_debug: bool = True
+) -> None:
+    """
+    Sends raw bytes over serial and prints exactly what is sent.
 
+    Args:
+        controller (LEDMatrixController):
+            The controller to use.
+
+        command (Union[bytes, bytearray, list]):
+            Command as a list of ints, bytes, or bytearray.
+
+        baud (int):
+            Baudrate for serial. Defaults to 115200.
+
+        print_debug (bool):
+            Whether to print debug info.
+
+    Raises:
+        ValueError: If command is not bytes/bytearray/list of ints.
+        serial.SerialException: If serial communication fails.
+    """
+    # Normalize to bytes
+    if isinstance(command, (bytes, bytearray)):
+        cmd_bytes = bytes(command)
+    elif isinstance(command, list):
+        cmd_bytes = bytes(command)
+    else:
+        raise ValueError("Command must be bytes, bytearray, or list of ints")
+
+    if print_debug:
+        print(f"[send_serial] Integer bytes: {list(cmd_bytes)}")
+        print(f"[send_serial] Hex bytes:    {[f'0x{b:02X}' for b in cmd_bytes]}")
+        print(f"[send_serial] Raw bytes:    {cmd_bytes!r}")
+
+    try:
+        with serial.Serial(controller.device, baud) as ser:
+            ser.write(cmd_bytes)
+    except (IOError, OSError) as _ex:
+        disconnect_dev(controller.device)
+
+
+def send_command_raw(dev: ListPortInfo, command: List[int], with_response: bool = False, response_size: Optional[int] = None) -> Optional[ByteString]:
+    """
+    Send a command to the device using a new serial connection.
+
+    Args:
+        dev (ListPortInfo): The device to send the command to.
+        command (List[int]): The command to send.
+        with_response (bool, optional): Whether to wait for a response from the device. Defaults to False.
+        response_size (Optional[int], optional): The size of the response to expect. Defaults to None.
+
+    Returns:
+        Optional[ByteString]: The response from the device, if any, or None if no response or an error occurred.
+
+    Raises:
+        IOError, OSError: If there is an error communicating with the device.
+    """
+    cmd_bytes = bytes(command)
+    #print(f"Sending command (int): {list(cmd_bytes)}")
+    #print(f"Sending command (hex):  {[f'0x{b:02X}' for b in cmd_bytes]}")
+    #print(f"Raw bytes: {cmd_bytes!r}")
+    res_size = response_size or RESPONSE_SIZE
+    try:
+        with serial.Serial(dev.device, 115200) as s:
+            s.write(cmd_bytes)
+            return s.read(res_size) if with_response else None
+    except (IOError, OSError) as _ex:
+        disconnect_dev(dev.device)
+        return None
+        # print("Error: ", ex)
+
+
+def send_command(
+        dev:           ListPortInfo,
+        command:       int,
+        parameters:    Optional[List[int]] = None,
+        with_response: bool                = False
+) -> Optional[ByteString]:
+    """
+    Send a command to the device using a new serial connection.
+
+    Parameters:
+        dev (ListPortInfo):
+            The device to send the command to.
+
+        command (int):
+            The command to send.
+
+        parameters (Optional[List[int]], optional):
+            The parameters to send with the command. Defaults to None.
+
+        with_response (bool, optional):
+            Whether to wait for a response from the device. Defaults to False.
+
+    Returns:
+        Optional[ByteString]:
+            The response from the device, if any, or None if no response or an error occurred.
+    """
+    if parameters is None:
+        parameters = []
+    return send_command_raw(dev, FWK_MAGIC + [command] + parameters, with_response)

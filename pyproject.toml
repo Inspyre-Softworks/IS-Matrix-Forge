@@ -1,28 +1,25 @@
-[project]
+[tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.4"
+version = "1.0.0-dev.5"
 description = ""
-authors = [
-    {name = "Taylor B.",email = "t.blackstone@inspyre.tech"}
-]
+authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
 readme = "README.md"
 license = "MIT"
 keywords = ["led", "matrix", "framework", "hardware"]
 homepage = "https://github.com/Inspyre-Softworks/IS-Matrix-Forge"
 repository = "https://github.com/Inspyre-Softworks/IS-Matrix-Forge"
-requires-python = ">=3.12,<4.0"
 
 [[tool.poetry.source]]
-name     = "pypi"
+name = "pypi"
 priority = "primary"
 
-
 [[tool.poetry.source]]
-name     = "testpypi"
-url      = "https://test.pypi.org/simple/"
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
 priority = "explicit"
 
 [tool.poetry.dependencies]
+python = ">=3.12,<4.0"
 chime = ">=0.7.0,<0.8.0"
 pyserial = ">=3.5,<4.0"
 inspy-logger = ">=3.2.3,<4.0.0"
@@ -31,28 +28,31 @@ pillow = ">=11.2.1,<12.0.0"
 opencv-python = ">=4.11.0.86,<5.0.0.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
+pysimplegui-4-foss = "==4.60.4.1"
+pysimpleguiweb = "==0.39.0"
+imapclient = "==3.0.1"
 
 [tool.poetry.extras]
-clipboard_support = ['clipboard']
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+clipboard_support = ["clipboard"]
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^9.1.0"
 prompt-toolkit = "^3.0.51"
 ptipython = "^1.0.1"
-ipyboost = { version = "1.0.0.a3", source = "testpypi"}
+ipyboost = { version = "1.0.0.a3", source = "testpypi" }
 
 [tool.poetry.scripts]
 python-path = "Scripts.python_path:main"
-led-matrix-identify = 'is_matrix_forge.led_matrix.Scripts.identify_matrices:main'
+led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
 install-presets = "Scripts.install_presets:main"
 
 [[tool.poetry.include]]
 path = "presets/**"
 format = "sdist"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
