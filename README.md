@@ -2,26 +2,26 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/IS-Matrix-Forge)
 
 
-# LED Matrix Battery Monitor
+# IS Matrix Forge
 
-A Python application that displays your computer's battery status on an LED matrix display. The application monitors battery level and power state, providing visual feedback on an LED matrix and audio notifications when power is plugged or unplugged.
+IS Matrix Forge is a toolkit for controlling 9x34 LED matrix displays.  It provides utilities for device discovery, grid manipulation and pattern rendering.  A battery-monitor example demonstrates how to display system power status on a matrix.
 
 ## Project Description and Purpose
 
-The LED Matrix Battery Monitor is designed to provide a visual representation of your computer's battery status on an external LED matrix display. It serves as a convenient way to monitor battery levels without having to check your computer's status bar, especially useful for setups where the status bar might not be visible or when you want a more noticeable indicator.
+IS Matrix Forge supplies the core components for driving LED matrices.  The project exposes a flexible API for writing graphics or text to the display and includes helpers for locating connected hardware.  The battery monitor application demonstrates how these pieces fit together to provide real-time system feedback.
 
 Key features:
-- Real-time battery level display on an LED matrix
-- Visual animations when power is plugged in
-- Audio notifications when power state changes (plugged/unplugged)
-- Configurable checking intervals
-- Support for multiple LED matrices
+- Device detection and control
+- Grid and pattern utilities
+- Animation framework
+- Battery-monitor example
+- Support for multiple matrices
 
 ## Hardware Requirements
 
-- LED Matrix display with dimensions 9x34 (compatible with the project's specifications)
+- 9x34 LED matrix display
 - Serial connection to the computer (USB)
-- The LED matrix should have the following hardware identifiers:
+- Supported devices share the following identifiers:
   - VID: 0x32AC
   - PID: 0x20
   - Serial Number Prefix: FRAK
@@ -47,8 +47,8 @@ This project requires Python 3.12 or newer and the following dependencies:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Inspyre-Softworks/led-matrix-battery.git
-   cd led-matrix-battery
+   git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+   cd IS-Matrix-Forge
    ```
 
 2. Install dependencies using Poetry:
@@ -65,8 +65,8 @@ This project requires Python 3.12 or newer and the following dependencies:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Inspyre-Softworks/led-matrix-battery.git
-   cd led-matrix-battery
+   git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+   cd IS-Matrix-Forge
    ```
 
 2. Install the package:
@@ -161,7 +161,7 @@ monitor = run_power_monitor_threaded(device)
 
 ## Contributing
 
-Contributions to the LED Matrix Battery Monitor are welcome! Please feel free to submit a Pull Request.
+Contributions to IS Matrix Forge are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
