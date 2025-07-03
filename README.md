@@ -2,20 +2,26 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/IS-Matrix-Forge)
 
 
-# LED Matrix Battery Monitor
+# IS Matrix Forge
 
-A Python application that displays your computer's battery status on an LED matrix display. The application monitors battery level and power state, providing visual feedback on an LED matrix and audio notifications when power is plugged or unplugged.
+**IS Matrix Forge** is a Python framework for creating applications that drive
+9×34 LED matrix displays.  It provides high level helpers for talking to the
+hardware, tools for building animations, and utilities such as progress bars and
+a battery monitor.
 
-## Project Description and Purpose
+## Project Overview
 
-The LED Matrix Battery Monitor is designed to provide a visual representation of your computer's battery status on an external LED matrix display. It serves as a convenient way to monitor battery levels without having to check your computer's status bar, especially useful for setups where the status bar might not be visible or when you want a more noticeable indicator.
+Matrix Forge grew out of the LED Matrix Battery Monitor project.  The goal is to
+make it easy to create rich LED matrix experiences from Python.  In addition to
+monitoring the battery, you can design custom frames, display scrolling text,
+run animations, and integrate the LED matrix with your own applications.
 
-Key features:
-- Real-time battery level display on an LED matrix
-- Visual animations when power is plugged in
-- Audio notifications when power state changes (plugged/unplugged)
-- Configurable checking intervals
-- Support for multiple LED matrices
+Highlighted features include:
+- Device discovery and control via `pyserial`
+- Drawing grids and patterns with the `Grid` class
+- Built-in and custom animations
+- Progress bars that render on the matrix
+- A battery monitor example using these building blocks
 
 ## Hardware Requirements
 
@@ -47,8 +53,8 @@ This project requires Python 3.12 or newer and the following dependencies:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Inspyre-Softworks/led-matrix-battery.git
-   cd led-matrix-battery
+   git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+   cd IS-Matrix-Forge
    ```
 
 2. Install dependencies using Poetry:
@@ -65,8 +71,8 @@ This project requires Python 3.12 or newer and the following dependencies:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/Inspyre-Softworks/led-matrix-battery.git
-   cd led-matrix-battery
+   git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+   cd IS-Matrix-Forge
    ```
 
 2. Install the package:
@@ -76,60 +82,43 @@ This project requires Python 3.12 or newer and the following dependencies:
 
 ## Usage Examples
 
-### Basic Usage
+### Identify Connected Devices
 
-To start monitoring your battery with default settings:
+```python
+from is_matrix_forge.led_matrix.helpers.device import DEVICES
+
+for dev in DEVICES:
+    print(dev)
+```
+
+### Display Text on the Matrix
+
+```python
+from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.helpers.device import DEVICES
+
+ctrl = LEDMatrixController(DEVICES[0])
+ctrl.scroll_text("Hello World!", loop=False)
+```
+
+### Progress Bars
+
+```python
+import time
+from is_matrix_forge.progress import tqdm
+
+for _ in tqdm(range(100)):
+    time.sleep(0.05)
+```
+
+### Battery Monitor Example
 
 ```python
 from is_matrix_forge.monitor import run_power_monitor
 from is_matrix_forge.led_matrix.helpers.device import DEVICES
 
-# Get the first available LED matrix device
 device = DEVICES[0]
-
-# Start monitoring with default settings
 run_power_monitor(device)
-```
-
-### Custom Configuration
-
-To customize the monitoring behavior:
-
-```python
-from is_matrix_forge.monitor import run_power_monitor
-from is_matrix_forge.led_matrix.helpers.device import DEVICES
-from pathlib import Path
-
-# Get the first available LED matrix device
-device = DEVICES[0]
-
-# Custom sound files
-plugged_sound = Path("path/to/custom_plugged_sound.wav")
-unplugged_sound = Path("path/to/custom_unplugged_sound.wav")
-
-# Start monitoring with custom settings
-run_power_monitor(
-    device,
-    battery_check_interval=10,  # Check every 10 seconds
-    plugged_alert=plugged_sound,
-    unplugged_alert=unplugged_sound
-)
-```
-
-### Running in a Thread
-
-To run the monitor in a background thread:
-
-```python
-from is_matrix_forge.monitor import run_power_monitor_threaded
-from is_matrix_forge.led_matrix.helpers.device import DEVICES
-
-# Get the first available LED matrix device
-device = DEVICES[0]
-
-# Start monitoring in a background thread
-monitor = run_power_monitor_threaded(device)
-# ``monitor`` is a :class:`threading.Thread` instance
 ```
 
 ## Troubleshooting
@@ -161,7 +150,8 @@ monitor = run_power_monitor_threaded(device)
 
 ## Contributing
 
-Contributions to the LED Matrix Battery Monitor are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! If you have ideas or improvements for Matrix Forge,
+feel free to open an issue or submit a pull request.
 
 ## License
 
