@@ -256,5 +256,10 @@ class PixelGrid:
         return is_valid_grid(grid, self.width, self.height)
 
 
+def main():
+    pg = PixelGrid()
+    pg.run()
+
+
 if __name__ == '__main__':
     PixelGrid().run()

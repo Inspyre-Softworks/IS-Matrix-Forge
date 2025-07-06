@@ -115,6 +115,8 @@ class LEDMatrixController(metaclass=MultitonMeta):
         self.__show_grid_on_init      = None
         self._thread_safe             = None
         self._cmd_lock                = None
+        self._keep_alive              = False
+        self._KEEP_ALIVE_INTERVAL    = 50
 
         self.hold_all = hold_all or False
 
@@ -129,6 +131,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
             self.__init_clear = not skip_init_clear
 
         if init_grid is not None:
+            from is_matrix_forge.led_matrix.display.grid import Grid
             if not isinstance(init_grid, Grid):
                 raise TypeError(f'init_grid must be of type `Grid`, not {type(init_grid)}')
 
@@ -143,6 +146,67 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
         self.__set_up_thread_safety__(thread_safe)
 
+        self.__post_init__()
+
+        # ---------------------------------------------------------------------
+        # Keep‑alive internal worker
+        # ---------------------------------------------------------------------
+
+    def __keep_alive_worker(self):
+        """Loop until signalled, polling :pyattr:`animating` every 50 s."""
+        # Lazily create the stop event (should already exist, but be safe)
+        stop_evt = self._keep_alive_stop_evt or threading.Event()
+        self._keep_alive_stop_evt = stop_evt
+
+        while not stop_evt.is_set():
+            try:
+                _ = self.animating  # A simple query is enough to keep FW awake
+            except Exception:  # pragma: no cover – we don't crash the thread
+                pass
+
+            # Wait with timeout so the thread can exit early when stop_evt is set
+            stop_evt.wait(self._KEEP_ALIVE_INTERVAL)
+
+        # ---------------------------------------------------------------------
+        # Property controlling the keep‑alive thread
+        # ---------------------------------------------------------------------
+
+    @property
+    def keep_alive(self) -> bool:
+        """Whether the background keep‑alive thread is active."""
+        return self._keep_alive
+
+    @keep_alive.setter
+    def keep_alive(self, enable: bool):
+        if not isinstance(enable, bool):
+            raise TypeError('keep_alive must be a boolean.')
+
+        # No change ➜ nothing to do
+        if enable == self._keep_alive:
+            return
+
+        if enable:
+            # Start background thread
+            self._keep_alive_stop_evt = threading.Event()
+            self._keep_alive_thread = threading.Thread(
+                target=self.__keep_alive_worker,
+                name=f"{self.__class__.__name__}-KeepAlive-{self.device.name}",
+                daemon=True,
+            )
+            self._keep_alive_thread.start()
+            self._keep_alive = True
+        else:
+            # Signal thread to exit and wait (briefly) for it
+            if self._keep_alive_stop_evt is not None:
+                self._keep_alive_stop_evt.set()
+            if (
+                    self._keep_alive_thread is not None
+                    and self._keep_alive_thread.is_alive()
+            ):
+                self._keep_alive_thread.join(timeout=self._KEEP_ALIVE_INTERVAL + 1)
+            self._keep_alive_thread = None
+            self._keep_alive_stop_evt = None
+            self._keep_alive = False
         self.__post_init__()
 
     def __post_init__(self):

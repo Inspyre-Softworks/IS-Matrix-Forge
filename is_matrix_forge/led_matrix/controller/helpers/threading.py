@@ -24,11 +24,7 @@ def synchronized(method):
             and getattr(self, "_warn_on_thread_misuse", True)
             and cur_thread_id != getattr(self, "_owner_thread_id", None)
         ):
-            PARENT_LOGGER.warning(
-                "%r called from thread %r but thread_safe=False",
-                self,
-                threading.current_thread().name
-            )
+            PARENT_LOGGER.warn_once(f"{self} called from thread {threading.current_thread()} but thread_safe=False")
 
         # 🔐 actual lock if thread_safe=True
         if getattr(self, "_thread_safe", False) and getattr(self, "_cmd_lock", None):

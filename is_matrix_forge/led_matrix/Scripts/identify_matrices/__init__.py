@@ -151,6 +151,9 @@ class Arguments(ArgumentParser):
         return self.__parsed
 
 
+threads = []
+
+
 def main(
     runtime:     Optional[Union[int, float]] = None,
     only_left:   Optional[bool]              = None,
@@ -181,6 +184,8 @@ def main(
         List[Thread]:
             A list of threads, one for each LED matrix being identified.
     """
+    global threads
+    threads = []
     selected = [LEDMatrixController(device, 100, thread_safe=True) for device in DEVICES]
 
     if not skip_clear:
@@ -202,8 +207,6 @@ def main(
     if runtime is None:
         runtime = ARGS.parsed.runtime
 
-    threads = []
-
     threads.extend(
         Thread(
             target=device.identify,
@@ -217,8 +220,6 @@ def main(
     )
     for t in threads:
         t.start()
-
-    return threads
 
 
 ARGS   = Arguments()
