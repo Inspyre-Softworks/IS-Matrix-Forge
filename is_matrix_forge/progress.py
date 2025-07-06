@@ -29,6 +29,9 @@ class LEDTqdm(_tqdm):
     def __init__(self, *args: Any, use_led: bool = True, matrix: Optional[Any] = None,
                  **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        if matrix is None and use_led:
+            from is_matrix_forge.led_matrix.controller import get_controllers
+            matrix, _ = get_controllers(threaded=True)
 
         self._matrix = None
         if use_led:

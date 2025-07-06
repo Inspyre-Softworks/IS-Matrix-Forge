@@ -281,7 +281,10 @@ class Animation:
 
         for dev in devices:
             dev.clear()
-            
+
+    def __interrupted(self):
+        self.rewind()
+
     def __normalize_devices(self, devices):
 
         if devices is None:
@@ -329,50 +332,108 @@ class Animation:
                 )
                 self.__breathing_thread.start()
 
-    def play(self, devices: Optional[List[LEDMatrixController]] = None, skip_clear_screen: bool = False) -> None:
+    def play(
+            self,
+            devices: Optional[List[LEDMatrixController]] = None,
+            skip_clear_screen: bool = False,
+    ) -> None:
         """
-        Play the animation on the LED matrix.
+        Start (or resume) playback.
 
-        Plays all frames, starting from the current cursor position.
-        If `loop` is True, this animation repeats indefinitely.
-
-        Parameters:
-            devices (Optional[List[LEDMatrixController]]):
-                Device to play on (passed to `Frame.play()`).
-
-            skip_clear_screen (Optional[bool]):
-                Skip clearing screen before playing.
-
-        Raises:
-            ValueError:
-                If the animation has no frames.
+        A slim façade that validates state, normalises devices, then delegates
+        the real work to helper methods.  Splitting the logic pulls decision
+        branches out of the main loop and keeps cyclomatic complexity low.
         """
         if self.cursor_at_end:
-            raise AnimationFinishedError('Try rewinding the animation first.')
+            raise AnimationFinishedError("Try rewinding the animation first.")
 
         self.__check_ready()
         devices = self.__normalize_devices(devices)
-
-        # The loop below will handle cursor advancement.
         self.is_playing = True
-        while self.is_playing:
-            # Iterate from current cursor to the end of frames
-            for i in range(self.__cursor, len(self.__frames)):
-                try:
-                    self.play_frame(i, devices)  # Frame.play() is responsible for its own duration (e.g., sleep)
-                except KeyboardInterrupt:
-                    self.is_playing = False
-                    print('Received keyboard interrupt!')
-                    return
 
-            if self.__loop:
-                self.rewind()
-            else:
-                # If not looping, we've played to the end from the initial cursor.
-                self.is_playing = False  # Stop the while loop
+        try:
+            while self.is_playing:
+                self._play_until_end(devices)
 
-            if not skip_clear_screen:
-                self.__clear_screen(devices)
+                if self.loop:
+                    self.rewind()
+                else:
+                    self.is_playing = False  # finished naturally
+
+                if not skip_clear_screen:
+                    self.__clear_screen(devices)
+
+        except KeyboardInterrupt:
+            # Centralised Ctrl-C handling
+            self._handle_interrupt()
+
+    def _play_until_end(self, devices: List[LEDMatrixController]) -> None:
+        """
+        Play frames from the current cursor position to the last frame once.
+
+        Separated so the outer `play()` loop only decides *whether* to repeat,
+        not *how* to iterate.
+        """
+        for idx in range(self.cursor, len(self.frames)):
+            if not self.is_playing:  # external pause/stop
+                self.__interrupted()
+                break
+
+            self.play_frame(idx, devices)
+
+    def _handle_interrupt(self) -> None:
+        """Gracefully stop playback on KeyboardInterrupt."""
+        self.is_playing = False
+        self.__interrupted()
+        print("Received keyboard interrupt!")
+
+    # def play(self, devices: Optional[List[LEDMatrixController]] = None, skip_clear_screen: bool = False) -> None:
+    #     """
+    #     Play the animation on the LED matrix.
+    #
+    #     Plays all frames, starting from the current cursor position.
+    #     If `loop` is True, this animation repeats indefinitely.
+    #
+    #     Parameters:
+    #         devices (Optional[List[LEDMatrixController]]):
+    #             Device to play on (passed to `Frame.play()`).
+    #
+    #         skip_clear_screen (Optional[bool]):
+    #             Skip clearing screen before playing.
+    #
+    #     Raises:
+    #         ValueError:
+    #             If the animation has no frames.
+    #     """
+    #     if self.cursor_at_end:
+    #         raise AnimationFinishedError('Try rewinding the animation first.')
+    #
+    #     self.__check_ready()
+    #     devices = self.__normalize_devices(devices)
+    #
+    #     # The loop below will handle cursor advancement.
+    #     self.is_playing = True
+    #     while self.is_playing:
+    #         # Iterate from current cursor to the end of frames
+    #         for i in range(self.__cursor, len(self.__frames)):
+    #             if not self.is_playing:
+    #                 self.__interrupted()
+    #                 break
+    #             try:
+    #                 self.play_frame(i, devices)  # Frame.play() is responsible for its own duration (e.g., sleep)
+    #             except KeyboardInterrupt:
+    #                 self.is_playing = False
+    #                 print('Received keyboard interrupt!')
+    #                 return
+    #
+    #         if self.__loop:
+    #             self.rewind()
+    #         else:
+    #             # If not looping, we've played to the end from the initial cursor.
+    #             self.is_playing = False  # Stop the while loop
+    #
+    #         if not skip_clear_screen:
+    #             self.__clear_screen(devices)
 
     def play_frame(self, frame_index: Optional[int] = None, devices: Any = None) -> None:
         """
