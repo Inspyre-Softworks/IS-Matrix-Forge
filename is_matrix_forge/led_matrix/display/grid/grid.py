@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import List, Optional, Union, ClassVar, Type, Any, Dict  # Added Any, Dict
 from ...constants import WIDTH as __WIDTH, HEIGHT as __HEIGHT, PRESETS_DIR
 from .helpers import is_valid_grid, generate_blank_grid
+from ...helpers import load_from_file as _helpers_load_from_file
 from is_matrix_forge.common.helpers import coerce_to_int
 
 MATRIX_HEIGHT = __HEIGHT
@@ -33,6 +34,24 @@ MATRIX_WIDTH = __WIDTH
 """int: Width of the LED matrix grid in pixels.
 This constant defines the default width for new Grid instances and for loading operations.
 """
+
+
+def load_from_file(
+    path: Union[str, Path],
+    expected_width: Optional[int] | None = None,
+    expected_height: Optional[int] | None = None,
+    fallback_duration: Optional[Union[int, float]] = None,
+) -> Any:
+    """Wrapper around :func:`is_matrix_forge.led_matrix.helpers.load_from_file`.
+
+    Exists primarily for unit tests which monkeypatch this function directly.
+    """
+    return _helpers_load_from_file(
+        path,
+        expected_width,
+        expected_height,
+        fallback_duration,
+    )
 
 
 class Grid:
@@ -127,8 +146,18 @@ class Grid:
         cls,
         spec: List[List[int]]
     ) -> 'Grid':
-        """Instantiate directly from a column-major spec list."""
-        return cls(init_grid=spec)
+        """Instantiate directly from a column-major spec list.
+
+        The dimensions of the grid are inferred from ``spec`` so tests can
+        provide arbitrary sized grids.
+        """
+        width = len(spec)
+        height = len(spec[0]) if spec else 0
+        if not is_valid_grid(spec, width, height):
+            raise ValueError(
+                f"init_grid must be {width}×{height} column-major 0/1 list"
+            )
+        return cls(width=width, height=height, init_grid=spec)
 
     @classmethod
     def from_file(
@@ -141,10 +170,16 @@ class Grid:
         """
         Load a column-major grid from file (single grid or frames of grids).
         """
-        from ...helpers import load_from_file
         raw = load_from_file(str(filename))
         # Single-grid JSON: list of lists
-        if isinstance(raw, list) and raw and isinstance(raw[0], list):
+        if (
+            isinstance(raw, list)
+            and raw
+            and isinstance(raw[0], list)
+            and is_valid_grid(raw[0], width, height)
+        ):
+            grid_data = raw[0]
+        elif isinstance(raw, list) and raw and isinstance(raw[0], list):
             grid_data = raw
         # Frame-list JSON: list of dicts
         elif isinstance(raw, list) and all(isinstance(f, dict) for f in raw):
@@ -187,11 +222,11 @@ class Grid:
         new = generate_blank_grid(self._width, self._height, self._fill_value)
 
         for c, r in itertools.product(range(self._width), range(self._height)):
-            src_c = (c + dx) % self._width if wrap else c + dx
-            src_r = (r + dy) % self._height if wrap else r + dy
+            dest_c = (c + dx) % self._width if wrap else c + dx
+            dest_r = (r + dy) % self._height if wrap else r + dy
 
-            if 0 <= src_c < self._width and 0 <= src_r < self._height:
-                new[c][r] = self._grid[src_c][src_r]
+            if 0 <= dest_c < self._width and 0 <= dest_r < self._height:
+                new[dest_c][dest_r] = self._grid[c][r]
 
         return Grid(width=self._width, height=self._height, fill_value=self._fill_value, init_grid=new)
 

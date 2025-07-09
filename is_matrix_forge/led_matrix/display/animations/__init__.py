@@ -2,6 +2,7 @@ from time import sleep
 
 from is_matrix_forge.led_matrix.hardware import brightness
 from is_matrix_forge.led_matrix.display.text import show_string
+from .audio_visualizer import AudioVisualizer
 
 
 def clear(dev):
@@ -26,3 +27,11 @@ def goodbye_animation(dev):
     checkerboard_cycle(dev)
     sleep(.5)
     show_string(dev, 'Bye')
+
+
+__all__ = [
+    'AudioVisualizer',
+    'clear',
+    'checkerboard_cycle',
+    'goodbye_animation',
+]
