@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.6"
+version = "1.0.0-dev.7"
 description = ""
 authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
 readme = "README.md"

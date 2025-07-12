@@ -384,6 +384,7 @@ class LEDMatrixController(metaclass=AliasMeta):
         return self.location['abbrev']
 
     @property
+    @alias('serial_port', 'port_name')
     def name(self) -> str:
         if self.__name is None:
             self.__name = self.device.name
@@ -468,8 +469,8 @@ class LEDMatrixController(metaclass=AliasMeta):
         # The animate function also sets the status to 'animate' when enabled
         animate(self.device, enable)
 
+    @alias('clear')
     @synchronized
-    @method_alias('clear')
     def clear_matrix(self) -> None:
         """
         Clear the LED matrix display.
@@ -502,8 +503,8 @@ class LEDMatrixController(metaclass=AliasMeta):
             grid = Grid(init_grid=grid)
         render_matrix(self.device, grid.grid)
 
-    @synchronized
     @alias('pattern', 'show_pattern')
+    @synchronized
     def draw_pattern(self, pattern: str) -> None:
         """
         Draw a pattern on the LED matrix.
@@ -519,6 +520,7 @@ class LEDMatrixController(metaclass=AliasMeta):
         pattern_pen = BuiltInPatterns(self)
         pattern_pen.render(pattern)
 
+    @alias('display_percentage', 'show_percentage')
     @synchronized
     def draw_percentage(self, percentage: int, clear_first: bool = False):
         from is_matrix_forge.led_matrix.hardware import percentage as _show_percentage_raw
