@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.5"
+version = "1.0.0-dev.6"
 description = ""
 authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
 readme = "README.md"
@@ -31,6 +31,8 @@ clipboard = { version = "^0.0.4", optional = true }
 pysimplegui-4-foss = "==4.60.4.1"
 pysimpleguiweb = "==0.39.0"
 imapclient = "==3.0.1"
+requests = "^2.32.4"
+aliaser = "^1.0.0.dev4"
 
 [tool.poetry.extras]
 clipboard_support = ["clipboard"]
@@ -44,7 +46,8 @@ ipyboost = { version = "1.0.0.a3", source = "testpypi" }
 [tool.poetry.scripts]
 python-path = "Scripts.python_path:main"
 led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
-install-presets = "Scripts.install_presets:main"
+install-presets = "is_matrix_forge.led_matrix.Scripts.install_presets.main:main"
+pixel-grid = "is_matrix_forge.designer_gui.main_window:main"
 
 [[tool.poetry.include]]
 path = "presets/**"
