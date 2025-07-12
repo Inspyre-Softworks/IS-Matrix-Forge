@@ -26,20 +26,20 @@ from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import add_alia
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.common.helpers import coerce_to_int
+from aliaser.metaclass import AliasMeta
 from is_matrix_forge.led_matrix.constants import SLOT_MAP
 from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
 from is_matrix_forge.led_matrix.controller import MultitonMeta
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.commands.map import CommandVals
-from is_matrix_forge.led_matrix.hardware import send_serial, send_command
+from is_matrix_forge.led_matrix.hardware import send_command
 from is_matrix_forge.led_matrix.display.effects.breather import Breather
 from is_matrix_forge.led_matrix.display.text import show_string
 
 COMMANDS = CommandVals
 
 
-@add_aliases
-class LEDMatrixController(metaclass=MultitonMeta):
+class LEDMatrixController(metaclass=AliasMeta):
     """
     Controller class for LED Matrix devices.
 
@@ -115,6 +115,8 @@ class LEDMatrixController(metaclass=MultitonMeta):
         self.__show_grid_on_init      = None
         self._thread_safe             = None
         self._cmd_lock                = None
+        self._keep_alive              = False
+        self._KEEP_ALIVE_INTERVAL    = 50
 
         self.hold_all = hold_all or False
 
@@ -129,6 +131,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
             self.__init_clear = not skip_init_clear
 
         if init_grid is not None:
+            from is_matrix_forge.led_matrix.display.grid import Grid
             if not isinstance(init_grid, Grid):
                 raise TypeError(f'init_grid must be of type `Grid`, not {type(init_grid)}')
 
@@ -145,13 +148,75 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
         self.__post_init__()
 
+    # ---------------------------------------------------------------------
+    # Keep‑alive internal worker
+    # ---------------------------------------------------------------------
+
+    @synchronized
+    def __keep_alive_worker(self):
+        """Loop until signalled, polling :pyattr:`animating` every 50 s."""
+        # Lazily create the stop event (should already exist, but be safe)
+        stop_evt = self._keep_alive_stop_evt or threading.Event()
+        self._keep_alive_stop_evt = stop_evt
+
+        while not stop_evt.is_set():
+            try:
+                _ = self.animating  # A simple query is enough to keep FW awake
+            except Exception:  # pragma: no cover – we don't crash the thread
+                pass
+
+            # Wait with timeout so the thread can exit early when stop_evt is set
+            stop_evt.wait(self._KEEP_ALIVE_INTERVAL)
+
+    # ---------------------------------------------------------------------
+    # Property controlling the keep‑alive thread
+    # ---------------------------------------------------------------------
+
+    @property
+    def keep_alive(self) -> bool:
+        """Whether the background keep‑alive thread is active."""
+        return self._keep_alive
+
+    @keep_alive.setter
+    def keep_alive(self, enable: bool):
+        if not isinstance(enable, bool):
+            raise TypeError('keep_alive must be a boolean.')
+
+        # No change ➜ nothing to do
+        if enable == self._keep_alive:
+            return
+
+        if enable:
+            # Start background thread
+            self._keep_alive_stop_evt = threading.Event()
+            self._keep_alive_thread = threading.Thread(
+                target=self.__keep_alive_worker,
+                name=f"{self.__class__.__name__}-KeepAlive-{self.device.name}",
+                daemon=True,
+            )
+            self._keep_alive_thread.start()
+            self._keep_alive = True
+        else:
+            # Signal thread to exit and wait (briefly) for it
+            if self._keep_alive_stop_evt is not None:
+                self._keep_alive_stop_evt.set()
+            if (
+                    self._keep_alive_thread is not None
+                    and self._keep_alive_thread.is_alive()
+            ):
+                self._keep_alive_thread.join(timeout=self._KEEP_ALIVE_INTERVAL + 1)
+            self._keep_alive_thread = None
+            self._keep_alive_stop_evt = None
+            self._keep_alive = False
+        self.__post_init__()
+
     def __post_init__(self):
         from is_matrix_forge.led_matrix.display.effects.breather import Breather
 
         self.__breather = Breather(self)
 
         if self.clear_on_init:
-            self.clear()
+            self.clear_matrix()
 
         if self.set_brightness_on_init:
             self.set_brightness(self.__default_brightness)
@@ -184,7 +249,6 @@ class LEDMatrixController(metaclass=MultitonMeta):
             bool: True if the device is animating, False otherwise.
         """
         return bool(send_command(self.device, COMMANDS.Animate, with_response=True)[0])
-        # return animate(self.device)
 
     @property
     def breather(self) -> Breather:
@@ -321,7 +385,10 @@ class LEDMatrixController(metaclass=MultitonMeta):
 
     @property
     def name(self) -> str:
-        return self.__name if self.__name is not None else self.device.name
+        if self.__name is None:
+            self.__name = self.device.name
+
+        return self.__name
 
     def play_animation(self, animation):
         from is_matrix_forge.led_matrix.display.animations.animation import Animation
@@ -343,9 +410,6 @@ class LEDMatrixController(metaclass=MultitonMeta):
         if loop:
             text_animation.loop = True
         return self.play_animation(text_animation)
-
-    def show_text(self, text: str):
-        self.draw_text(text)
 
     @property
     def set_brightness_on_init(self):
@@ -405,6 +469,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
         animate(self.device, enable)
 
     @synchronized
+    @method_alias('clear')
     def clear_matrix(self) -> None:
         """
         Clear the LED matrix display.
@@ -419,12 +484,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
         grid = Grid(init_grid=data)
         self.draw_grid(grid)
 
-    def clear(self):
-        self.clear_matrix()
-
-    def draw(self, grid: 'Grid' = None) -> None:
-        return self.draw_grid(grid)
-
+    @alias('draw')
     @synchronized
     def draw_grid(self, grid: 'Grid' = None) -> None:
         """
@@ -443,7 +503,7 @@ class LEDMatrixController(metaclass=MultitonMeta):
         render_matrix(self.device, grid.grid)
 
     @synchronized
-    @method_alias('pattern')
+    @alias('pattern', 'show_pattern')
     def draw_pattern(self, pattern: str) -> None:
         """
         Draw a pattern on the LED matrix.
@@ -475,12 +535,6 @@ class LEDMatrixController(metaclass=MultitonMeta):
             self.clear()
 
         _show_percentage_raw(self.device, percentage)
-
-    def draw_string(self, text: str):
-        self.show_text(text)
-
-    def draw_text(self, text: str):
-        self.show_text(text)
 
     @synchronized
     def display_location(self):
@@ -613,15 +667,8 @@ class LEDMatrixController(metaclass=MultitonMeta):
         if not __from_setter:
             self.__brightness = brightness
 
-    def show_string(self, text: str) -> None:
-        """
-        Alias for LEDMatrixController.show_text.
 
-        See Also:
-            LEDMatrixController.show_text
-        """
-        self.show_text(text)
-
+    @method_alias('draw_text', 'show_string', 'draw_string')
     @synchronized
     def show_text(self, text: str) -> None:
         """

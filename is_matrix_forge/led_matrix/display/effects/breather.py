@@ -1,6 +1,6 @@
 import threading
 import time
-from is_matrix_forge.common.decorators import freeze_setter
+from is_matrix_forge.common.decorators.freeze_setter import freeze_setter
 from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 
 
