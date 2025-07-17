@@ -24,21 +24,16 @@ from is_matrix_forge.led_matrix.hardware import CommandVals
 
 
 def all_brightnesses(dev):
-    """Increase the brightness with each pixel.
-    Only 0-255 available, so it can't fill all 306 LEDs"""
-    with serial.Serial(dev.device, 115200) as s:
-        for x in range(0, WIDTH):
-            vals = [0 for _ in range(HEIGHT)]
+    """Increase brightness gradually across the matrix."""
+    for x in range(WIDTH):
+        vals = [0 for _ in range(HEIGHT)]
 
-            for y in range(HEIGHT):
-                brightness = x + WIDTH * y
-                if brightness > 255:
-                    vals[y] = 0
-                else:
-                    vals[y] = brightness
+        for y in range(HEIGHT):
+            brightness = x + WIDTH * y
+            vals[y] = brightness if brightness <= 255 else 0
 
-            send_col(dev, s, x, vals)
-        commit_cols(dev, s)
+        send_col(dev, x, vals)
+    commit_cols(dev)
 
 
 
@@ -60,10 +55,9 @@ def every_nth_col(dev, n):
 
 def checkerboard(dev, n):
     for x in range(WIDTH):
-        vals = (([0xFF] * n) + ([0x00] * n)) * (HEIGHT // (2 * n))
-        if x % (2 * n) < n:
-            vals = vals[n:] + vals[:n]
-        # Build and send frame command via helper
+        vals = [
+            0xFF if ((x // n) + (y // n)) % 2 == 0 else 0x00
+            for y in range(HEIGHT)
+        ]
         send_command(dev, CommandVals.StageGreyCol, [x] + vals)
-    # After loop:
     send_command(dev, CommandVals.DrawGreyColBuffer, [])
