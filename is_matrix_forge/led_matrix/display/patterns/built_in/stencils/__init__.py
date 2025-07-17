@@ -43,7 +43,7 @@ def all_brightnesses(dev):
 
 
 def every_nth_row(dev, n):
-    for x in range(0, WIDTH):
+    for x in range(WIDTH):
         vals = [(0xFF if y % n == 0 else 0) for y in range(HEIGHT)]
 
         send_command(dev, CommandVals.StageGreyCol, [x] + vals)
