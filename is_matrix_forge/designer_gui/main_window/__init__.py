@@ -46,7 +46,7 @@ class PixelGrid:
         self.preferred_device = None
 
         layout = PixelGridLayout(self.width, self.height).build()
-        self.window = sg.Window('Pixel Grid', layout, finalize=True)
+        self.window = sg.Window('Pixel Grid', layout, finalize=True, resizable=True)
         self._init_button_colors()
         self._update_frame_indicator()
 

@@ -21,6 +21,8 @@ import threading
 from time import sleep
 from typing import Optional, Dict, Any, Union, List
 
+from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
+
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import add_aliases, method_alias
 from serial.tools.list_ports_common import ListPortInfo
@@ -38,8 +40,10 @@ from is_matrix_forge.led_matrix.display.text import show_string
 
 COMMANDS = CommandVals
 
+MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.controller.controller')
 
-class LEDMatrixController(metaclass=AliasMeta):
+
+class LEDMatrixController(Loggable, metaclass=AliasMeta):
     """
     Controller class for LED Matrix devices.
 
@@ -237,10 +241,13 @@ class LEDMatrixController(metaclass=AliasMeta):
             return
         else:
             self._thread_safe = True
+            self._cmd_lock = threading.RLock()
 
             return
 
+
     @property
+    @alias('is_animating')
     def animating(self) -> bool:
         """
         Check if the device is currently animating.
@@ -248,7 +255,13 @@ class LEDMatrixController(metaclass=AliasMeta):
         Returns:
             bool: True if the device is animating, False otherwise.
         """
-        return bool(send_command(self.device, COMMANDS.Animate, with_response=True)[0])
+        log = self.method_logger
+        response = send_command(self.device, COMMANDS.Animate, with_response=True)
+        if not response or response[0] is None:
+            log.error('Received null or empty response')
+            return False
+        return bool(response[0])
+
 
     @property
     def breather(self) -> Breather:
@@ -356,8 +369,8 @@ class LEDMatrixController(metaclass=AliasMeta):
         """
         return self.__keep_image
 
-    @validate_type(bool)
     @keep_image.setter
+    @validate_type(bool)
     def keep_image(self, new):
         self.__keep_image = new
 
@@ -619,9 +632,6 @@ class LEDMatrixController(metaclass=AliasMeta):
         if not skip_clear:
             self.clear()
 
-    @property
-    def is_animating(self):
-        return self.animating
 
     def jump_to_bootloader(self):
         """
@@ -634,7 +644,7 @@ class LEDMatrixController(metaclass=AliasMeta):
         bootloader_jump(self.device)
 
     def list_patterns(self):
-        print
+        print(', '.join(self.get_built_in_pattern_names()))
 
     @synchronized
     def set_brightness(self, brightness: Union[int, float], __from_setter=False) -> None:
