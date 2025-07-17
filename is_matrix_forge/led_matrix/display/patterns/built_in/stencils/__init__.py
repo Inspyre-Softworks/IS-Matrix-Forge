@@ -19,6 +19,8 @@ import serial
 
 from is_matrix_forge.led_matrix.constants import WIDTH, HEIGHT
 from is_matrix_forge.led_matrix.display.helpers.columns import send_col, commit_cols
+from is_matrix_forge.led_matrix.hardware import send_command
+from is_matrix_forge.led_matrix.hardware import CommandVals
 
 
 def all_brightnesses(dev):
@@ -41,30 +43,27 @@ def all_brightnesses(dev):
 
 
 def every_nth_row(dev, n):
-    with serial.Serial(dev.device, 115200) as s:
-        for x in range(0, WIDTH):
-            vals = [(0xFF if y % n == 0 else 0) for y in range(HEIGHT)]
+    for x in range(0, WIDTH):
+        vals = [(0xFF if y % n == 0 else 0) for y in range(HEIGHT)]
 
-            send_col(dev, s, x, vals)
-        commit_cols(dev, s)
+        send_command(dev, CommandVals.StageGreyCol, [x] + vals)
+    send_command(dev, CommandVals.DrawGreyColBuffer, [])
 
 
 def every_nth_col(dev, n):
-    with serial.Serial(dev.device, 115200) as s:
-        for x in range(0, WIDTH):
-            vals = [(0xFF if x % n == 0 else 0) for _ in range(HEIGHT)]
+    for x in range(0, WIDTH):
+        vals = [(0xFF if x % n == 0 else 0) for _ in range(HEIGHT)]
 
-            send_col(dev, s, x, vals)
-        commit_cols(dev, s)
+        send_command(dev, CommandVals.StageGreyCol, [x] + vals)
+    send_command(dev, CommandVals.DrawGreyColBuffer, [])
 
 
 def checkerboard(dev, n):
-    with serial.Serial(dev.device, 115200) as s:
-        for x in range(0, WIDTH):
-            vals = (([0xFF] * n) + ([0x00] * n)) * int(HEIGHT / 2)
-            if x % (n * 2) < n:
-                # Rotate once
-                vals = vals[n:] + vals[:n]
-
-            send_col(dev, s, x, vals)
-        commit_cols(dev, s)
+    for x in range(WIDTH):
+        vals = (([0xFF] * n) + ([0x00] * n)) * (HEIGHT // (2 * n))
+        if x % (2 * n) < n:
+            vals = vals[n:] + vals[:n]
+        # Build and send frame command via helper
+        send_command(dev, CommandVals.StageGreyCol, [x] + vals)
+    # After loop:
+    send_command(dev, CommandVals.DrawGreyColBuffer, [])

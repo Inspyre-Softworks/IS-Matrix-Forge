@@ -1,7 +1,7 @@
 import difflib
 from typing import Any
 
-from .stencils.res import PATTERN_MAP
+from is_matrix_forge.led_matrix.display.patterns.built_in.stencils.res import PATTERN_MAP
 
 
 class BuiltInPatterns:

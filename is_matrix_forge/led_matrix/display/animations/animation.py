@@ -415,7 +415,6 @@ class Animation:
             print('Received keyboard interrupt!')
             return
 
-
     def resume(self) -> None:
         """Resumes playback from paused state."""
         if not self.is_thread_safe:
