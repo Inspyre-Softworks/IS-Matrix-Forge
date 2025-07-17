@@ -51,7 +51,7 @@ def every_nth_row(dev, n):
 
 
 def every_nth_col(dev, n):
-    for x in range(0, WIDTH):
+    for x in range(WIDTH):
         vals = [(0xFF if x % n == 0 else 0) for _ in range(HEIGHT)]
 
         send_command(dev, CommandVals.StageGreyCol, [x] + vals)

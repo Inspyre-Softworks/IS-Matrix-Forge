@@ -256,10 +256,11 @@ class LEDMatrixController(Loggable, metaclass=AliasMeta):
             bool: True if the device is animating, False otherwise.
         """
         log = self.method_logger
-        try:
-            return bool(send_command(self.device, COMMANDS.Animate, with_response=True)[0])
-        except TypeError as e:
-            log.error('Received null response')
+        response = send_command(self.device, COMMANDS.Animate, with_response=True)
+        if not response or response[0] is None:
+            log.error('Received null or empty response')
+            return False
+        return bool(response[0])
 
 
     @property
