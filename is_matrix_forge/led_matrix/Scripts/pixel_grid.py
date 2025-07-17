@@ -15,6 +15,13 @@ Description:
 from is_matrix_forge.designer_gui.main_window import PixelGrid
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Entry point for the pixel grid designer GUI.
+    """
     PixelGrid().run()
+
+
+if __name__ == "__main__":
+    main()
 
