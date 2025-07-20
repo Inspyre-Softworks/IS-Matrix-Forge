@@ -114,3 +114,128 @@ from is_matrix_forge.led_matrix.hardware import (
     get_animate,
     percentage, send_command,
 )
+
+
+TINY_DIGITS = {
+    "0": [
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 0, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+    ],
+    "1": [
+        [0, 1, 0],
+        [1, 1, 0],
+        [0, 1, 0],
+        [0, 1, 0],
+        [1, 1, 1],
+    ],
+    "2": [
+        [1, 1, 1],
+        [0, 0, 1],
+        [1, 1, 1],
+        [1, 0, 0],
+        [1, 1, 1],
+    ],
+    "3": [
+        [1, 1, 1],
+        [0, 0, 1],
+        [1, 1, 1],
+        [0, 0, 1],
+        [1, 1, 1],
+    ],
+    "4": [
+        [1, 0, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 1],
+        [0, 0, 1],
+    ],
+    "5": [
+        [1, 1, 1],
+        [1, 0, 0],
+        [1, 1, 1],
+        [0, 0, 1],
+        [1, 1, 1],
+    ],
+    "6": [
+        [1, 1, 1],
+        [1, 0, 0],
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+    ],
+    "7": [
+        [1, 1, 1],
+        [0, 0, 1],
+        [0, 0, 1],
+        [0, 0, 1],
+        [0, 0, 1],
+    ],
+    "8": [
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+    ],
+    "9": [
+        [1, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 1],
+        [1, 1, 1],
+    ],
+}
+
+
+def percent(dev, value: int) -> None:
+    """Render a percentage fill with the numeric value.
+
+    The matrix fills from the bottom up based on ``value``. The numeric
+    percentage is rendered using a small 3x5 font in the top quarter. Any
+    portion of the digits that falls below the fill line is inverted.
+    """
+
+    from is_matrix_forge.led_matrix.constants import WIDTH, HEIGHT
+
+    if not isinstance(value, int):
+        raise TypeError("value must be int")
+    if not (0 <= value <= 100):
+        raise ValueError("value must be between 0 and 100")
+
+    # blank grid
+    grid = [[0 for _ in range(HEIGHT)] for _ in range(WIDTH)]
+
+    # fill portion from bottom up
+    fill_rows = int((value * HEIGHT) / 100)
+    for x in range(WIDTH):
+        for y in range(HEIGHT - fill_rows, HEIGHT):
+            grid[x][y] = 1
+
+    digits = str(value)
+    digit_w = 3
+    digit_h = 5
+    total_w = digit_w * len(digits)
+    start_x = max((WIDTH - total_w) // 2, 0)
+
+    for idx, ch in enumerate(digits):
+        pattern = TINY_DIGITS.get(ch)
+        if pattern is None:
+            continue
+        for dy in range(digit_h):
+            for dx in range(digit_w):
+                px = start_x + idx * digit_w + dx
+                py = dy
+                if px >= WIDTH or py >= HEIGHT:
+                    continue
+                if py >= HEIGHT - fill_rows:
+                    if pattern[dy][dx]:
+                        grid[px][py] = 0
+                else:
+                    if pattern[dy][dx]:
+                        grid[px][py] = 1
+
+    render_matrix(dev, grid)
+
