@@ -40,10 +40,8 @@ class RP2BootloaderMixin:
                     label = self._get_volume_label_win(part.device)
                     if label == self.BOOTLOADER_LABEL:
                         return part.mountpoint
-                else:
-                    # On Linux/Mac, label not always directly available, but can check mountpoint
-                    if self.BOOTLOADER_LABEL in part.mountpoint:
-                        return part.mountpoint
+                elif self.BOOTLOADER_LABEL in part.mountpoint:
+                    return part.mountpoint
             except Exception:
                 continue
         return None
