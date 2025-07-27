@@ -14,7 +14,7 @@ class UnsupportedOSError(CustomRootException):
 
 if platform.system() == 'Windows':
     from is_matrix_forge.led_matrix.helpers.device.bootloader.win import find_bootloader_drive
-elif platform.system() == 'Linux' or platform.system() == 'Darwin':
+elif platform.system() in ['Linux', 'Darwin']:
     from is_matrix_forge.led_matrix.helpers.device.bootloader.unix import find_bootloader_drive
 else:
     raise UnsupportedOSError()
