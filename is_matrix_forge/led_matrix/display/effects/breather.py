@@ -187,6 +187,8 @@ class Breather(Loggable):
 
         def next_brightness(curr, up):
             """Calculate next brightness value and direction."""
+
+            self.method_logger.debug("Getting next brightness value (up=%s)", up)
             if up:
                 self.method_logger.debug("Getting next brightness value (up=%s)", up)
                 next_val = curr + self._step
