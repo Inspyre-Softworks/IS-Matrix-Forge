@@ -29,9 +29,5 @@ def find_bootloader_drive(label: Optional[str] = None) -> Optional[str]:
         f'/media/{user}/{label}',
         f'/Volumes/{label}'
     ]
-    for mnt in possible_mounts:
-        if os.path.ismount(mnt):
-            return mnt
-
-    return None  # Failure
+    return next((mnt for mnt in possible_mounts if os.path.ismount(mnt)), None)
 
