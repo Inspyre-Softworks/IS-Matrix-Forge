@@ -37,7 +37,7 @@ class MenuBar:
 
     def build(self):
         if self.__layout is not None and self.menu_bar is not None:
-
-
+            return [self.menu_bar, [sg.VPush()], *self.__layout]
+        raise RuntimeError("Menu bar or layout is not defined.")
 
 
