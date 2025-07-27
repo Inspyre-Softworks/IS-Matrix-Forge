@@ -4,8 +4,7 @@ from inspyre_toolbox.syntactic_sweets.classes.decorators import validate_type
 
 
 def transpose(grid):
-    # grid is list of rows; we want list of columns
-    return [ [row[x] for row in grid] for x in range(len(grid[0])) ]
+    return [[row[x] for row in grid] for x in range(len(grid[0]))]
 
 
 def load_grid(grid_list):
@@ -13,6 +12,7 @@ def load_grid(grid_list):
         if isinstance(grid_list, Grid):
             return grid_list
         raise ValueError(f"grid_list must be a list of lists not {type(grid_list)}")
+
     try:
         return Grid(init_grid=grid_list)
     except ValueError as e:
@@ -20,8 +20,7 @@ def load_grid(grid_list):
         if msg.startswith('ValueError: init_grid must be'):
             print('caught a ValueError: init_grid must be a list of lists')
             return Grid(init_grid=transpose(grid_list))
-        else:
-            raise e from e
+        raise e from e
 
 
 class CompositeGrid(Grid):
@@ -80,14 +79,10 @@ class CompositeGrid(Grid):
 
         for y in range(base.height):
             for x in range(base.width):
-                fg_val = fg._grid[x][y]
-                bg_val = base._grid[x][y]
+                if (fg_val := fg._grid[x][y]):
+                    bg_val = base._grid[x][y]
+                    base._grid[x][y] = 0 if self.invert_on_overlap and bg_val else fg_val
 
-                if fg_val:
-                    if self.invert_on_overlap and bg_val:
-                        base._grid[x][y] = 0 if bg_val else 1  # invert bg pixel
-                    else:
-                        base._grid[x][y] = fg_val  # just set to fg pixel
         return base
 
     def draw(self, device) -> None:
