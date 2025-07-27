@@ -59,9 +59,4 @@ def synchronized(method=None, *, pause_breather=True):
         # fallback: call method directly
         return method(self, *args, **kwargs)
 
-    if method is None:
-        # Decorator was called with arguments: @synchronized(...)
-        return decorator
-    else:
-        # Decorator was called without arguments: @synchronized
-        return decorator(method)
+    return decorator if method is None else decorator(method)
