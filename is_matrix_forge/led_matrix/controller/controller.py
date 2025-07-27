@@ -281,7 +281,9 @@ class LEDMatrixController(metaclass=AliasMeta):
         Returns:
             bool: True if the device is animating, False otherwise.
         """
-        return bool(send_command(self.device, COMMANDS.Animate, with_response=True)[0])
+        # Guard against `None`, and empty lists
+        res = send_command(dev= self.device, command= COMMANDS.Animate, with_response= True)
+        return bool(res and res[0])
 
     @property
     def breather(self) -> Breather:
