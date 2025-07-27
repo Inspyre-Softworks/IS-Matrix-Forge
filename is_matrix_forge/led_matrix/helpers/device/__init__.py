@@ -4,6 +4,7 @@ Device helper functions for LED matrix hardware.
 This module provides utility functions for working with LED matrix devices,
 including functions to convert between different device location formats.
 """
+from __future__ import annotations
 from serial import Serial, SerialException
 from serial.tools import list_ports
 from is_matrix_forge.log_engine import ROOT_LOGGER
@@ -11,6 +12,33 @@ from is_matrix_forge.led_matrix.constants import VID as EXPECTED_VID, PID as EXP
 
 
 MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.helpers.device')
+
+
+def find_device_by_serial_number(serial_number: str) -> 'ListPortInfo':
+    """
+    Find and return the `ListPortInfo` for a device by its serial number.
+    
+    Parameters:
+        serial_number (str):
+            The serial number of the device to find.
+            
+    Returns:
+        ListPortInfo:
+            The `ListPortInfo` of the device with the given serial number.
+    """
+    log = MOD_LOGGER.get_child('find_device_by_serial_number')
+    log.debug(f'Finding device with serial number: {serial_number}...')
+
+    for port in list_ports.comports():
+        if port.serial_number == serial_number:
+
+            log.debug(f'Found device with serial number: {port.serial_number}.')
+
+            return port
+    return None
+
+
+
 
 
 def serial_loc_to_physical(dev):

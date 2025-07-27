@@ -5,10 +5,10 @@ Author:
     Inspyre Softworks
 
 Project:
-    led-matrix-battery
+    IS-Matrix-Forge
 
 File: 
-    is_matrix_forge/led_matrix/helpers/core/grid.py
+    is_matrix_forge/led_matrix/display/scene/__init__.py
  
 
 Description:

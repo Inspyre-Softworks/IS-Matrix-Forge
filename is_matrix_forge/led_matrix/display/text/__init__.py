@@ -6,7 +6,7 @@ This module provides functions for displaying text and symbols on the LED matrix
 It includes functions for rendering strings, fonts, and special symbols.
 """
 
-from is_matrix_forge.led_matrix import fonts as font
+from ..assets import fonts as font
 from ...hardware import send_command
 from ...commands.map import CommandVals
 

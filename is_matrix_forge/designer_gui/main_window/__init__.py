@@ -86,16 +86,44 @@ class PixelGrid:
 
     @current_frame.setter
     def current_frame(self, value: Any) -> None:
+        """
+        Setter indicating which frame index to display..
+
+        Note:
+            Must be an integer between 0 and len(frames) - 1.
+        """
         if not isinstance(value, int) or not (0 <= value < len(self.frames)):
             raise ValueError("current_frame must be an index into frames list")
         self.__current_frame = value
 
     @property
     def grid(self) -> List[List[int]]:
+        """
+        A column-major 0/1 list representing the pixel grid.
+        """
         return self.__grid
 
     @grid.setter
     def grid(self, value: Any) -> None:
+        """
+        Setter for the grid data.
+
+        Note:
+            A valid grid is structured as follows:
+              - Must be a list
+                - Containing 9 lists
+                  - Each list:
+                    - Must be the same length
+                    - Each item:
+                      - Integer
+                      - 0-1
+
+            Example:
+                Framework Laptop 9x34:
+                    - 9 lists
+                      - each with 34 items
+                        - 0-1
+        """
         if not is_valid_grid(value, self.width, self.height):
             raise ValueError("Grid must match width/height and be 0/1 values")
         self.__grid = value
@@ -105,6 +133,9 @@ class PixelGrid:
 
     @property
     def preferred_device(self):
+        """
+        The device we want to send the grid to.
+        """
         return self.__preferred_device
 
     @preferred_device.setter
@@ -128,6 +159,9 @@ class PixelGrid:
         )
 
     def run(self) -> None:
+        """
+        Run the UI.
+        """
         while True:
             event, _ = self.window.read()
             if event in (sg.WINDOW_CLOSED, 'Exit'):
@@ -152,6 +186,9 @@ class PixelGrid:
 
     # Frame management
     def add_frame(self) -> None:
+        """
+        Add a new frame to the grid.
+        """
         new_grid = copy.deepcopy(self.grid)
         frm = Frame(new_grid)
         self.frames = self.frames + [frm]
@@ -161,6 +198,11 @@ class PixelGrid:
         self._update_frame_indicator()
 
     def prev_frame(self) -> None:
+        """
+        Go back one frame.
+
+        Show the frame that's before the current one.
+        """
         if self.current_frame > 0:
             self.current_frame -= 1
             self._load_frame()
@@ -256,5 +298,9 @@ class PixelGrid:
         return is_valid_grid(grid, self.width, self.height)
 
 
-if __name__ == '__main__':
+def main():
     PixelGrid().run()
+
+
+if __name__ == '__main__':
+    main()

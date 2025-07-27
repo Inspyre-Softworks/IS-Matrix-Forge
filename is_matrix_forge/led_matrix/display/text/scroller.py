@@ -137,8 +137,6 @@ class TextScroller:
 
 
 def scroll_text_on_multiple_matrices(controllers, text, delay=0.1, skip_end_space=False, threaded=False):
-    import is_matrix_forge.led_matrix.fonts
-
     if threaded:
         from threading import Thread
         threads = []

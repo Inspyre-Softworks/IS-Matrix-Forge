@@ -25,12 +25,12 @@ from .helpers import is_valid_grid, generate_blank_grid
 from ...helpers import load_from_file as _helpers_load_from_file
 from is_matrix_forge.common.helpers import coerce_to_int
 
-MATRIX_HEIGHT = __HEIGHT
+MATRIX_HEIGHT = 34
 """int: Height of the LED matrix grid in pixels.
 This constant defines the default height for new Grid instances and for loading operations.
 """
 
-MATRIX_WIDTH = __WIDTH
+MATRIX_WIDTH = 9
 """int: Width of the LED matrix grid in pixels.
 This constant defines the default width for new Grid instances and for loading operations.
 """
@@ -38,8 +38,8 @@ This constant defines the default width for new Grid instances and for loading o
 
 def load_from_file(
     path: Union[str, Path],
-    expected_width: Optional[int] | None = None,
-    expected_height: Optional[int] | None = None,
+    expected_width: Optional[int] | None = MATRIX_WIDTH,
+    expected_height: Optional[int] | None = MATRIX_HEIGHT,
     fallback_duration: Optional[Union[int, float]] = None,
 ) -> Any:
     """Wrapper around :func:`is_matrix_forge.led_matrix.helpers.load_from_file`.
@@ -74,7 +74,12 @@ class Grid:
         Initialize a Grid. If `init_grid` is provided, it must be column-major
         with shape (width × height). Otherwise, create a blank grid.
         """
+        self._grid = []
         if init_grid is not None:
+            # Try to detect if row-major was given by mistake
+            if len(init_grid) == height and len(init_grid[0]) == width:
+                # row-major, convert to column-major
+                init_grid = [[row[x] for row in init_grid] for x in range(width)]
             if not is_valid_grid(init_grid, width, height):
                 raise ValueError(f"init_grid must be {width}×{height} column-major 0/1 list")
             self._grid = [col[:] for col in init_grid]
@@ -195,6 +200,17 @@ class Grid:
 
         return cls(width=width, height=height, init_grid=grid_data)
 
+    def copy(self) -> "Grid":
+        """
+        Return a new `Grid` object with a deep copy of the grid data and same parameters.
+        """
+        return Grid(
+            width=self.width,
+            height=self.height,
+            fill_value=self.fill_value,
+            init_grid=[col[:] for col in self.grid]
+        )
+
     def draw(self, device: Any) -> None:
         """Draw this grid via device.draw_grid(grid)."""
         if not hasattr(device, 'draw_grid') or not callable(device.draw_grid):
@@ -228,7 +244,7 @@ class Grid:
             if 0 <= dest_c < self._width and 0 <= dest_r < self._height:
                 new[dest_c][dest_r] = self._grid[c][r]
 
-        return Grid(width=self._width, height=self._height, fill_value=self._fill_value, init_grid=new)
+        return self.__class__(width=self._width, height=self._height, fill_value=self._fill_value, init_grid=new)
 
     def __getitem__(self, index: int) -> list[int]:
         """Allow column-major indexing: grid[col] → list of pixel values down that column."""
