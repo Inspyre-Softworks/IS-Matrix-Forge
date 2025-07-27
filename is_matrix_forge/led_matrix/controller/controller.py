@@ -44,10 +44,18 @@ class _BreatherPauseCtx:
         self._was_breathing = False
 
     def __enter__(self):
+        """
+        Pause the breathing animation. This context manager ensures that the
+        device is not breathing when the context is exited. **A sleep of .05
+        seconds is carried out to ensure the hardware settles before the
+        context is exited. This is to ensure that the device has time to
+        leave the breathing state and restore the previous state.**
+
+        """
         if getattr(self.controller, "breathing", False):
             self._was_breathing = True
             self.controller.breathing = False
-            sleep(0.05)  # Give hardware time to settle (tune as needed)
+            sleep(0.05)  # Required short delay to ensure hardware settles
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._was_breathing:
