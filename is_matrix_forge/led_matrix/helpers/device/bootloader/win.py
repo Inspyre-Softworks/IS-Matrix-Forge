@@ -14,8 +14,8 @@ def find_bootloader_drive(self, label: Optional[str] = None) -> Optional[str]:
         try:
             if part.opts and 'cdrom' in part.opts:
                 continue
-            label = get_volume_label(part.device)
-            if label == BOOTLOADER_LABEL:
+            vol_label = get_volume_label(part.device)
+            if vol_label == BOOTLOADER_LABEL:
                 return part.mountpoint
         except Exception:
             continue
