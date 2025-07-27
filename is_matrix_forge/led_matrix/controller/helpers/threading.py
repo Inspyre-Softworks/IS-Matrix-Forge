@@ -42,6 +42,11 @@ def synchronized(method=None, *, pause_breather=True):
                 else:
                     # fallback to legacy or alternate pause context
                     ctx = getattr(self, "breather_paused", None)
+                if ctx is None:
+                    raise RuntimeError(
+                        "Could not find a valid breather pause context. "
+                        "Neither 'breather.paused' nor 'breather_paused' are present on this object."
+                    )
 
             if ctx is not None:
                 with ctx():
