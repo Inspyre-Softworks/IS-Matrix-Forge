@@ -1,5 +1,6 @@
 import threading
 import time
+import contextlib
 from is_matrix_forge.common.decorators.freeze_setter import freeze_setter
 from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 
@@ -49,6 +50,7 @@ class Breather(Loggable):
         self._max_brightness = None
         self._step           = None
         self._fps            = None
+        self._pause_event = threading.Event()
 
         self.controller = controller
         log = self.class_logger
@@ -180,24 +182,37 @@ class Breather(Loggable):
 
     def _breath_loop(self):
         interval = 1.0 / self._fps
-        # start at current brightness, clamped
-        current = max(self._min_brightness,
-                      min(self.controller.brightness, self._max_brightness))
+        current = max(self._min_brightness, min(self.controller.brightness, self._max_brightness))
         going_up = True
 
-        while self._breathing:
-            if going_up:
-                current += self._step
-                if current >= self._max_brightness:
-                    current = self._max_brightness
-                    going_up = False
-            else:
-                current -= self._step
-                if current <= self._min_brightness:
-                    current = self._min_brightness
-                    going_up = True
+        def next_brightness(curr, up):
+            """Calculate next brightness value and direction."""
 
+            self.method_logger.debug("Getting next brightness value (up=%s)", up)
+            if up:
+                self.method_logger.debug("Getting next brightness value (up=%s)", up)
+                next_val = curr + self._step
+                if next_val >= self._max_brightness:
+                    return self._max_brightness, False
+                return next_val, True
+            else:
+                self.method_logger.debug("Getting next brightness value (up=%s)", up)
+                next_val = curr - self._step
+                if next_val <= self._min_brightness:
+                    return self._min_brightness, True
+                return next_val, False
+
+        while self._breathing:
+            # Handle pause
+            if self._pause_event.is_set():
+                self.method_logger.debug("Breathing paused, sleeping")
+                time.sleep(interval)
+                continue
+
+            # Update brightness
+            current, going_up = next_brightness(current, going_up)
             self.controller.brightness = current
+
             time.sleep(interval)
 
     def start(self):
@@ -205,10 +220,14 @@ class Breather(Loggable):
         Begin the breathing effect in a background daemon thread.
         No effect if already running.
         """
+        self.method_logger.debug('Starting breathing effect')
+
         if not self._breathing:
             self._breathing = True
             self._thread = threading.Thread(target=self._breath_loop, daemon=True)
             self._thread.start()
+
+        self.method_logger.debug('Breathing effect started')
 
     def stop(self):
         """
@@ -219,4 +238,6 @@ class Breather(Loggable):
             self._thread.join()
             self._thread = None
 
+        self.method_logger.debug('Breathing effect stopped')
+        self.method_logger.debug(f'Setting brightness to initial value {self.initial_brightness}.')
         self.controller.brightness = self.initial_brightness

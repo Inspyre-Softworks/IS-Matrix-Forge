@@ -3,6 +3,8 @@ import json
 import importlib.resources
 
 from is_matrix_forge.assets.font_map import FontMap
+from is_matrix_forge.assets.digit_map import DIGITS
+
 
 # Load the default font map shipped with the package using importlib.resources
 with importlib.resources.open_text("is_matrix_forge.assets", "char_map.json", encoding="utf-8") as f:
