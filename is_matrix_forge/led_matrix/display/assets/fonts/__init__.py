@@ -2,13 +2,14 @@ from typing import List
 import json
 import importlib.resources
 
-from is_matrix_forge.assets.font_map import FontMap
-from is_matrix_forge.assets.digit_map import DIGITS
+from .font_map import FontMap
+from is_matrix_forge.led_matrix.display.assets.fonts.digit_map import DIGITS
 
 
 # Load the default font map shipped with the package using importlib.resources
 with importlib.resources.open_text("is_matrix_forge.assets", "char_map.json", encoding="utf-8") as f:
     _FONT_DATA = json.load(f)
+
 FONT_MAP = FontMap(font_map=_FONT_DATA)
 
 

@@ -9,6 +9,7 @@ It includes functions for rendering strings, fonts, and special symbols.
 from ..assets import fonts as font
 from ...hardware import send_command
 from ...commands.map import CommandVals
+from ..assets.fonts import FONT_MAP
 
 
 def show_string(dev, s):
@@ -63,4 +64,12 @@ def show_symbols(dev, symbols):
         font_items.append(s)
 
     show_font(dev, font_items)
+
+
+__all__ = [
+    'show_font',
+    'show_string',
+    'show_symbols',
+    'FONT_MAP'
+]
 

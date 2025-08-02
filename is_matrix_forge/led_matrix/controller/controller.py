@@ -33,7 +33,7 @@ from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.hardware import send_command
 from is_matrix_forge.led_matrix.display.effects.breather import Breather
-from is_matrix_forge.led_matrix.display.text import show_string
+from is_matrix_forge.led_matrix.display.text import show_string, FONT_MAP
 
 COMMANDS = CommandVals
 

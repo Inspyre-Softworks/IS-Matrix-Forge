@@ -3,6 +3,7 @@ import time
 import contextlib
 from is_matrix_forge.common.decorators.freeze_setter import freeze_setter
 from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
+from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 
 
 MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
@@ -113,6 +114,14 @@ class Breather(Loggable):
         return self.__initial_brightness
 
     @property
+    def is_paused(self):
+        """
+        Whether the breathing effect is currently paused.
+        """
+        return self._pause_event.is_set()
+
+
+    @property
     def min_brightness(self) -> int:
         """
         The minimum LED brightness in the cycle.
@@ -147,6 +156,31 @@ class Breather(Loggable):
             raise ValueError('"max_brightness" must be >= min_brightness')
 
         self._max_brightness = new
+
+    @property
+    def paused(self):
+        """
+        Context manager: pauses breathing while inside, resumes after.
+        Usage:
+            with breather.paused():
+                ...
+        """
+
+        @contextlib.contextmanager
+        def _pause_ctx():
+            already_paused = self._pause_event.is_set()
+            self.method_logger.debug("Pausing breather (already_paused=%s)", already_paused)
+            self._pause_event.set()
+            try:
+                yield
+            finally:
+                if not already_paused:
+                    self.method_logger.debug("Resuming breather after pause context")
+                    self._pause_event.clear()
+                else:
+                    self.method_logger.debug("Leaving breather paused after context")
+
+        return _pause_ctx
 
     @property
     def step(self) -> int:
