@@ -59,9 +59,37 @@ class DummyController:
         return self.breather.pause_count
 
 
+class DummyControllerWithCtx(DummyController):
+    def __init__(self):
+        super().__init__()
+        self.ctrl_pause_count = 0
+
+    def breather_paused(self):
+        @contextlib.contextmanager
+        def _ctx():
+            self.ctrl_pause_count += 1
+            try:
+                yield
+            finally:
+                self.ctrl_pause_count -= 1
+        return _ctx()
+
+    @synchronized
+    def check_both_pauses(self):
+        return self.ctrl_pause_count, self.breather.pause_count
+
+
 def test_synchronized_pauses_breather():
     ctrl = DummyController()
     assert ctrl.breather.pause_count == 0
     inside_count = ctrl.check_pause()
     assert inside_count == 1
     assert ctrl.breather.pause_count == 0
+
+
+def test_controller_breather_paused_preferred():
+    ctrl = DummyControllerWithCtx()
+    assert (ctrl.ctrl_pause_count, ctrl.breather.pause_count) == (0, 0)
+    inside_counts = ctrl.check_both_pauses()
+    assert inside_counts == (1, 0)
+    assert (ctrl.ctrl_pause_count, ctrl.breather.pause_count) == (0, 0)

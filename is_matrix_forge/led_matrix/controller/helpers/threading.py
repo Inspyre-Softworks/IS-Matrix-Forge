@@ -10,9 +10,12 @@ def get_breather_context(self, pause_breather):
     Retrieve the breather pause context for the given object.
 
     This function checks if the breather should be paused and returns the appropriate
-    context manager. If `pause_breather` is False, it returns None. Otherwise, it
-    attempts to retrieve the `paused` context from the `breather` attribute, if available.
-    If not, it falls back to the `breather_paused` attribute.
+    context manager. If `pause_breather` is False, it returns ``None``.  When a
+    pause is requested we first look for a dedicated ``breather_paused``
+    attribute on the object (some controllers expose a custom context manager
+    that fully stops the breathing thread).  If that is not available, we
+    fall back to the ``breather.paused`` context provided by the ``Breather``
+    helper itself.
 
     Parameters:
         self:
@@ -27,15 +30,27 @@ def get_breather_context(self, pause_breather):
     """
     if not pause_breather:
         return None
+
+    # Prefer an explicit "breather_paused" context on the object itself.  Some
+    # controllers implement a private ``__breather_paused`` method; we attempt
+    # to resolve that name‑mangled attribute as well.
+    possible_names = (
+        "breather_paused",
+        "_breather_paused",
+        f"_{type(self).__name__}__breather_paused",
+    )
+    for name in possible_names:
+        breather_paused = getattr(self, name, None)
+        if breather_paused is not None:
+            return breather_paused() if callable(breather_paused) else breather_paused
+
+    # Fall back to the breather's own pause context.
     breather = getattr(self, "breather", None)
     if breather and hasattr(breather, "paused"):
         pause_ctx = breather.paused
         return pause_ctx() if callable(pause_ctx) else pause_ctx
 
-    breather_paused = getattr(self, "breather_paused", None)
-    if callable(breather_paused):
-        return breather_paused()
-    return breather_paused
+    return None
 
 
 def should_warn_thread_misuse(self_obj):
