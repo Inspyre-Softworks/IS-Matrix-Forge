@@ -29,9 +29,13 @@ def get_breather_context(self, pause_breather):
         return None
     breather = getattr(self, "breather", None)
     if breather and hasattr(breather, "paused"):
-        return breather.paused
+        pause_ctx = breather.paused
+        return pause_ctx() if callable(pause_ctx) else pause_ctx
 
-    return getattr(self, "breather_paused", None)
+    breather_paused = getattr(self, "breather_paused", None)
+    if callable(breather_paused):
+        return breather_paused()
+    return breather_paused
 
 
 def should_warn_thread_misuse(self_obj):
@@ -94,7 +98,7 @@ def run_with_contexts(ctx, lock, func):
             The return value of the called function.
     """
     if ctx is not None:
-        with ctx():
+        with ctx:
             if lock:
                 with lock:
                     return func()
