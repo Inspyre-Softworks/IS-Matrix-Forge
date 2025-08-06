@@ -76,10 +76,13 @@ class Grid:
         """
         self._grid = []
         if init_grid is not None:
-            # Try to detect if row-major was given by mistake
+            # Try to detect if row-major was given by mistake. Only transpose
+            # when the data does *not* already validate as column-major. This
+            # avoids corrupting square grids that are already in the correct
+            # orientation.
             if len(init_grid) == height and len(init_grid[0]) == width:
-                # row-major, convert to column-major
-                init_grid = [[row[x] for row in init_grid] for x in range(width)]
+                if not is_valid_grid(init_grid, width, height):
+                    init_grid = [[row[x] for row in init_grid] for x in range(width)]
             if not is_valid_grid(init_grid, width, height):
                 raise ValueError(f"init_grid must be {width}×{height} column-major 0/1 list")
             self._grid = [col[:] for col in init_grid]

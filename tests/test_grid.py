@@ -248,7 +248,7 @@ def test_draw_draw_grid_not_callable():
     "x,y,expected",
     [
         (0, 0, 1),
-        (1, 1, 0),
+        (1, 1, 1),
     ],
     ids=["top_left", "bottom_right"]
 )
@@ -286,9 +286,9 @@ def test_get_pixel_value_out_of_bounds(x, y):
         # No shift
         ([[1, 0], [0, 1]], 0, 0, False, [[1, 0], [0, 1]]),
         # Shift right by 1, no wrap
-        ([[1, 0], [0, 1]], 1, 0, False, [[0, 0], [1, 1]]),
+        ([[1, 0], [0, 1]], 1, 0, False, [[0, 0], [1, 0]]),
         # Shift down by 1, no wrap
-        ([[1, 0], [0, 1]], 0, 1, False, [[0, 0], [1, 0]]),
+        ([[1, 0], [0, 1]], 0, 1, False, [[0, 1], [0, 0]]),
         # Shift left by 1, wrap
         ([[1, 0], [0, 1]], -1, 0, True, [[0, 1], [1, 0]]),
         # Shift up by 1, wrap

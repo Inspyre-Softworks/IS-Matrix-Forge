@@ -1,11 +1,14 @@
-"""Real-time audio visualizer for the LED matrix.
+"""Audio visualizer animation for LED matrix controllers.
 
-This module provides a small utility that streams audio data and renders simple
-bar style visualizations on one or more LED matrix controllers.  By default it
-uses the system microphone for input, however an audio file may also be used as
-the source allowing "regular" audio to be visualized.  ``sounddevice`` and
-``soundfile`` are optional dependencies and the visualiser gracefully degrades
-if they are unavailable.
+This module exposes :class:`AudioVisualizerAnimation`, an ``Animation``
+subclass that streams audio data and renders a simple bar style
+visualization on one or more LED matrix controllers.  The class can be
+handed directly to :meth:`LEDMatrixController.play_animation` to start the
+visualizer.
+
+Both ``sounddevice`` and ``soundfile`` are optional dependencies.  If they
+are unavailable the animation will raise a ``RuntimeError`` when ``play`` is
+called.
 """
 
 from __future__ import annotations
@@ -26,28 +29,31 @@ try:  # ``soundfile`` is also optional
 except Exception:  # pragma: no cover - optional dependency missing
     sf = None  # type: ignore
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.display.animations.animation import Animation
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
+from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
 
-class AudioVisualizer:
+class AudioVisualizerAnimation(Animation):
     """Stream audio data and render a simple bar visualisation."""
 
     def __init__(
         self,
-        controllers: Iterable[LEDMatrixController],
+        controllers: Iterable[LEDMatrixController] | None = None,
         sample_rate: int = 44_100,
         chunk_size: int = 1_024,
         audio_source: Union[str, Path, None] = None,
         loop_file: bool = True,
     ) -> None:
-        self.controllers: List[LEDMatrixController] = list(controllers)
+        super().__init__(frame_data=[], loop=True)
+        self.controllers: List[LEDMatrixController] = list(controllers or [])
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
         self._stream: Optional[sd.InputStream] = None  # type: ignore[var-annotated]
         self._thread: Optional[threading.Thread] = None
-        self._running = False
-        self._audio_source: Optional[Path] = Path(audio_source) if audio_source else None
+        self._audio_source: Optional[Path] = (
+            Path(audio_source) if audio_source else None
+        )
         self._loop_file = loop_file
 
     # ------------------------------------------------------------------ utils --
@@ -67,16 +73,16 @@ class AudioVisualizer:
             ctrl.draw_grid(frame.grid)
 
     def _audio_callback(self, indata, frames, time, status) -> None:  # pragma: no cover - real time
-        if not self._running:
+        if not self.is_playing:
             return
         self._process_chunk(indata[:, 0])
 
     def _file_loop(self) -> None:  # pragma: no cover - requires soundfile
         assert sf is not None and self._audio_source is not None
-        while self._running:
+        while self.is_playing:
             with sf.SoundFile(self._audio_source) as f:
-                while self._running:
-                    data = f.read(self.chunk_size, dtype='float32')
+                while self.is_playing:
+                    data = f.read(self.chunk_size, dtype="float32")
                     if len(data) == 0:
                         break
                     self._process_chunk(data)
@@ -84,14 +90,21 @@ class AudioVisualizer:
                 break
 
     # ------------------------------------------------------------------- API --
-    def start(self) -> None:
+    def play(
+        self,
+        devices: Optional[List[LEDMatrixController]] = None,
+        skip_clear_screen: bool = False,
+    ) -> None:
         if sd is None:  # pragma: no cover - environment without sounddevice
-            raise RuntimeError("sounddevice is required for AudioVisualizer")
+            raise RuntimeError(
+                "sounddevice is required for AudioVisualizerAnimation"
+            )
 
-        if self._running:
+        if self.is_playing:
             return
 
-        self._running = True
+        self.controllers = list(devices or self.controllers)
+        self.is_playing = True
         if self._audio_source is not None:
             if sf is None:
                 raise RuntimeError("soundfile is required for file playback")
@@ -107,10 +120,10 @@ class AudioVisualizer:
             self._stream.start()
 
     def stop(self) -> None:
-        if not self._running:
+        if not self.is_playing:
             return
 
-        self._running = False
+        self.is_playing = False
         if self._stream is not None:
             self._stream.stop()
             self._stream.close()
@@ -120,5 +133,8 @@ class AudioVisualizer:
             self._thread = None
 
 
-__all__ = ["AudioVisualizer"]
+# Backwards compatibility alias
+AudioVisualizer = AudioVisualizerAnimation
+
+__all__ = ["AudioVisualizerAnimation", "AudioVisualizer"]
 
