@@ -1,17 +1,35 @@
-from inspy_logger import InspyLogger, Loggable
-from inspy_logger.constants import LEVEL_MAP
+try:  # pragma: no cover - fallback when inspy_logger is unavailable
+    from inspy_logger import InspyLogger, Loggable
+    from inspy_logger.constants import LEVEL_MAP
 
+    LOG_LEVELS = [level for level in LEVEL_MAP.keys()]
+    del LEVEL_MAP
 
-LOG_LEVELS = [level for level in LEVEL_MAP.keys()]
+    PROGNAME = 'LEDMatrixBattery'
+    AUTHOR = 'Inspyre-Softworks'
 
-del LEVEL_MAP
+    INSPY_LOG_LEVEL = 'INFO'
+    ROOT_LOGGER = InspyLogger(PROGNAME, console_level='info', no_file_logging=True)
+except ModuleNotFoundError:  # pragma: no cover - simplified logging
+    import logging
 
-PROGNAME = 'LEDMatrixBattery'
-AUTHOR = 'Inspyre-Softworks'
+    class Loggable:  # minimal stub
+        def __init__(self, logger=None):
+            self.class_logger = logger or logging.getLogger(__name__)
+            self.method_logger = self.class_logger
 
-INSPY_LOG_LEVEL = 'INFO'
+    LOG_LEVELS = list(logging._nameToLevel.keys())
+    PROGNAME = 'LEDMatrixBattery'
+    AUTHOR = 'Inspyre-Softworks'
+    INSPY_LOG_LEVEL = 'INFO'
+    class _Logger(logging.Logger):
+        def get_child(self, name):
+            return self.getChild(name)
 
-ROOT_LOGGER = InspyLogger(PROGNAME, console_level='info', no_file_logging=True)
+    logging.setLoggerClass(_Logger)
+    ROOT_LOGGER = logging.getLogger(PROGNAME)
+    ROOT_LOGGER.setLevel(logging.INFO)
+
 
 
 __all__ = [

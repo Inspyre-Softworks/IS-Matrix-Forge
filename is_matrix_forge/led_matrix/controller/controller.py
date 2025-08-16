@@ -21,8 +21,19 @@ import threading
 from time import sleep
 from typing import Optional, Dict, Any, Union, List
 
-from inspyre_toolbox.syntactic_sweets.classes import validate_type
-from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import method_alias
+try:
+    from inspyre_toolbox.syntactic_sweets.classes import validate_type
+    from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import method_alias
+except ModuleNotFoundError:  # pragma: no cover - fallbacks when dependency missing
+    def validate_type(_type):  # type: ignore[unused-argument]
+        def decorator(func):
+            return func
+        return decorator
+
+    def method_alias(*aliases):  # type: ignore[unused-argument]
+        def decorator(func):
+            return func
+        return decorator
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.common.helpers import coerce_to_int
@@ -177,7 +188,7 @@ class LEDMatrixController(metaclass=AliasMeta):
             skip_greeting=skip_greeting or skip_all_init_animations
         )
 
-    def __breather_paused(self):
+    def breather_paused(self):
         return _BreatherPauseCtx(self)
 
     def __greet(self):
