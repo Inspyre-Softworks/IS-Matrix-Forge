@@ -64,6 +64,16 @@ class _BreatherPauseCtx:
 
         """
         if getattr(self.controller, "breathing", False):
+            # If we're already in the breather's own thread, do nothing to
+            # avoid stopping and joining the thread from within itself.
+            breather_thread = getattr(
+                getattr(self.controller, "breather", None),
+                "_thread",
+                None,
+            )
+            if breather_thread is threading.current_thread():
+                return
+
             self._was_breathing = True
             self.controller.breathing = False
             sleep(0.05)  # Required short delay to ensure hardware settles
