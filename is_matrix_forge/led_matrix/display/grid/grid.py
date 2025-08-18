@@ -76,17 +76,55 @@ class Grid:
         """
         self._grid = []
         if init_grid is not None:
-            # Try to detect if row-major was given by mistake
-            if len(init_grid) == height and len(init_grid[0]) == width:
-                # row-major, convert to column-major
-                init_grid = [[row[x] for row in init_grid] for x in range(width)]
+            # Accept a flat list (row-major) or a list of lists. If the user
+            # provides a flattened 5×6 glyph (as returned by
+            # ``convert_symbol``/``convert_font``), attempt to infer the
+            # dimensions and convert it to the column‑major format used by the
+            # Grid class.
+            if (
+                isinstance(init_grid, list)
+                and init_grid
+                and all(isinstance(v, int) for v in init_grid)
+                and not any(isinstance(v, list) for v in init_grid)
+            ):
+                flat = list(init_grid)
+                # If the caller didn't specify dimensions (i.e. left the
+                # defaults of 9×34) assume a 5×6 font glyph which is the
+                # primary flat list used throughout the project.
+                if width == MATRIX_WIDTH and height == MATRIX_HEIGHT:
+                    width = 5
+                    height = len(flat) // width
+                if len(flat) != width * height:
+                    raise ValueError(
+                        f"Flat init_grid length {len(flat)} does not match {width}×{height}"
+                    )
+                # Convert from row-major 1D list to column-major list of
+                # lists.
+                init_grid = [
+                    [flat[r * width + c] for r in range(height)] for c in range(width)
+                ]
+            else:
+                # Try to detect if row-major 2D was given by mistake. First
+                # check if the provided grid is already valid column-major. If
+                # not, attempt a transpose and validate again.
+                if isinstance(init_grid, list) and init_grid and isinstance(init_grid[0], list):
+                    if not is_valid_grid(init_grid, width, height) and len(init_grid) == height and len(init_grid[0]) == width:
+                        transposed = [[row[x] for row in init_grid] for x in range(width)]
+                        if is_valid_grid(transposed, width, height):
+                            init_grid = transposed
+                    
+
             if not is_valid_grid(init_grid, width, height):
-                raise ValueError(f"init_grid must be {width}×{height} column-major 0/1 list")
+                raise ValueError(
+                    f"init_grid must be {width}×{height} column-major 0/1 list"
+                )
             self._grid = [col[:] for col in init_grid]
         else:
             if fill_value not in (0, 1):
                 raise ValueError("fill_value must be 0 or 1")
-            self._grid = generate_blank_grid(width=width, height=height, fill_value=fill_value)
+            self._grid = generate_blank_grid(
+                width=width, height=height, fill_value=fill_value
+            )
 
         self._width = width
         self._height = height
