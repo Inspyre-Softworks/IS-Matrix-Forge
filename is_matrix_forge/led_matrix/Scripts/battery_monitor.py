@@ -26,6 +26,7 @@ from is_matrix_forge.monitor import run_power_monitor
 from is_matrix_forge.led_matrix.helpers.device import get_devices
 from is_matrix_forge.notify.sounds import Sound
 from is_matrix_forge.led_matrix.led_matrix import LEDMatrix
+from is_matrix_forge.led_matrix import initialize as init_led_matrix
 
 
 def parse_arguments():
@@ -87,6 +88,9 @@ def main():
     """
     # Parse command-line arguments
     args = parse_arguments()
+
+    # Run any LED matrix package initialization (e.g., first-run welcome)
+    init_led_matrix()
     
     # Get available LED matrix devices
     devices = get_devices()
