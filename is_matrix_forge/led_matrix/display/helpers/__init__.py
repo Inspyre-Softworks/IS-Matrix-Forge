@@ -78,11 +78,18 @@ def light_leds(dev, leds):
 
 
 def render_matrix(dev, matrix):
-    """Show a black/white matrix
-    Send everything in a single command"""
+    """Show a black/white matrix.
+
+    Accepts matrices smaller than 9×34 and treats out-of-bounds pixels as
+    "off" so that callers can render compact glyphs without padding.
+    """
     # Initialize a byte array to hold the binary representation of the matrix
     # 39 bytes = 312 bits, which is enough for 9x34 = 306 pixels
     vals = [0x00 for _ in range(39)]
+
+    # Determine provided matrix dimensions (column-major)
+    width = len(matrix)
+    height = len(matrix[0]) if width and isinstance(matrix[0], list) else 0
 
     # Iterate through each position in the 9x34 matrix
     for x in range(9):
@@ -91,8 +98,8 @@ def render_matrix(dev, matrix):
             # The matrix is stored in column-major order (y changes faster than x)
             i = x + 9 * y
 
-            # If the pixel at this position is "on" (non-zero)
-            if matrix[x][y]:
+            # Only read from matrix if within bounds and the pixel is on
+            if x < width and y < height and matrix[x][y]:
                 # Calculate which byte in the vals array this pixel belongs to
                 byte_index = int(i / 8)
 
