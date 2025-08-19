@@ -107,11 +107,11 @@ class Grid:
                 # Try to detect if row-major 2D was given by mistake. First
                 # check if the provided grid is already valid column-major. If
                 # not, attempt a transpose and validate again.
-                if isinstance(init_grid, list) and init_grid and isinstance(init_grid[0], list):
-                    if not is_valid_grid(init_grid, width, height) and len(init_grid) == height and len(init_grid[0]) == width:
-                        transposed = [[row[x] for row in init_grid] for x in range(width)]
-                        if is_valid_grid(transposed, width, height):
-                            init_grid = transposed
+                if isinstance(init_grid, list) and init_grid and isinstance(init_grid[0], list) and (not is_valid_grid(init_grid, width, height) and len(init_grid) == height and len(init_grid[0]) == width):
+                    transposed = [[row[x] for row in init_grid] for x in range(width)]
+                    if is_valid_grid(transposed, width, height):
+                        init_grid = transposed
+
                     
 
             if not is_valid_grid(init_grid, width, height):
