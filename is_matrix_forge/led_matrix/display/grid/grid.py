@@ -168,7 +168,8 @@ class Grid:
                 return dst_len - src_len
             if axis == 'center':
                 return (dst_len - src_len) // 2
-            raise ValueError(f'Invalid alignment: {axis}')
+            valid_options = ['left', 'right', 'center', 'top', 'bottom']
+            raise ValueError(f"Invalid alignment: '{axis}'. Valid options are: {', '.join(valid_options)}.")
 
         ox = _off(align_x, src_w, dst_w)
         oy = _off(align_y, src_h, dst_h)
