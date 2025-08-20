@@ -24,6 +24,8 @@ from ...constants import WIDTH as __WIDTH, HEIGHT as __HEIGHT, PRESETS_DIR
 from .helpers import is_valid_grid, generate_blank_grid
 from ...helpers import load_from_file as _helpers_load_from_file
 from is_matrix_forge.common.helpers import coerce_to_int
+from aliaser import alias, Aliases
+
 
 MATRIX_HEIGHT = 34
 """int: Height of the LED matrix grid in pixels.
@@ -57,10 +59,26 @@ def load_from_file(
 class Grid:
     """
     Represents a 2D column-major grid for the LED display (grid[x][y], 9×34).
-    Provides methods for grid creation, manipulation, and loading from files.
 
-    The Grid class allows for the management of pixel data in a column-major format,
-    supporting operations such as shifting, drawing, and loading from specifications or files.
+    Parameters
+    ----------
+    width : int
+        Target canvas width (columns).
+    height : int
+        Target canvas height (rows).
+    fill_value : int
+        Default pixel value for blank/padded areas (0 or 1).
+    init_grid : List[List[int]] | List[int] | None
+        Optional initial data. Accepts:
+          - column-major 2D list (preferred),
+          - row-major 2D list (auto-transposed if shape matches),
+          - flat row-major 1D list (e.g., 5×6 glyph).
+    align_x : str
+        Horizontal placement when `init_grid` is smaller than the canvas.
+        One of {'left', 'center', 'right'}. Default: 'center'.
+    align_y : str
+        Vertical placement when `init_grid` is smaller than the canvas.
+        One of {'top', 'center', 'bottom'}. Default: 'center'.
     """
 
     def __init__(
@@ -68,29 +86,152 @@ class Grid:
         width: int = MATRIX_WIDTH,
         height: int = MATRIX_HEIGHT,
         fill_value: int = 0,
-        init_grid: List[List[int]] = None
+        init_grid: List[List[int]] | List[int] | None = None,
+        align_x: str = 'center',
+        align_y: str = 'center',
     ) -> None:
-        """
-        Initialize a Grid. If `init_grid` is provided, it must be column-major
-        with shape (width × height). Otherwise, create a blank grid.
-        """
-        self._grid = []
-        if init_grid is not None:
-            # Try to detect if row-major was given by mistake
-            if len(init_grid) == height and len(init_grid[0]) == width:
-                # row-major, convert to column-major
-                init_grid = [[row[x] for row in init_grid] for x in range(width)]
-            if not is_valid_grid(init_grid, width, height):
-                raise ValueError(f"init_grid must be {width}×{height} column-major 0/1 list")
-            self._grid = [col[:] for col in init_grid]
-        else:
-            if fill_value not in (0, 1):
-                raise ValueError("fill_value must be 0 or 1")
-            self._grid = generate_blank_grid(width=width, height=height, fill_value=fill_value)
+        if fill_value not in (0, 1):
+            raise ValueError('fill_value must be 0 or 1')
 
         self._width = width
         self._height = height
         self._fill_value = fill_value
+
+        # Start with a clean canvas
+        canvas = generate_blank_grid(width=width, height=height, fill_value=fill_value)
+
+        if init_grid is None:
+            self._grid = canvas
+            return
+
+        # Normalize init_grid to column-major 2D with its *own* intrinsic w×h
+        src = self._normalize_to_col_major(init_grid, width, height)
+
+        src_w = len(src)
+        src_h = len(src[0]) if src else 0
+
+        if src_w == width and src_h == height:
+            # Perfect fit: use as-is (defensive copy)
+            if not is_valid_grid(src, width, height):
+                raise ValueError(f'init_grid must be {width}×{height} column-major 0/1 list')
+            self._grid = [col[:] for col in src]
+            return
+
+        # Smaller-than-canvas → center (or place per align_x/align_y)
+        if src_w <= width and src_h <= height:
+            placed = self._place_into_canvas(
+                src=src,
+                dst_w=width,
+                dst_h=height,
+                pad_value=fill_value,
+                align_x=align_x,
+                align_y=align_y,
+            )
+            if not is_valid_grid(placed, width, height):
+                raise ValueError(f'Final grid must be {width}×{height} column-major 0/1 list')
+            self._grid = placed
+            return
+
+        # Bigger-than-canvas → loud, fast failure (no silent cropping)
+        raise ValueError(
+            f'init_grid size {src_w}×{src_h} exceeds canvas {width}×{height}. '
+            'Resize or supply a proper target width/height.'
+        )
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _place_into_canvas(
+        src: List[List[int]],
+        dst_w: int,
+        dst_h: int,
+        pad_value: int,
+        align_x: str = 'center',
+        align_y: str = 'center',
+    ) -> List[List[int]]:
+        """
+        Return a new column-major grid of shape (dst_w×dst_h) with `src` placed
+        according to alignment. No cropping; raises if `src` is larger.
+        """
+        src_w = len(src)
+        src_h = len(src[0]) if src else 0
+
+        if src_w > dst_w or src_h > dst_h:
+            raise ValueError('Source grid larger than destination canvas.')
+
+        def _off(axis: str, src_len: int, dst_len: int) -> int:
+            if axis == 'left' or axis == 'top':
+                return 0
+            if axis == 'right' or axis == 'bottom':
+                return dst_len - src_len
+            if axis == 'center':
+                return (dst_len - src_len) // 2
+            raise ValueError(f'Invalid alignment: {axis}')
+
+        ox = _off(align_x, src_w, dst_w)
+        oy = _off(align_y, src_h, dst_h)
+
+        out = generate_blank_grid(width=dst_w, height=dst_h, fill_value=pad_value)
+        # Copy pixels
+        for x in range(src_w):
+            for y in range(src_h):
+                out[x + ox][y + oy] = src[x][y]
+        return out
+
+    @staticmethod
+    def _transpose(matrix: List[List[int]]) -> List[List[int]]:
+        return [[row[x] for row in matrix] for x in range(len(matrix[0]))]
+
+    def _normalize_to_col_major(
+        self,
+        init_grid: List[List[int]] | List[int],
+        default_w: int,
+        default_h: int,
+    ) -> List[List[int]]:
+        """
+        Accepts:
+          - flat row-major 1D (common for 5×6 glyphs),
+          - row-major 2D,
+          - column-major 2D,
+        and returns a column-major 2D grid with its *intrinsic* dimensions.
+        """
+        # Flat row-major 1D → infer width/height and convert
+        if (
+            isinstance(init_grid, list)
+            and init_grid
+            and all(isinstance(v, int) for v in init_grid)
+            and not any(isinstance(v, list) for v in init_grid)
+        ):
+            flat = list(init_grid)
+            # If caller used matrix defaults, assume common 5×6 glyph
+            w = 5 if (default_w == MATRIX_WIDTH and default_h == MATRIX_HEIGHT) else default_w
+            if len(flat) % w != 0:
+                raise ValueError(f'Flat init_grid length {len(flat)} not divisible by width {w}')
+            h = len(flat) // w
+            # row-major → column-major
+            return [[flat[r * w + c] for r in range(h)] for c in range(w)]
+
+        # 2D list provided
+        if isinstance(init_grid, list) and init_grid and isinstance(init_grid[0], list):
+            cand = init_grid
+
+            # If already valid column-major, accept
+            w = len(cand)
+            h = len(cand[0]) if cand else 0
+            if is_valid_grid(cand, w, h):
+                return [col[:] for col in cand]
+
+            # Maybe row-major by mistake; try transpose
+            if len(cand) and len(cand[0]):
+                maybe_col = self._transpose(cand)
+                w2 = len(maybe_col)
+                h2 = len(maybe_col[0]) if maybe_col else 0
+                if is_valid_grid(maybe_col, w2, h2):
+                    return maybe_col
+
+        raise ValueError('Unsupported init_grid structure; expected 1D flat or 2D list.')
 
     @property
     def grid(self) -> List[List[int]]:

@@ -43,6 +43,23 @@ def test_grid_init_happy(width, height, fill_value, init_grid, expected_grid):
     assert grid.fill_value == fill_value
     assert grid.grid == expected_grid
 
+
+def test_grid_init_from_flat_glyph():
+    """Grid should accept a flat 5×6 glyph list and infer dimensions."""
+    glyph = [
+        0, 0, 0, 0, 0,
+        1, 1, 0, 1, 1,
+        1, 1, 1, 1, 1,
+        0, 1, 1, 1, 0,
+        0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0,
+    ]
+    grid = Grid(init_grid=glyph)
+    assert grid.width == 5
+    assert grid.height == 6
+    expected = [[glyph[r * 5 + c] for r in range(6)] for c in range(5)]
+    assert grid.grid == expected
+
 @pytest.mark.parametrize(
     "fill_value",
     [
@@ -248,7 +265,7 @@ def test_draw_draw_grid_not_callable():
     "x,y,expected",
     [
         (0, 0, 1),
-        (1, 1, 0),
+        (1, 1, 1),
     ],
     ids=["top_left", "bottom_right"]
 )
@@ -286,9 +303,9 @@ def test_get_pixel_value_out_of_bounds(x, y):
         # No shift
         ([[1, 0], [0, 1]], 0, 0, False, [[1, 0], [0, 1]]),
         # Shift right by 1, no wrap
-        ([[1, 0], [0, 1]], 1, 0, False, [[0, 0], [1, 1]]),
+        ([[1, 0], [0, 1]], 1, 0, False, [[0, 0], [1, 0]]),
         # Shift down by 1, no wrap
-        ([[1, 0], [0, 1]], 0, 1, False, [[0, 0], [1, 0]]),
+        ([[1, 0], [0, 1]], 0, 1, False, [[0, 1], [0, 0]]),
         # Shift left by 1, wrap
         ([[1, 0], [0, 1]], -1, 0, True, [[0, 1], [1, 0]]),
         # Shift up by 1, wrap
