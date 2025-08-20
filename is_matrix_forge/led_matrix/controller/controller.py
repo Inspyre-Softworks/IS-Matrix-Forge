@@ -20,24 +20,20 @@ from __future__ import annotations
 import threading
 from time import sleep
 from typing import Optional, Dict, Any, Union, List
+from aliaser import alias, Aliases
+
 
 try:
     from inspyre_toolbox.syntactic_sweets.classes import validate_type
-    from inspyre_toolbox.syntactic_sweets.classes.decorators.aliases import method_alias
 except ModuleNotFoundError:  # pragma: no cover - fallbacks when dependency missing
     def validate_type(_type):  # type: ignore[unused-argument]
         def decorator(func):
             return func
         return decorator
 
-    def method_alias(*aliases):  # type: ignore[unused-argument]
-        def decorator(func):
-            return func
-        return decorator
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.common.helpers import coerce_to_int
-from aliaser.metaclass import AliasMeta
 from is_matrix_forge.led_matrix.constants import SLOT_MAP
 from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
@@ -83,7 +79,7 @@ class _BreatherPauseCtx:
             self.controller.breathing = True
 
 
-class LEDMatrixController(metaclass=AliasMeta):
+class LEDMatrixController(Aliases):
     """
     Controller class for LED Matrix devices.
 
@@ -216,10 +212,7 @@ class LEDMatrixController(metaclass=AliasMeta):
         self._keep_alive_stop_evt = stop_evt
 
         while not stop_evt.is_set():
-            try:
-                _ = self.animating  # A simple query is enough to keep FW awake
-            except Exception:  # pragma: no cover – we don't crash the thread
-                pass
+            self._ping()
 
             # Wait with timeout so the thread can exit early when stop_evt is set
             stop_evt.wait(self._KEEP_ALIVE_INTERVAL)
@@ -264,7 +257,6 @@ class LEDMatrixController(metaclass=AliasMeta):
             self._keep_alive_thread = None
             self._keep_alive_stop_evt = None
             self._keep_alive = False
-        self.__post_init__()
 
     def __post_init__(self, skip_greeting= False, skip_identify=False):
         from is_matrix_forge.led_matrix.display.effects.breather import Breather
@@ -758,13 +750,26 @@ class LEDMatrixController(metaclass=AliasMeta):
             self.__brightness = brightness
 
 
-    @method_alias('draw_text', 'show_string', 'draw_string')
+    @alias('draw_text', 'show_string', 'draw_string')
     @synchronized
     def show_text(self, text: str) -> None:
         """
         Show text on the LED matrix.
         """
         show_string(self.device, text)
+
+    def _ping(self) -> None:
+        """
+        Send a harmless query to keep the device awake.
+        Prefer a read-only status command. Falls back to 'animating' status.
+
+        Returns:
+            None
+        """
+        try:
+            _ = self.animating
+        except Exception:
+            pass
 
     @staticmethod
     # Internal methods
