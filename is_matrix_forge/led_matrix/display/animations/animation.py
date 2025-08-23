@@ -6,7 +6,7 @@ from pathlib import Path
 
 from serial.tools.list_ports_common import ListPortInfo
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError

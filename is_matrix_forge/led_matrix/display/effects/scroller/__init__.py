@@ -4,7 +4,7 @@ from is_matrix_forge.common.decorators import freeze_setter
 
 
 if TYPE_CHECKING:
-    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.controller import LEDMatrixController
 
 
 class HardwareScroller:

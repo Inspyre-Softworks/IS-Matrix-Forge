@@ -97,7 +97,7 @@ class Breather(Loggable):
     @controller.setter
     @freeze_setter()
     def controller(self, new):
-        from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+        from is_matrix_forge.led_matrix.controller import LEDMatrixController
         if not isinstance(new, LEDMatrixController):
             raise TypeError(f'controller must be LEDMatrixController, not {type(new)}')
 

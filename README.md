@@ -94,7 +94,7 @@ for dev in DEVICES:
 ### Display Text on the Matrix
 
 ```python
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.helpers.device import DEVICES
 
 ctrl = LEDMatrixController(DEVICES[0])

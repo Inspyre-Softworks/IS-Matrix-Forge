@@ -26,7 +26,7 @@ try:  # ``soundfile`` is also optional
 except ImportError:  # pragma: no cover - optional dependency missing
     sf = None  # type: ignore
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 

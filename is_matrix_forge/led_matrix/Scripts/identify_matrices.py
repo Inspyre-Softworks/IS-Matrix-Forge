@@ -22,7 +22,7 @@ from argparse import ArgumentParser
 from threading import Thread
 from typing import List, Optional, Union
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.constants import DEVICES
 
 

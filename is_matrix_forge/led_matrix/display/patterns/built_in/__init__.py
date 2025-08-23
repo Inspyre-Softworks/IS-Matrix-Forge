@@ -16,7 +16,7 @@ class BuiltInPatterns:
 
     def __init__(self, dev: Any):
         from serial.tools.list_ports_common import ListPortInfo
-        from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+        from is_matrix_forge.led_matrix.controller import LEDMatrixController
 
         if dev is None:
             from is_matrix_forge.led_matrix.controller.helpers import get_controllers

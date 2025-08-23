@@ -24,7 +24,7 @@ def get_controllers(
         List[LEDMatrixController]: List of controller instances.
     """
     from is_matrix_forge.led_matrix.constants import DEVICES
-    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.controller import LEDMatrixController
 
     _devices = devices or DEVICES
     _controller_cls = controller_cls or LEDMatrixController

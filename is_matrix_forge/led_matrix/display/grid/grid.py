@@ -93,9 +93,22 @@ class Grid:
         if fill_value not in (0, 1):
             raise ValueError('fill_value must be 0 or 1')
 
+        self._fill_value = fill_value
+
+        # Normalize init_grid to column-major 2D with its *own* intrinsic w×h
+        if init_grid is not None:
+            src = self._normalize_to_col_major(init_grid, width, height)
+            src_w = len(src)
+            src_h = len(src[0]) if src else 0
+            if width == MATRIX_WIDTH and height == MATRIX_HEIGHT:
+                width, height = src_w, src_h
+        else:
+            src = None
+            src_w = width
+            src_h = height
+
         self._width = width
         self._height = height
-        self._fill_value = fill_value
 
         # Start with a clean canvas
         canvas = generate_blank_grid(width=width, height=height, fill_value=fill_value)
@@ -103,12 +116,6 @@ class Grid:
         if init_grid is None:
             self._grid = canvas
             return
-
-        # Normalize init_grid to column-major 2D with its *own* intrinsic w×h
-        src = self._normalize_to_col_major(init_grid, width, height)
-
-        src_w = len(src)
-        src_h = len(src[0]) if src else 0
 
         if src_w == width and src_h == height:
             # Perfect fit: use as-is (defensive copy)
@@ -216,20 +223,14 @@ class Grid:
         # 2D list provided
         if isinstance(init_grid, list) and init_grid and isinstance(init_grid[0], list):
             cand = init_grid
-
-            # If already valid column-major, accept
             w = len(cand)
             h = len(cand[0]) if cand else 0
-            if is_valid_grid(cand, w, h):
+            if w and h:
+                if w == default_w and h == default_h:
+                    return [col[:] for col in cand]
+                if h == default_w and w == default_h:
+                    return self._transpose(cand)
                 return [col[:] for col in cand]
-
-            # Maybe row-major by mistake; try transpose
-            if len(cand) and len(cand[0]):
-                maybe_col = self._transpose(cand)
-                w2 = len(maybe_col)
-                h2 = len(maybe_col[0]) if maybe_col else 0
-                if is_valid_grid(maybe_col, w2, h2):
-                    return maybe_col
 
         raise ValueError('Unsupported init_grid structure; expected 1D flat or 2D list.')
 

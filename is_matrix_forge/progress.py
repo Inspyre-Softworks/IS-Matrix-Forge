@@ -40,7 +40,7 @@ Constants:
 Dependencies:
     tqdm
     is_matrix_forge.led_matrix.helpers.device.DEVICES
-    is_matrix_forge.led_matrix.controller.controller.LEDMatrixController
+    is_matrix_forge.led_matrix.controller.LEDMatrixController
 
 Example Usage:
     from led_tqdm import tqdm
@@ -62,7 +62,7 @@ from tqdm import tqdm as _tqdm
 
 try:
     from is_matrix_forge.led_matrix.helpers.device import DEVICES
-    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.controller import LEDMatrixController
 except Exception:  # pragma: no cover - dependency issues / optional runtime
     DEVICES = []
     LEDMatrixController = None  # type: ignore[misc,assignment]

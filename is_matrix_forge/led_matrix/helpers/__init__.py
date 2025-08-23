@@ -155,7 +155,7 @@ def identify_devices(devices: Optional[List[ListPortInfo]] = None) -> None:
             List of devices to identify. Defaults to ``None`` which will use all
             detected devices.
     """
-    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.controller import LEDMatrixController
 
     if devices is None:
         from is_matrix_forge.led_matrix.helpers.device import DEVICES
