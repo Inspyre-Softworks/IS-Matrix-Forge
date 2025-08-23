@@ -41,6 +41,7 @@ from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.hardware import send_command
 from is_matrix_forge.led_matrix.display.effects.breather import Breather
 from is_matrix_forge.led_matrix.display.text import show_string
+from is_matrix_forge.led_matrix.display.animations import flash_matrix
 
 COMMANDS = CommandVals
 
@@ -631,6 +632,13 @@ class LEDMatrixController(Aliases):
 
         return list(PATTERN_MAP.keys())
 
+    @synchronized
+    def flash(self, num_flashes: Optional[int] = None, interval: float = 0.33):
+        flash_matrix(
+            self,
+            num_flashes=num_flashes,
+            interval=interval
+        )
 
     @synchronized
     def halt_animation(self) -> None:

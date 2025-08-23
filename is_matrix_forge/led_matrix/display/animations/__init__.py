@@ -9,6 +9,20 @@ def clear(dev):
     brightness(dev, 0)
 
 
+def flash_matrix(dev, num_flashes=6, interval=.33, min_brightness=None, max_brightness=None):
+    initial_brightness = dev.brightness
+    max_brightness = max_brightness or initial_brightness
+    min_brightness = min_brightness or 0
+    for i in range(num_flashes):
+        dev.brightness = min_brightness
+        sleep(interval)
+        dev.brightness = max_brightness
+        sleep(interval)
+
+    dev.brightness = initial_brightness
+
+
+
 def checkerboard_cycle(dev):
     from is_matrix_forge.led_matrix.display.patterns.built_in.stencils import checkerboard
     frame = 2
