@@ -32,7 +32,7 @@ def get_controllers(
 
     def create_controller(device):
         # Here’s where you could add try/except if your hardware is flaky!
-        return _controller_cls(device, 100, thread_safe=True, **controller_kwargs)
+        return _controller_cls(device=device, default_brightness=100, thread_safe=True, **controller_kwargs)
 
     if not threaded:
         return [create_controller(dev) for dev in _devices]

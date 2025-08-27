@@ -1,0 +1,35 @@
+from __future__ import annotations
+from time import sleep
+from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
+from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
+
+
+class IdentifyManager:
+    def __init__(self, *, skip_greeting: bool = False, skip_identify: bool = False,
+                 skip_all_init_animations: bool = False, **kwargs):
+        super().__init__(**kwargs)
+
+        if not (skip_greeting or skip_all_init_animations):
+            self._greet()
+
+        if not (skip_identify or skip_all_init_animations):
+            self.identify()
+
+    def _greet(self):
+        # cheap, safe default
+        from is_matrix_forge.led_matrix.display.text import show_string as _show
+        _show(self.device, 'Hello')
+
+    @synchronized
+    def identify(self, *, skip_clear: bool = False, duration: float = 20.0, cycles: int = 3) -> None:
+        if not skip_clear and hasattr(self, 'clear_matrix'):
+            self.clear_matrix()
+        messages = (self.location_abbrev, self.device.name)
+        interval = duration / (cycles * len(messages))
+        for _ in range(cycles):
+            for msg in messages:
+                _show_string_raw(self.device, msg)
+                sleep(interval)
+        if not skip_clear and hasattr(self, 'clear_matrix'):
+            self.clear_matrix()
+
