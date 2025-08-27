@@ -329,9 +329,7 @@ class LEDTqdm(_tqdm):
             return False
         if not self._matrix:
             return False
-        if self._completed in (None, 'none'):
-            return False
-        return True
+        return self._completed not in (None, 'none')
 
     def _invoke_resolved_animation(self) -> None:
         try:
