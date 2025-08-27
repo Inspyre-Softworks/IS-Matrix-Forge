@@ -23,13 +23,17 @@ class DeviceBase(Aliases):
         thread_safe (bool): Enables use of an internal RLock for synchronized ops.
         cmd_lock (Optional[threading.RLock]): Lazily created lock when thread_safe.
     """
-    def __init__(self, *, device: ListPortInfo, thread_safe: bool = False, **_: Any) -> None:
-        super().__init__()
+    def __init__(self, *, device: ListPortInfo, thread_safe: bool = False, **kwargs: Any) -> None:
+        # Initialize core device/threading state BEFORE forwarding to super(), so
+        # downstream mixins (e.g., brightness/breather/identify) can safely access
+        # self.device during their initialization.
         if not device:
             raise ValueError('device cannot be None or empty.')
         self._device: ListPortInfo = device
         self._thread_safe: bool = bool(thread_safe)
         self._cmd_lock: Optional[threading.RLock] = None
+        # Cooperative init: forward any remaining kwargs down the MRO chain
+        super().__init__(**kwargs)
 
     # ——— device/meta ———
     @property

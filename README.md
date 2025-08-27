@@ -111,10 +111,15 @@ ctrl.scroll_text("Hello World!", loop=False)
     brightness at init time.
   - `BreatherManager` precedes `IdentifyManager` because `IdentifyManager` may
     call `@synchronized` methods in `__init__` that rely on a breather pause context.
+  - `Loggable` is placed last so the cooperative chain can pass `logger=` safely.
 - Thread safety: pass `thread_safe=True` to enable an internal `RLock` used by
   the `@synchronized` decorator for device operations.
 - Logging: integrates with InspyLogger when available and falls back to a simple
-  logger; the controller maps `parent_log_device` → `logger` when needed.
+  logger; the controller passes `parent_log_device` through the cooperative chain
+  and the fallback stub supports it.
+
+MRO diagram (left → right, init order)
+`DeviceBase → KeepAliveManager → AnimationManager → DrawingManager → BrightnessManager → BreatherManager → IdentifyManager → Loggable`
 
 ### Progress Bars
 

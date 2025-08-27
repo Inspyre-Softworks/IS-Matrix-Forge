@@ -14,8 +14,9 @@ except ModuleNotFoundError:  # pragma: no cover - simplified logging
     import logging
 
     class Loggable:  # minimal stub
-        def __init__(self, logger=None):
-            self.class_logger = logger or logging.getLogger(__name__)
+        def __init__(self, logger=None, parent_log_device=None, **kwargs):
+            chosen = logger or parent_log_device
+            self.class_logger = chosen or logging.getLogger(__name__)
             self.method_logger = self.class_logger
 
     LOG_LEVELS = list(logging._nameToLevel.keys())

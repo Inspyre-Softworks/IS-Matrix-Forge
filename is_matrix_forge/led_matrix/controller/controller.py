@@ -8,9 +8,11 @@ Key design notes:
   inspects the controller brightness on initialization.
 - ``IdentifyManager`` comes after ``BreatherManager`` because it may call
   ``@synchronized`` methods during ``__init__`` which expect a breather pause context.
+- ``Loggable`` is placed last so we can pass ``parent_log_device=...`` through the cooperative
+  chain without colliding with other mixin keyword arguments.
 - Logging cooperates with an InspyLogger ``Loggable`` when available, but a lightweight
-  fallback is supported. The controller passes either ``parent_log_device`` (InspyLogger)
-  or ``logger`` (fallback) depending on availability.
+  fallback is supported. The controller passes ``parent_log_device`` through the chain;
+  the fallback stub also accepts this parameter.
 """
 from is_matrix_forge.led_matrix.controller.components.keep_alive import KeepAliveManager
 from is_matrix_forge.led_matrix.controller.components.animation import AnimationManager
@@ -27,7 +29,6 @@ MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
 
 
 class LEDMatrixController(
-    Loggable,
     DeviceBase,
     KeepAliveManager,
     AnimationManager,
@@ -35,6 +36,7 @@ class LEDMatrixController(
     BrightnessManager,
     BreatherManager,
     IdentifyManager,
+    Loggable,
 ):
     def __init__(self, device, *, thread_safe: bool = False, parent_log_device=MOD_LOGGER, **kwargs):
         """
@@ -54,24 +56,13 @@ class LEDMatrixController(
         self._warn_on_thread_misuse = True
 
         # Use a single cooperative super() init across all mixins.
-        # Prefer the inspy_logger-style kw; fall back to the simple stub.
-        try:
-            super().__init__(
-                device=device,
-                thread_safe=thread_safe,
-                parent_log_device=parent_log_device,
-                **kwargs,
-            )
-        except TypeError as e:
-            if 'parent_log_device' in str(e):
-                super().__init__(
-                    device=device,
-                    thread_safe=thread_safe,
-                    logger=parent_log_device,
-                    **kwargs,
-                )
-            else:
-                raise
+        # Pass parent_log_device through to be consumed by Loggable at the end of the MRO.
+        super().__init__(
+            device=device,
+            thread_safe=thread_safe,
+            parent_log_device=parent_log_device,
+            **kwargs,
+        )
 
         # Ensure command lock is created if requested
         if thread_safe:

@@ -22,7 +22,6 @@ dependencies during `__init__`:
 
 ```
 class LEDMatrixController(
-    Loggable,
     DeviceBase,
     KeepAliveManager,
     AnimationManager,
@@ -30,6 +29,7 @@ class LEDMatrixController(
     BrightnessManager,
     BreatherManager,
     IdentifyManager,
+    Loggable,
 ):
     ...
 ```
@@ -40,11 +40,13 @@ Rationale for ordering:
   brightness during its initialization.
 - BreatherManager before IdentifyManager because `IdentifyManager.__init__` may
   call `@synchronized` methods which rely on a breather pause context.
+- Loggable is placed last so we can pass `logger=` through the cooperative
+  chain without colliding with other mixin kwargs.
 
 The controller’s `__init__` uses a single cooperative `super().__init__` call,
-passing common kwargs (`device`, `thread_safe`, and logging handle). To support
-both InspyLogger and the lightweight fallback, we attempt `parent_log_device=`
-first and map to `logger=` if needed.
+passing common kwargs (`device`, `thread_safe`, and logging handle).
+We pass `parent_log_device=` through the chain; the fallback `Loggable` stub
+accepts this parameter as well.
 
 ## Consequences
 
@@ -67,4 +69,3 @@ first and map to `logger=` if needed.
 - BrightnessManager was updated to participate in cooperative `super()` init.
 - Controller helpers now catch `TypeError` for `default_brightness` to preserve
   backward compatibility with legacy controllers.
-

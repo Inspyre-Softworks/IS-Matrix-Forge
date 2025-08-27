@@ -205,11 +205,25 @@ class Grid:
             and not any(isinstance(v, list) for v in init_grid)
         ):
             flat = list(init_grid)
-            # If caller used matrix defaults, assume common 5×6 glyph
-            w = 5 if (default_w == MATRIX_WIDTH and default_h == MATRIX_HEIGHT) else default_w
-            if len(flat) % w != 0:
-                raise ValueError(f'Flat init_grid length {len(flat)} not divisible by width {w}')
-            h = len(flat) // w
+            n = len(flat)
+            # Heuristic: find factor pairs (w,h) that fit within the target canvas.
+            candidates = [(w, n // w) for w in range(1, min(n, default_w) + 1) if (n % w == 0) and (n // w) <= default_h]
+            if not candidates:
+                raise ValueError(
+                    f'Flat init_grid of length {n} cannot fit within {default_w}×{default_h}. '
+                    'Provide explicit dimensions or reshape to column-major 2D.'
+                )
+            # Prefer common glyph width 5, then nearby widths
+            preferred = [5, 4, 6, 7, 8, 9, 3, 2, 1]
+            chosen = None
+            for pref_w in preferred:
+                if any(w == pref_w for w, _ in candidates):
+                    chosen = next((w, h) for w, h in candidates if w == pref_w)
+                    break
+            if chosen is None:
+                # Fallback: choose the candidate with the largest width that fits
+                chosen = max(candidates, key=lambda wh: wh[0])
+            w, h = chosen
             # row-major → column-major
             return [[flat[r * w + c] for r in range(h)] for c in range(w)]
 

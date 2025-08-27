@@ -35,8 +35,9 @@ class BrightnessManager:
                 If True, do not set brightness during initialization.
             **kwargs: forwarded to next class in the MRO.
         """
-        # Ensure cooperative initialization to play nice with MRO chains
-        super().__init__(**kwargs)
+        # Establish brightness attributes BEFORE calling super() so that
+        # downstream mixins (e.g., BreatherManager) can safely read
+        # `controller.brightness` during their initialization.
         self._default_brightness = self._norm_pct(
             default_brightness if default_brightness is not None
             else self.FACTORY_DEFAULT_BRIGHTNESS
@@ -44,6 +45,11 @@ class BrightnessManager:
         self._brightness: Optional[int] = None
         self._set_brightness_on_init = not bool(skip_init_brightness_set)
 
+        # Continue cooperative chain so BreatherManager initializes.
+        super().__init__(**kwargs)
+
+        # Apply brightness only after Breather exists to satisfy
+        # the @synchronized breather pause context.
         if self._set_brightness_on_init:
             self.set_brightness(self._default_brightness)
 

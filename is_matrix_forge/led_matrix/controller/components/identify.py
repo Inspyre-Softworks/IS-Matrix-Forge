@@ -22,6 +22,11 @@ class IdentifyManager:
 
     @synchronized
     def identify(self, *, skip_clear: bool = False, duration: float = 20.0, cycles: int = 3) -> None:
+        # Validate arguments to prevent division by zero or negative intervals
+        if not isinstance(cycles, int) or cycles <= 0:
+            raise ValueError('cycles must be a positive integer')
+        if duration <= 0:
+            raise ValueError('duration must be a positive number')
         if not skip_clear and hasattr(self, 'clear_matrix'):
             self.clear_matrix()
         messages = (self.location_abbrev, self.device.name)
