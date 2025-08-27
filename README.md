@@ -101,6 +101,21 @@ ctrl = LEDMatrixController(DEVICES[0])
 ctrl.scroll_text("Hello World!", loop=False)
 ```
 
+## Controller Architecture
+
+- Composition is implemented via multiple mixins that all use cooperative
+  initialization with `super()`.
+- MRO ordering ensures safe access patterns during `__init__`:
+  - `DeviceBase` initializes early so mixins can use `self.device`.
+  - `BrightnessManager` precedes `BreatherManager` because the breather inspects
+    brightness at init time.
+  - `BreatherManager` precedes `IdentifyManager` because `IdentifyManager` may
+    call `@synchronized` methods in `__init__` that rely on a breather pause context.
+- Thread safety: pass `thread_safe=True` to enable an internal `RLock` used by
+  the `@synchronized` decorator for device operations.
+- Logging: integrates with InspyLogger when available and falls back to a simple
+  logger; the controller maps `parent_log_device` → `logger` when needed.
+
 ### Progress Bars
 
 ```python
@@ -152,6 +167,19 @@ run_power_monitor(device)
 
 Contributions are welcome! If you have ideas or improvements for Matrix Forge,
 feel free to open an issue or submit a pull request.
+
+- See docs/contributing-mixins.md for guidance on authoring new controller mixins
+  using cooperative initialization and the `@synchronized` decorator.
+  A minimal reference mixin is available at
+  `is_matrix_forge/led_matrix/controller/components/example_template.py`.
+
+Quick checklist for a new controller mixin
+- Create `is_matrix_forge/led_matrix/controller/components/<name>.py` with `ClassNameManager`.
+- In `__init__(...)`, accept keyword-only args and call `super().__init__(**kwargs)`.
+- Avoid IO-heavy work in `__init__`; use `@synchronized` for device methods.
+- If calling synchronized methods in `__init__`, ensure MRO places you after `BreatherManager`.
+- If adding to the main controller, place after `DeviceBase` and before `IdentifyManager`; consider dependencies.
+- Provide docstrings, type hints, and a small usage example or test.
 
 ## License
 

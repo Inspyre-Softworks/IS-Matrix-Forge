@@ -12,10 +12,31 @@ from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 
 
 class BrightnessManager:
+    """
+    Mixin managing normalized (0–100) brightness and ramp effects.
+
+    Notes:
+    - Participates in cooperative initialization via ``super().__init__(**kwargs)``.
+    - Stores a normalized default brightness; optionally applies it during init.
+    - Exposes helpers like ``fade_out`` and ``set_brightness`` using the device API.
+    """
+
     FACTORY_DEFAULT_BRIGHTNESS = 75
 
     def __init__(self, *, default_brightness: Optional[int] = None,
                  skip_init_brightness_set: bool = False, **kwargs):
+        """
+        Initialize brightness mixin with optional default value and init behavior.
+
+        Parameters:
+            default_brightness (Optional[int]):
+                Percent 0–100. Defaults to ``FACTORY_DEFAULT_BRIGHTNESS`` when None.
+            skip_init_brightness_set (bool):
+                If True, do not set brightness during initialization.
+            **kwargs: forwarded to next class in the MRO.
+        """
+        # Ensure cooperative initialization to play nice with MRO chains
+        super().__init__(**kwargs)
         self._default_brightness = self._norm_pct(
             default_brightness if default_brightness is not None
             else self.FACTORY_DEFAULT_BRIGHTNESS

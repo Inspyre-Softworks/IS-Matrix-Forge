@@ -6,8 +6,17 @@ from is_matrix_forge.log_engine import ROOT_LOGGER as PARENT_LOGGER
 
 def synchronized(method=None, *, pause_breather=True):
     """
-    Lock & warn if you’re calling off-thread with thread_safe=False.
-    Optionally pause/resume the breather around the method.
+    Decorator that serializes command execution and integrates with breather pause.
+
+    Behavior:
+    - If ``thread_safe=True``, uses ``self._cmd_lock`` (an ``RLock``) to ensure
+      in-object mutual exclusion for device operations.
+    - Logs a warning if invoked from a non-owner thread while ``thread_safe`` is
+      False (misuse detection) provided ``_warn_on_thread_misuse`` is True.
+    - When ``pause_breather=True``, it tries to pause any active breathing effect
+      around the wrapped call. Resolution order:
+        1. ``self.breather.paused`` (preferred)
+        2. ``self.breather_paused`` (compatibility helper)
 
     Usage:
         @synchronized

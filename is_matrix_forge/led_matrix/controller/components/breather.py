@@ -6,6 +6,12 @@ from is_matrix_forge.led_matrix.display.effects.breather import Breather
 
 
 class _BreatherPauseCtx:
+    """
+    Context manager to pause the breathing effect during critical operations.
+
+    Safely avoids self-join if invoked from the breather thread, and restores
+    prior breathing state on exit.
+    """
     def __init__(self, controller: 'BreatherMixin'):
         self.controller = controller
         self._was_breathing = False
@@ -29,6 +35,15 @@ class _BreatherPauseCtx:
 
 
 class BreatherManager:
+    """
+    Mixin that provides a ``Breather`` effect and a pause context used by
+    the ``@synchronized`` decorator to bracket hardware operations.
+
+    Notes:
+    - Participates in cooperative initialization via ``super().__init__(**kwargs)``.
+    - Exposes ``breather_paused`` for legacy pause integration.
+    """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._breather: Breather | None = Breather(self)

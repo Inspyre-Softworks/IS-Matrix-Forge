@@ -15,6 +15,14 @@ COMMANDS = CommandVals
 
 
 class DeviceBase(Aliases):
+    """
+    Base mixin that stores the underlying serial device and thread-safety knobs.
+
+    Attributes:
+        device (ListPortInfo): The serial device to control.
+        thread_safe (bool): Enables use of an internal RLock for synchronized ops.
+        cmd_lock (Optional[threading.RLock]): Lazily created lock when thread_safe.
+    """
     def __init__(self, *, device: ListPortInfo, thread_safe: bool = False, **_: Any) -> None:
         super().__init__()
         if not device:
