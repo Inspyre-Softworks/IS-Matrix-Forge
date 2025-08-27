@@ -11,12 +11,11 @@ from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 
 
-class BrightnessManager(Loggable):
+class BrightnessManager:
     FACTORY_DEFAULT_BRIGHTNESS = 75
 
     def __init__(self, *, default_brightness: Optional[int] = None,
                  skip_init_brightness_set: bool = False, **kwargs):
-        super().__init__(**kwargs)
         self._default_brightness = self._norm_pct(
             default_brightness if default_brightness is not None
             else self.FACTORY_DEFAULT_BRIGHTNESS
@@ -48,7 +47,7 @@ class BrightnessManager(Loggable):
             - `duration` is total time for the whole fade, not per step.
             - Non-blocking spawns a daemon thread and returns immediately.
         """
-        log = MOD_LOGGER.get_child('fade_out')
+        log = self.method_logger
 
         start = max(int(getattr(self, 'brightness', 0)), 0)
         if start <= 0:
