@@ -300,13 +300,8 @@ class LEDMatrixController(Aliases):
             self.identify()
 
     def __set_up_thread_safety__(self, thread_safe_opt: bool):
-        if thread_safe_opt is None or not thread_safe_opt:
-            self._thread_safe = False
-            return
-        else:
-            self._thread_safe = True
-
-            return
+        self._thread_safe = thread_safe_opt is not None and thread_safe_opt
+        return
 
     @property
     def animating(self) -> bool:
