@@ -264,7 +264,10 @@ class BrightnessManager:
 
     def _safe_clear(self) -> None:
         if hasattr(self, 'clear'):
-            self.clear()
+            try:
+                self.clear()
+            except Exception:
+                pass
 
     @staticmethod
     def _norm_pct(val: Union[int, float, str]) -> int:
