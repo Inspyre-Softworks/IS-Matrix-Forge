@@ -27,15 +27,15 @@ jobs:
           VERSION=$(poetry version -s)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           env VERSION=$VERSION python - <<'PY'
-from packaging.version import Version
-import os
-version = os.environ["VERSION"]
-pr = Version(version).is_prerelease
-with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-    fh.write(f"prerelease={str(pr).lower()}\n")
-    url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
-    fh.write(f"repository_url={url}\n")
-PY
+          from packaging.version import Version
+          import os
+          version = os.environ["VERSION"]
+          pr = Version(version).is_prerelease
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"prerelease={str(pr).lower()}\n")
+              url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
+              fh.write(f"repository_url={url}\n")
+          PY
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
         with:
