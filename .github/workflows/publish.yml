@@ -19,11 +19,25 @@ jobs:
       - uses: abatilo/actions-poetry@v3
       - run: poetry install --no-interaction --no-root
       - run: poetry build
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Determine release target
+        id: vars
+        run: |
+          VERSION=$(poetry version -s)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *"a"* || "$VERSION" == *"b"* || "$VERSION" == *"rc"* || "$VERSION" == *"dev"* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to PyPI
+        if: steps.vars.outputs.prerelease == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to Test PyPI
+        if: steps.vars.outputs.prerelease == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
           user: __token__
