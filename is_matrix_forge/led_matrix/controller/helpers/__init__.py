@@ -22,6 +22,12 @@ def get_controllers(
 
     Returns:
         List[LEDMatrixController]: List of controller instances.
+
+    Compatibility:
+        When instantiating a custom controller via ``controller_cls``, this helper
+        will attempt to pass ``default_brightness`` and fall back gracefully if the
+        target class does not support it. This preserves compatibility with legacy
+        controller signatures.
     """
     from is_matrix_forge.led_matrix.constants import DEVICES
     from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
@@ -32,7 +38,23 @@ def get_controllers(
 
     def create_controller(device):
         # Here’s where you could add try/except if your hardware is flaky!
-        return _controller_cls(device, 100, thread_safe=True, **controller_kwargs)
+        # Backward-compatibility: Some controllers may not accept
+        # ``default_brightness``; try with it first, then fall back.
+        try:
+            return _controller_cls(
+                device=device,
+                default_brightness=100,
+                thread_safe=True,
+                **controller_kwargs,
+            )
+        except TypeError as e:
+            if 'default_brightness' in str(e):
+                return _controller_cls(
+                    device=device,
+                    thread_safe=True,
+                    **controller_kwargs,
+                )
+            raise
 
     if not threaded:
         return [create_controller(dev) for dev in _devices]

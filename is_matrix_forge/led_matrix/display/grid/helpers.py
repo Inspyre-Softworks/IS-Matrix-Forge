@@ -3,7 +3,10 @@ from __future__ import annotations
 import threading
 from typing import Any, List
 
-from inspyre_toolbox.chrono import sleep as ist_sleep
+try:
+    from inspyre_toolbox.chrono import sleep as ist_sleep
+except ModuleNotFoundError:  # pragma: no cover - fallback when dependency missing
+    from time import sleep as ist_sleep
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.common.helpers import coerce_to_int

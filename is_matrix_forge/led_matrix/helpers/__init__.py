@@ -1,6 +1,22 @@
 import serial
-from inspyre_toolbox.chrono.sleep import NegateSwitch
-from inspyre_toolbox.path_man import provision_path
+try:
+    from inspyre_toolbox.chrono.sleep import NegateSwitch
+except ModuleNotFoundError:  # pragma: no cover - fallback when dependency missing
+    class NegateSwitch:
+        def __init__(self, initial: bool = False):
+            self.value = initial
+
+        def __call__(self, *_):
+            self.value = not self.value
+            return self.value
+
+try:
+    from inspyre_toolbox.path_man import provision_path
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    from pathlib import Path
+
+    def provision_path(path):
+        return Path(path).expanduser().resolve()
 
 from serial.tools.list_ports_common import ListPortInfo
 from threading import Thread

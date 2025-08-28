@@ -18,15 +18,15 @@ import numpy as np
 
 try:  # ``sounddevice`` is an optional dependency
     import sounddevice as sd
-except Exception:  # pragma: no cover - optional dependency missing
+except ImportError:  # pragma: no cover - optional dependency missing
     sd = None  # type: ignore
 
 try:  # ``soundfile`` is also optional
     import soundfile as sf
-except Exception:  # pragma: no cover - optional dependency missing
+except ImportError:  # pragma: no cover - optional dependency missing
     sf = None  # type: ignore
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 

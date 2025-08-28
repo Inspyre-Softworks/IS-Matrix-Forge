@@ -1,4 +1,8 @@
-from inspyre_toolbox.exceptional import CustomRootException
+try:
+    from inspyre_toolbox.exceptional import CustomRootException
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    class CustomRootException(Exception):
+        pass
 from .base import LEDMatrixControllerError
 
 

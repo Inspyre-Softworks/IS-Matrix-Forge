@@ -1,8 +1,15 @@
 import hashlib
 from pathlib import Path
 from typing import Optional
-import requests
-from inspyre_toolbox.path_man import provision_path
+try:
+    import requests
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    requests = None
+try:
+    from inspyre_toolbox.path_man import provision_path
+except ModuleNotFoundError:  # pragma: no cover - fallback
+    def provision_path(path):
+        return Path(path)
 from is_matrix_forge.log_engine import ROOT_LOGGER
 
 

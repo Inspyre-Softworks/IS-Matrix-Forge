@@ -235,7 +235,8 @@ class Breather(Loggable):
         """
         self._breathing = False
         if self._thread:
-            self._thread.join()
+            if threading.current_thread() is not self._thread:
+                self._thread.join()
             self._thread = None
 
         self.method_logger.debug('Breathing effect stopped')
