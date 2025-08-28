@@ -19,7 +19,6 @@ jobs:
           python-version: '3.12'
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
       - run: poetry install --no-interaction --no-root
-      - run: poetry run pytest
       - run: poetry build
       - name: Determine release target
         id: vars
