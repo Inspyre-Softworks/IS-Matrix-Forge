@@ -1,11 +1,12 @@
 name: Build and Publish
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -16,15 +17,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: abatilo/actions-poetry@v3
+      - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
       - run: poetry install --no-interaction --no-root
+      - run: poetry run pytest
       - run: poetry build
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Determine release target
+        id: vars
+        run: |
+          VERSION=$(poetry version -s)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          env VERSION=$VERSION python - <<'PY'
+from packaging.version import Version
+import os
+version = os.environ["VERSION"]
+pr = Version(version).is_prerelease
+with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+    fh.write(f"prerelease={str(pr).lower()}\n")
+    url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
+    fh.write(f"repository_url={url}\n")
+PY
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-      - uses: pypa/gh-action-pypi-publish@release/v1
+          password: ${{ steps.vars.outputs.prerelease == 'true' && secrets.TEST_PYPI_TOKEN || secrets.PYPI_TOKEN }}
+          repository-url: ${{ steps.vars.outputs.repository_url }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
-          repository-url: https://test.pypi.org/legacy/
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: v${{ steps.vars.outputs.version }}
+          generate_release_notes: true
+          prerelease: ${{ steps.vars.outputs.prerelease }}
