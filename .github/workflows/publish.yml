@@ -14,12 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for changelog
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
-      - run: poetry install --no-interaction --no-root
-      - run: poetry build
+
+      - name: Install deps
+        run: poetry install --no-interaction --no-root
+
+      - name: Build dists
+        run: poetry build
+
       - name: Determine release target
         id: vars
         run: |
@@ -35,16 +42,34 @@ jobs:
               url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
               fh.write(f"repository_url={url}\n")
           PY
-      - name: Publish package
+
+      - name: Publish to PyPI / TestPyPI
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
         with:
           user: __token__
           password: ${{ steps.vars.outputs.prerelease == 'true' && secrets.TEST_PYPI_TOKEN || secrets.PYPI_TOKEN }}
           repository-url: ${{ steps.vars.outputs.repository_url }}
-      - name: Create GitHub Release
+
+      # Build a nice changelog from PRs/commits between tags
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          configurationJson: |
+            {
+              "template": "# Changelog for v${{ steps.vars.outputs.version }}\n\n{{CHANGELOG}}",
+              "toTag": "${{ github.ref_name }}"
+            }
+
+      - name: Create GitHub Release with assets
         uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
           tag_name: ${{ github.ref_name }}
           name: v${{ steps.vars.outputs.version }}
-          generate_release_notes: true
           prerelease: ${{ steps.vars.outputs.prerelease }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
