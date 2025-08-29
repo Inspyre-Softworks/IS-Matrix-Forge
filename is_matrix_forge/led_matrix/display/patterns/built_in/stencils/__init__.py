@@ -60,10 +60,13 @@ def every_nth_col(dev, n):
 
 def checkerboard(dev, n):
     for x in range(WIDTH):
-        vals = (([0xFF] * n) + ([0x00] * n)) * (HEIGHT // (2 * n))
-        if x % (2 * n) < n:
-            vals = vals[n:] + vals[:n]
-        # Build and send frame command via helper
+        vals = []
+        col_phase = (x // n) % 2  # alternate every n columns
+        for y in range(HEIGHT):
+            row_phase = (y // n) % 2
+            if row_phase == col_phase:
+                vals.append(0xFF)
+            else:
+                vals.append(0x00)
         send_command(dev, CommandVals.StageGreyCol, [x] + vals)
-    # After loop:
     send_command(dev, CommandVals.DrawGreyColBuffer, [])
