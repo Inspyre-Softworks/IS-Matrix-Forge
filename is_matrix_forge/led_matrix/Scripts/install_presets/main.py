@@ -56,9 +56,6 @@ from is_matrix_forge.common.helpers.github_api import assemble_github_content_pa
 
 LOGGER = InspyLogger('LEDMatrixLib:PresetInstaller', console_level='info', no_file_logging=True)
 
-API_URL = PROJECT_URLS['github_api']
-REQ_HEADERS = {"Accept": "application/vnd.github.v3+json"}
-
 
 def github_blob_sha(content: bytes) -> str:
     header = f"blob {len(content)}\0".encode()
@@ -72,7 +69,8 @@ class PresetInstaller(Loggable):
             headers: Optional[Dict[str, str]] = None,
             app_dir: Union[str, Path] = APP_DIRS.user_data_path,
             overwrite_existing: bool = False,
-            with_progress: bool = True
+            with_progress: bool = True,
+            timeout: float = 15.0,
     ):
         super().__init__(LOGGER)
         self.url = url
@@ -80,31 +78,49 @@ class PresetInstaller(Loggable):
         self.app_dir = provision_path(app_dir)
         self.overwrite = overwrite_existing
         self.with_progress = with_progress
+        self.timeout = timeout
 
         self.presets_dir = self.app_dir / 'presets'
         self.presets_dir.mkdir(parents=True, exist_ok=True)
         self.log = self.class_logger
 
+        # HTTP session for connection reuse
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
+
     def run(self):
         log = self.method_logger
         log.debug(f"Fetching file list from {self.url}")
-        files = self.get_file_list()
+        try:
+            files = self.get_file_list()
+        except requests.RequestException as e:
+            log.error(f"Failed to fetch file list: {e}")
+            return 1
         iterator = tqdm(files, desc="Processing files", unit="file") if self.with_progress else files
 
         for f in iterator:
             if self._is_json(f):
-                self._process_file(f)
+                try:
+                    self._process_file(f)
+                except requests.RequestException as e:
+                    log.error(f"Failed to download {f.get('name')}: {e}")
+                except Exception as e:
+                    log.error(f"Error processing {f.get('name')}: {e}")
             else:
                 log.debug(f"Skipping non-JSON file: {f.get('name')}")
 
         manifest_path = self.presets_dir / "manifest.json"
         manifest = GridPresetManifest(manifest_path)
         manifest.scan(self.presets_dir)
+        return 0
 
     def get_file_list(self) -> List[Dict]:
-        res = requests.get(self.url, headers=self.headers)
+        res = self.session.get(self.url, timeout=self.timeout)
         res.raise_for_status()
-        return res.json()
+        data = res.json()
+        if not isinstance(data, list):
+            raise ValueError("Unexpected response format from GitHub API: expected a list")
+        return data
 
     @staticmethod
     def _is_json(file_info: Dict) -> bool:
@@ -117,7 +133,7 @@ class PresetInstaller(Loggable):
         name = file_info['name']
         local_path = self.presets_dir / name
 
-        res = requests.get(file_info['download_url'])
+        res = self.session.get(file_info['download_url'], timeout=self.timeout)
         res.raise_for_status()
         content = res.content
 
@@ -128,7 +144,22 @@ class PresetInstaller(Loggable):
             self.log.error(f"GitHub SHA mismatch for {name}")
             raise ValueError(f"GitHub blob SHA mismatch for {name}")
 
-        self.save_file(local_path, content.decode('utf-8'), overwrite=True)
+        # If file exists and overwrite is false, skip when content matches
+        if local_path.exists() and not self.overwrite:
+            try:
+                with open(local_path, 'rb') as f:
+                    local_bytes = f.read()
+                local_sha = github_blob_sha(local_bytes)
+                if local_sha == actual_sha:
+                    self.log.debug(f"Up-to-date: {name} (checksum match)")
+                    return
+                else:
+                    self.log.info(f"Updating changed preset: {name}")
+            except Exception:
+                # If we can't read/compare, fall back to writing based on overwrite flag below
+                pass
+
+        self.save_file(local_path, content.decode('utf-8'), overwrite=self.overwrite)
 
     def _download_file(self, file_info: Dict, local_path: Path):
         if self.with_progress:
@@ -137,13 +168,13 @@ class PresetInstaller(Loggable):
             self._download_simple(file_info, local_path)
 
     def _download_simple(self, file_info: Dict, local_path: Path):
-        res = requests.get(file_info['download_url'])
+        res = self.session.get(file_info['download_url'], timeout=self.timeout)
         res.raise_for_status()
-        self.save_file(local_path, res.content.decode('utf-8'), overwrite=True)
+        self.save_file(local_path, res.content.decode('utf-8'), overwrite=self.overwrite)
 
     def _download_with_progress(self, file_info: Dict, local_path: Path):
         url = file_info['download_url']
-        res = requests.get(url, stream=True)
+        res = self.session.get(url, stream=True, timeout=self.timeout)
         res.raise_for_status()
         total = int(res.headers.get('content-length', 0))
         bar = tqdm(total=total, unit='B', unit_scale=True, desc=f"Downloading {file_info['name']}", leave=False)
@@ -156,7 +187,7 @@ class PresetInstaller(Loggable):
         bar.close()
 
         content = b''.join(chunks).decode('utf-8')
-        self.save_file(local_path, content, overwrite=True)
+        self.save_file(local_path, content, overwrite=self.overwrite)
 
     def save_file(self, path: Path, data: str, overwrite: bool = False):
         log = self.method_logger
@@ -185,7 +216,9 @@ def main():
         overwrite_existing=args.overwrite,
         with_progress=args.with_progress
     )
-    installer.run()
+    exit_code = installer.run()
+    if isinstance(exit_code, int):
+        raise SystemExit(exit_code)
 
 
 if __name__ == '__main__':
