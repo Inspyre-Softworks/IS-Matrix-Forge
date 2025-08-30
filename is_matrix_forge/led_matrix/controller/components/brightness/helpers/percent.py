@@ -4,7 +4,10 @@ class Percent:
     @staticmethod
     def norm(val: int | float | str) -> int:
         if isinstance(val, str):
-            val = float(val.strip('%'))
+            s = val.strip()
+            if s.endswith('%'):
+                s = s[:-1].strip()
+            val = float(s)
         pct = int(round(float(val)))
         if not (0 <= pct <= 100):
             raise ValueError('Percentage must be between 0 and 100')
@@ -12,14 +15,14 @@ class Percent:
 
     @staticmethod
     def resolve(target: int | float | str, *, current: int) -> int:
-        if isinstance(target, str):
-            s = target.strip()
-            if s.startswith(('+', '-')):
-                sign = 1 if s[0] == '+' else -1
-                num = s[1:].strip()
-                if num.endswith('%'):
-                    num = num[:-1].strip()
-                delta = float(num)
-                return max(0, min(100, int(round(current + sign * delta))))
-            return Percent.norm(s)
-        return Percent.norm(target)
+        if not isinstance(target, str):
+            return Percent.norm(target)
+        s = target.strip()
+        if s.startswith(('+', '-')):
+            sign = 1 if s[0] == '+' else -1
+            num = s[1:].strip()
+            if num.endswith('%'):
+                num = num[:-1].strip()
+            delta = float(num)
+            return max(0, min(100, int(round(current + sign * delta))))
+        return Percent.norm(s)

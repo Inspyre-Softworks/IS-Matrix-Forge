@@ -139,7 +139,7 @@ class BrightnessManager:
             else self.FACTORY_DEFAULT_BRIGHTNESS
         )
         self._brightness: Optional[int] = None
-        self._set_brightness_on_init = not bool(skip_init_brightness_set)
+        self._set_brightness_on_init = not skip_init_brightness_set
 
         # Optional user-settable easing – default to linear if not provided
         # You can override self.easing at runtime with any f:[0,1]->[0,1].
@@ -305,8 +305,11 @@ class BrightnessManager:
         """
         pct = Percent.norm(brightness)
         raw = percentage_to_value(max_value=255, percent=pct)
+        device = getattr(self, 'device', None)
+        if device is None:
+            raise RuntimeError("BrightnessManager requires a 'device' attribute for hardware calls")
         try:
-            _set_brightness_raw(self.device, raw)
+            _set_brightness_raw(device, raw)
         except ValueError as e:
             raise InvalidBrightnessError(raw) from e
         self._brightness = pct
@@ -326,7 +329,7 @@ class BrightnessManager:
         # Zero-duration fast path
         if duration <= 0:
             self.set_brightness(Percent.norm(target))
-            if clear_when_done and int(target) == 0:
+            if clear_when_done and target == 0:
                 SafeOps.clear(self)
             return None
 
