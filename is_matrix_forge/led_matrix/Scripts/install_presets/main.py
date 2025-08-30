@@ -46,6 +46,8 @@ from typing import List, Dict, Optional, Union
 from pathlib import Path
 import requests
 import hashlib
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from is_matrix_forge.progress import tqdm
 
 from is_matrix_forge.led_matrix.constants import PROJECT_URLS, APP_DIRS, GITHUB_REQ_HEADERS as REQ_HEADERS
@@ -87,6 +89,10 @@ class PresetInstaller(Loggable):
         # HTTP session for connection reuse
         self.session = requests.Session()
         self.session.headers.update(self.headers)
+        retry = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
 
     def run(self):
         log = self.method_logger
