@@ -38,11 +38,9 @@ class PixelGrid:
         self.height = height
 
         base = [[0] * self.height for _ in range(self.width)]
-        Frame.__width = self.width
-        Frame.__height = self.height
-        self.frames = [Frame(copy.deepcopy(base))]
+        self.frames = [Frame(copy.deepcopy(base), width=self.width, height=self.height)]
         self.current_frame = 0
-        self.grid = self.frames[0].grid
+        self.grid = self.frames[0].grid.grid
         self.preferred_device = None
 
         layout = PixelGridLayout(self.width, self.height).build()
@@ -129,7 +127,7 @@ class PixelGrid:
         self.__grid = value
         # update frame's grid as well
         if hasattr(self, 'frames') and self.frames:
-            self.frames[self.current_frame].grid = value
+            self.frames[self.current_frame].grid.grid = value
 
     @property
     def preferred_device(self):
@@ -190,10 +188,10 @@ class PixelGrid:
         Add a new frame to the grid.
         """
         new_grid = copy.deepcopy(self.grid)
-        frm = Frame(new_grid)
+        frm = Frame(new_grid, width=self.width, height=self.height)
         self.frames = self.frames + [frm]
         self.current_frame = len(self.frames) - 1
-        self.grid = frm.grid
+        self.grid = frm.grid.grid
         self._init_button_colors()
         self._update_frame_indicator()
 
@@ -214,13 +212,13 @@ class PixelGrid:
 
     def _load_frame(self) -> None:
         frm = self.frames[self.current_frame]
-        self.grid = frm.grid
+        self.grid = frm.grid.grid
         self._init_button_colors()
         self._update_frame_indicator()
 
     # Export handlers
     def _handle_Export(self, _event) -> None:
-        data = [f.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid
+        data = [f.grid.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid.grid
         print(data)
 
     def _handle_Export_to_File(self, _event) -> None:
@@ -230,7 +228,7 @@ class PixelGrid:
         )
         if not path:
             return
-        data = [f.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid
+        data = [f.grid.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid.grid
         try:
             with open(path, 'w') as f:
                 json.dump(data, f)
@@ -254,7 +252,7 @@ class PixelGrid:
             else:
                 sg.popup_error('Invalid format')
                 return
-            self.frames = [Frame(copy.deepcopy(g)) for g in grids]
+            self.frames = [Frame(copy.deepcopy(g), width=self.width, height=self.height) for g in grids]
             self.current_frame = 0
             self._load_frame()
             sg.popup('Success', f'Loaded {len(self.frames)} frame(s)')

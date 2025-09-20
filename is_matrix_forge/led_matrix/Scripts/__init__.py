@@ -1,4 +1,4 @@
 """
-Fake `grid.py` to make the Scripts directory a sub-package.
+Fake `base.py` to make the Scripts directory a sub-package.
 """
 

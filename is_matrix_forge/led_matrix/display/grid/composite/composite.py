@@ -1,5 +1,5 @@
 from typing import List, Union
-from is_matrix_forge.led_matrix.display.grid.grid import Grid
+from is_matrix_forge.led_matrix.display.grid.base import Grid
 from inspyre_toolbox.syntactic_sweets.classes.decorators import validate_type
 
 

@@ -2,14 +2,14 @@
 """
 Grid module for LED Matrix display.
 
-Author: 
+Author:
     Inspyre Softworks
 
 Project:
     led-matrix-battery
 
-File: 
-    is_matrix_forge/led_matrix/display/grid/grid.py
+File:
+    is_matrix_forge/led_matrix/display/grid/base.py
 
 Description:
     This module provides the Grid class which represents a 2D grid of pixels

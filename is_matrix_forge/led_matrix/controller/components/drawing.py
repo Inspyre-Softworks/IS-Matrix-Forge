@@ -70,3 +70,9 @@ class DrawingManager(Aliases):
         from is_matrix_forge.led_matrix.display.text import show_string
         show_string(self.device, text)
 
+    @synchronized
+    def scroll_text(self, text: str) -> None:
+        from is_matrix_forge.led_matrix.display.animations.text_scroller import TextScroller, TextScrollerConfig
+        print('scrolling')
+        animation = TextScroller(TextScrollerConfig(text=text)).generate_animation()
+        animation.play(devices=self)

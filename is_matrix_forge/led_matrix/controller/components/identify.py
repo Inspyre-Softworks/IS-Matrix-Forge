@@ -8,6 +8,7 @@ class IdentifyManager:
     def __init__(self, *, skip_greeting: bool = False, skip_identify: bool = False,
                  skip_all_init_animations: bool = False, **kwargs):
         super().__init__(**kwargs)
+        print(f'Skipping init animations: {skip_all_init_animations}')
 
         if not (skip_greeting or skip_all_init_animations):
             self._greet()

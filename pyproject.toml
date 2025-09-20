@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.20"
+version = "1.0.0-dev.21"
 
 description = ""
 authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
@@ -50,6 +50,7 @@ ipyboost = { version = "1.0.0.a3", source = "testpypi" }
 pytest = "^8.4.1"
 
 [tool.poetry.scripts]
+led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
 python-path = "Scripts.python_path:main"
 led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
 install-presets = "is_matrix_forge.led_matrix.Scripts.install_presets.main:main"

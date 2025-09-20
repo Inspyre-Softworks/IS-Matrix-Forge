@@ -8,7 +8,7 @@ Project:
     led-matrix-battery
 
 File: 
-    is_matrix_forge/led_matrix/utils/grid.py
+    is_matrix_forge/led_matrix/utils/base.py
  
 
 Description:

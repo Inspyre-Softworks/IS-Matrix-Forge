@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import Mock
 
-from is_matrix_forge.led_matrix.display.grid.grid import Grid, MATRIX_WIDTH, MATRIX_HEIGHT
+from is_matrix_forge.led_matrix.display.grid.base import Grid, MATRIX_WIDTH, MATRIX_HEIGHT
 
 # Mocks for helpers/constants
-import is_matrix_forge.led_matrix.display.grid.grid as grid_mod
+import is_matrix_forge.led_matrix.display.grid.base as grid_mod
 
 @pytest.fixture(autouse=True)
 def patch_helpers(monkeypatch):

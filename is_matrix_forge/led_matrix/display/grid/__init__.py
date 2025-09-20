@@ -6,4 +6,4 @@ the LED matrix display grid. It includes functionality for creating,
 loading, and modifying grid patterns.
 """
 from is_matrix_forge.led_matrix.display.grid.helpers import generate_blank_grid
-from is_matrix_forge.led_matrix.display.grid.grid import Grid
+from is_matrix_forge.led_matrix.display.grid.base import Grid
