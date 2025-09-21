@@ -44,7 +44,7 @@ class TextScroller:
         # -------- normalization helpers --------
 
     # Add near the top of TextScroller (just a tiny helper)
-    def _rows_to_cols(rows: List[List[int]]) -> List[List[int]]:
+    def _rows_to_cols(self, rows: List[List[int]]) -> List[List[int]]:
         if not rows:
             return []
         h, w = len(rows), len(rows[0])

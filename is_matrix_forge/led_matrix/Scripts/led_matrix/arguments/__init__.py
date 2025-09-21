@@ -40,17 +40,8 @@ class Arguments(ArgumentParser):
         return self.__scroll_parser
 
     def __build_scroll_text(self):
-        if not self.building or self.built:
-            return
-        self.__scroll_parser = self.SUBCOMMANDS.add_parser(
-            'scroll-text',
-            help='Scroll a text string on one or more of the matrices.',
-        )
-
-        self.scroll_parser.add_argument(
-            'input',
-            type=str,
-        )
+        from .commands.scroll_text import register_command
+        self.__scroll_parser = register_command(self)
 
     def __build(self):
         self.__building = True
