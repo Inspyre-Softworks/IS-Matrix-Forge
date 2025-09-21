@@ -82,7 +82,7 @@ class AnimationManager:
         if not isinstance(animation, Animation):
             raise TypeError(f'Expected Animation; got {type(animation)}')
         self._current_animation = animation
-        animation.play(devices=[self.device])
+        animation.play(devices=[self])
 
     # --- Text scrolling ------------------------------------------------------------
 
@@ -149,8 +149,8 @@ class AnimationManager:
         anim.loop = bool(loop)
         self._current_animation = anim
 
-        # IMPORTANT: play on the actual device object
-        anim.play(devices=[self.device])
+        # IMPORTANT: play using this controller so frames reuse the existing device connection
+        anim.play(devices=[self])
         return anim
 
     # --- Utilities ----------------------------------------------------------------

@@ -44,19 +44,65 @@ class TextScroller:
         # -------- normalization helpers --------
 
     # Add near the top of TextScroller (just a tiny helper)
-    def _rows_to_cols(rows: List[List[int]]) -> List[List[int]]:
+    def _rows_to_cols(self, rows: List[List[int]]) -> List[List[int]]:
         if not rows:
             return []
         h, w = len(rows), len(rows[0])
         return [[rows[r][c] for r in range(h)] for c in range(w)]
+
+    def _binary_flat_to_rows(self, flat: List[int]) -> GlyphRows:
+        """Interpret a flat binary list as row-major glyph data."""
+
+        if not flat:
+            return [[0]]
+
+        if not all(v in (0, 1) for v in flat):
+            raise ValueError("Flat glyph list must contain only 0/1 values")
+
+        total = len(flat)
+        max_width = min(MATRIX_WIDTH, total)
+        candidates: List[tuple[int, int]] = []
+        for width in range(1, max_width + 1):
+            if total % width:
+                continue
+            height = total // width
+            if height <= MATRIX_HEIGHT:
+                candidates.append((width, height))
+
+        if not candidates:
+            # Fallback: treat the glyph as a single row up to the display width.
+            return [flat[:max_width]]
+
+        preferred_widths = [5, 4, 6, 7, 8, 9, 3, 2, 1]
+        chosen: tuple[int, int] | None = None
+        for pref in preferred_widths:
+            for width, height in candidates:
+                if width == pref:
+                    chosen = (width, height)
+                    break
+            if chosen:
+                break
+
+        if chosen is None:
+            # Choose the candidate with the widest glyph to preserve detail.
+            chosen = max(candidates, key=lambda wh: (wh[0], wh[1]))
+
+        width, height = chosen
+        rows: GlyphRows = []
+        for r in range(height):
+            start = r * width
+            rows.append(flat[start:start + width])
+        return rows
 
     def _to_rows_cols(self, glyph: Any) -> GlyphRows:
         # Already rows×cols?
         if isinstance(glyph, list) and glyph and isinstance(glyph[0], list):
             return glyph
 
-        # 1-D list of bit-columns? (e.g., [0b010, 0b111, ...])
+        # 1-D list of ints? Distinguish flat binary glyphs from bit masks.
         if isinstance(glyph, list) and glyph and isinstance(glyph[0], int):
+            if all(isinstance(v, int) and v in (0, 1) for v in glyph):
+                return self._binary_flat_to_rows(glyph)
             return self._cols_mask_to_rows(glyph)
 
         # String rows like '01010'?
@@ -113,49 +159,6 @@ class TextScroller:
         source_map = getattr(self, '_rows_map', self.config.font_map)
 
         # --- local helpers -------------------------------------------------------
-        def to_rows_cols(g):
-            # already rows×cols?
-            if isinstance(g, list) and g and isinstance(g[0], list):
-                return g
-
-            # list of bit-mask columns, e.g., [0b010, 0b111, ...]
-            if isinstance(g, list) and g and isinstance(g[0], int):
-                height = max(1, max(c.bit_length() for c in g))
-                out = []
-                for r in range(height - 1, -1, -1):  # MSB = top row
-                    out.append([(c >> r) & 1 for c in g])
-                return out
-
-            # list of '01010' strings
-            if isinstance(g, list) and g and isinstance(g[0], str):
-                return [[1 if ch == '1' else 0 for ch in row] for row in g]
-
-            # model-like objects
-            if hasattr(g, 'rows'):
-                rows = getattr(g, 'rows')
-                if isinstance(rows, list) and rows and isinstance(rows[0], list):
-                    return rows
-            if hasattr(g, 'grid'):
-                grid = getattr(g, 'grid')
-                if isinstance(grid, list) and grid and isinstance(grid[0], list):
-                    return grid
-            if hasattr(g, 'cols'):
-                cols = getattr(g, 'cols')
-                if isinstance(cols, list) and cols and isinstance(cols[0], int):
-                    height = getattr(g, 'height', None)
-                    if height is None:
-                        height = max(1, max(c.bit_length() for c in cols))
-                    out = []
-                    for r in range(height - 1, -1, -1):
-                        out.append([(c >> r) & 1 for c in cols])
-                    return out
-
-            # blank/none-like
-            if g in (None, 0, []):
-                return [[0]]
-
-            raise TypeError(f'Unsupported glyph format: {type(g)!r}')
-
         def center_crop_rows(rows, target_h: int):
             h = len(rows)
             if h <= target_h:
@@ -191,7 +194,7 @@ class TextScroller:
             raw = source_map.get(ch)
             if raw is None:
                 raise ValueError(f'Character {ch!r} not found in font_map')
-            g = to_rows_cols(raw)
+            g = self._to_rows_cols(raw)
             if len(g) > MATRIX_HEIGHT:
                 if fit_mode == 'crop':
                     g = center_crop_rows(g, MATRIX_HEIGHT)

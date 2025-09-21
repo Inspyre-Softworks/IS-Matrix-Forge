@@ -362,13 +362,17 @@ class Animation:
         # The loop below will handle cursor advancement.
         self.is_playing = True
         try:
-            while self.is_playing and self._stop_event.is_set():
+            while self.is_playing and not self._stop_event.is_set():
                 # Iterate from current cursor to the end of frames
                 for i in range(self.__cursor, len(self.__frames)):
                     if self._stop_event.is_set():
                         break
 
-                    self.play_frame(i, devices)  # Frame.play() is responsible for its own duration (e.g., sleep)
+                    self.play_frame(
+                        i,
+                        devices,
+                        stop_event=self._stop_event,
+                    )  # Frame.play() is responsible for its own duration (e.g., sleep)
 
                 if self._stop_event.is_set():
                     break
@@ -388,8 +392,11 @@ class Animation:
 
     def play_frame(self, index: int, devices, *, stop_event: Event | None = None) -> None:
         frame = self.__frames[index]
-        # IMPORTANT: ensure Frame.play accepts stop_event and cooperates
-        frame.play(devices=devices, stop_event=stop_event)
+
+        for device in devices:
+            # Frame.play cooperates with stop_event for cancellable sleeps
+            frame.play(device, stop_event)
+
         self.__cursor = index + 1
 
     def resume(self) -> None:
