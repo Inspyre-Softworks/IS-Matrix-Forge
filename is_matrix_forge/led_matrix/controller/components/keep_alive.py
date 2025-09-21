@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 import threading
-from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
+from contextlib import nullcontext
 
 
 class KeepAliveManager:
@@ -16,12 +17,17 @@ class KeepAliveManager:
         self._keep_alive_thread: threading.Thread | None = None
         self._keep_alive_stop_evt: threading.Event | None = None
 
-    @synchronized
     def _keep_alive_worker(self):
         stop_evt = self._keep_alive_stop_evt or threading.Event()
         self._keep_alive_stop_evt = stop_evt
         while not stop_evt.is_set():
-            self._ping()
+            lock_ctx = nullcontext()
+            if getattr(self, '_thread_safe', False):
+                lock = self.cmd_lock
+                if lock is not None:
+                    lock_ctx = lock
+            with lock_ctx:
+                self._ping()
             stop_evt.wait(self._KEEP_ALIVE_INTERVAL)
 
     @property
