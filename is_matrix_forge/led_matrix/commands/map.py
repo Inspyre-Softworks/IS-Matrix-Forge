@@ -29,6 +29,7 @@ class CommandVals(IntEnum):
     StageGreyCol = 0x07
     DrawGreyColBuffer = 0x08
     SetText = 0x09
+    GetAllBrightness = 0x0B
     StartGame = 0x10
     GameControl = 0x11
     GameStatus = 0x12

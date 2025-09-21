@@ -12,7 +12,7 @@ from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 
-from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC
+from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC, WIDTH, HEIGHT
 from is_matrix_forge.led_matrix.helpers import disconnect_dev, DISCONNECTED_DEVS
 
 from is_matrix_forge.log_engine import ROOT_LOGGER
@@ -22,6 +22,8 @@ MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.hardware')
 
 del ROOT_LOGGER
 
+
+FRAMEBUFFER_SIZE = WIDTH * HEIGHT
 
 class Game(IntEnum):
     Snake = 0x00
@@ -145,6 +147,23 @@ def get_brightness(dev):
     return int(res[0])
 
 
+def get_framebuffer_brightness(dev) -> List[int]:
+    """Return the brightness for every pixel in the framebuffer."""
+    res = send_command(
+        dev,
+        CommandVals.GetAllBrightness,
+        with_response=True,
+        response_size=FRAMEBUFFER_SIZE,
+    )
+    if not res:
+        raise IOError('No data returned for framebuffer brightness request.')
+    if len(res) < FRAMEBUFFER_SIZE:
+        raise IOError(
+            f'Expected {FRAMEBUFFER_SIZE} brightness bytes, received {len(res)}.'
+        )
+    return list(res[:FRAMEBUFFER_SIZE])
+
+
 def animate(dev, b: bool):
     """Enable or disable animation."""
     send_command(dev, CommandVals.Animate, [0x01 if b else 0x00])
@@ -244,7 +263,8 @@ def send_command(
         dev:           ListPortInfo,
         command:       int,
         parameters:    Optional[List[int]] = None,
-        with_response: bool                = False
+        with_response: bool                = False,
+        response_size: Optional[int]       = None,
 ) -> Optional[ByteString]:
     """
     Send a command to the device using a new serial connection.
@@ -262,10 +282,19 @@ def send_command(
         with_response (bool, optional):
             Whether to wait for a response from the device. Defaults to False.
 
+        response_size (Optional[int], optional):
+            Number of bytes to read when awaiting a response. Defaults to
+            :data:`is_matrix_forge.led_matrix.constants.RESPONSE_SIZE`.
+
     Returns:
         Optional[ByteString]:
             The response from the device, if any, or None if no response or an error occurred.
     """
     if parameters is None:
         parameters = []
-    return send_command_raw(dev, FWK_MAGIC + [command] + parameters, with_response)
+    return send_command_raw(
+        dev,
+        FWK_MAGIC + [command] + parameters,
+        with_response,
+        response_size=response_size,
+    )
