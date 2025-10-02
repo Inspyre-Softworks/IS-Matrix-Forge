@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, Any
+from collections.abc import Mapping
+from typing import Any, Optional
 
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.display.animations import flash_matrix
@@ -86,27 +87,6 @@ class AnimationManager:
 
     # --- Text scrolling ------------------------------------------------------------
 
-    def _build_font_map_subset(self, text: str, font_map: Optional[FontMap]) -> Dict[str, Any]:
-        """
-        Build a glyph dictionary for the characters present in 'text'.
-
-        Notes:
-            - Uses provided FontMap or a default FontMap().
-            - Falls back to a 1x1 empty glyph for missing characters.
-
-        Returns:
-            dict mapping uppercase character -> glyph data structure expected by TextScroller.
-        """
-        fm = font_map or FontMap()
-        glyphs: Dict[str, Any] = {}
-        for ch in set(text.upper()):
-            try:
-                glyphs[ch] = fm.lookup(ch, kind=None)
-            except Exception:
-                # Graceful fallback so we never crash on unknown chars
-                glyphs[ch] = [[0]]
-        return glyphs
-
     def scroll_text(
             self,
             text: str,
@@ -121,23 +101,54 @@ class AnimationManager:
     ) -> Animation:
         """
         Build and play a scrolling text Animation using the current TextScrollerConfig API.
+
+        Parameters:
+            text:
+                Text to render.
+            spacing:
+                Columns (or rows for vertical scroll) between glyphs.
+            frame_duration:
+                Seconds to display each animation frame.
+            wrap:
+                Enable seamless horizontal wrapping.
+            direction:
+                One of ``'horizontal'``, ``'vertical_up'`` or ``'vertical_down'``.
+            font_map:
+                Either a :class:`FontMap` instance or any mapping of characters to glyphs.
+                When a :class:`FontMap` is supplied the entire map (including ligatures
+                and fallback glyphs) is passed through to :class:`TextScroller` to ensure
+                context-sensitive glyphs remain available.
+            loop:
+                Whether the resulting animation should loop when played via the manager.
+            set_duration_override:
+                Optional override for all frame durations.
         """
-        # Build a minimal dict for the characters used
         fm = font_map or FontMap()
-        fm_dict = {}
-        for ch in set(text.upper()):
-            try:
-                fm_dict[ch] = fm.lookup(ch, kind=None)
-            except Exception:
-                fm_dict[ch] = [[0]]
+
+        if isinstance(fm, FontMap):
+            case_sensitive = fm.is_case_sensitive
+            glyph_map = {
+                (key if case_sensitive else str(key).upper()): fm.lookup(key)
+                for key in fm.keys()
+            }
+        elif isinstance(fm, Mapping):
+            str_items = [(str(k), v) for k, v in fm.items()]
+            case_sensitive = any(key != key.upper() for key, _ in str_items)
+            glyph_map = {
+                (key if case_sensitive else key.upper()): value
+                for key, value in str_items
+            }
+        else:
+            raise TypeError('font_map must be a FontMap or mapping of glyphs')
 
         cfg = TextScrollerConfig(
             text=text,
-            font_map=fm_dict,
+            font_map=glyph_map,
             spacing=spacing,
             frame_duration=frame_duration,
             wrap=wrap,
             direction=direction,
+            case_sensitive=case_sensitive,
         )
 
         scroller = TextScroller(cfg)
@@ -146,7 +157,7 @@ class AnimationManager:
         if set_duration_override is not None:
             anim.set_all_frame_durations(set_duration_override)
 
-        anim.loop = bool(loop)
+        anim.loop = loop
         self._current_animation = anim
 
         # IMPORTANT: play using this controller so frames reuse the existing device connection

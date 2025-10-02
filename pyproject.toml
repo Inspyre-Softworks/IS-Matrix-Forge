@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.25"
+version = "1.0.0-dev.26"
 
 description = ""
 authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
@@ -58,6 +58,10 @@ pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 
 [[tool.poetry.include]]
 path = "presets/**"
+format = "sdist"
+
+[[tool.poetry.include]]
+path = "is_matrix_forge/assets/char_map.json"
 format = "sdist"
 
 [build-system]

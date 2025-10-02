@@ -115,12 +115,31 @@ class PresetInstaller(Loggable):
         return 0
 
     def get_file_list(self) -> List[Dict]:
-        res = self.session.get(self.url, timeout=self.timeout)
-        res.raise_for_status()
-        data = res.json()
-        if not isinstance(data, list):
-            raise ValueError("Unexpected response format from GitHub API: expected a list")
-        return data
+        files: List[Dict] = []
+        url: Optional[str] = self.url
+
+        while url:
+            res = self.session.get(url, timeout=self.timeout)
+            res.raise_for_status()
+            data = res.json()
+            if not isinstance(data, list):
+                raise ValueError("Unexpected response format from GitHub API: expected a list")
+            files.extend(data)
+
+            link = res.headers.get('Link')
+            next_url: Optional[str] = None
+            if link:
+                for part in link.split(','):
+                    part = part.strip()
+                    if 'rel="next"' in part:
+                        start = part.find('<') + 1
+                        end = part.find('>')
+                        if start > 0 and end > start:
+                            next_url = part[start:end]
+                        break
+            url = next_url
+
+        return files
 
     @staticmethod
     def _is_json(file_info: Dict) -> bool:

@@ -3,6 +3,7 @@ from typing import List, Tuple, Any, Dict
 import PySimpleGUI as sg
 import copy
 import os
+import json
 
 from is_matrix_forge.led_matrix.helpers.device import DEVICES
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
@@ -40,7 +41,7 @@ class PixelGrid:
         base = [[0] * self.height for _ in range(self.width)]
         self.frames = [Frame(copy.deepcopy(base), width=self.width, height=self.height)]
         self.current_frame = 0
-        self.grid = self.frames[0].grid.grid
+        self.grid = self.frames[0].get_grid_data()
         self.preferred_device = None
 
         layout = PixelGridLayout(self.width, self.height).build()
@@ -127,7 +128,7 @@ class PixelGrid:
         self.__grid = value
         # update frame's grid as well
         if hasattr(self, 'frames') and self.frames:
-            self.frames[self.current_frame].grid.grid = value
+            self.frames[self.current_frame].grid = value
 
     @property
     def preferred_device(self):
@@ -191,7 +192,7 @@ class PixelGrid:
         frm = Frame(new_grid, width=self.width, height=self.height)
         self.frames = self.frames + [frm]
         self.current_frame = len(self.frames) - 1
-        self.grid = frm.grid.grid
+        self.grid = frm.get_grid_data()
         self._init_button_colors()
         self._update_frame_indicator()
 
@@ -212,13 +213,13 @@ class PixelGrid:
 
     def _load_frame(self) -> None:
         frm = self.frames[self.current_frame]
-        self.grid = frm.grid.grid
+        self.grid = frm.get_grid_data()
         self._init_button_colors()
         self._update_frame_indicator()
 
     # Export handlers
     def _handle_Export(self, _event) -> None:
-        data = [f.grid.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid.grid
+        data = [f.get_grid_data() for f in self.frames] if len(self.frames) > 1 else self.frames[0].get_grid_data()
         print(data)
 
     def _handle_Export_to_File(self, _event) -> None:
@@ -228,7 +229,7 @@ class PixelGrid:
         )
         if not path:
             return
-        data = [f.grid.grid for f in self.frames] if len(self.frames) > 1 else self.frames[0].grid.grid
+        data = [f.get_grid_data() for f in self.frames] if len(self.frames) > 1 else self.frames[0].get_grid_data()
         try:
             with open(path, 'w') as f:
                 json.dump(data, f)

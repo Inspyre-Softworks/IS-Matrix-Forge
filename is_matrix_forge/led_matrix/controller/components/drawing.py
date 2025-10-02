@@ -78,7 +78,12 @@ class DrawingManager(Aliases):
         """
         from is_matrix_forge.led_matrix.hardware import percentage
 
-        percentage(self.device, int(n))
+        if not isinstance(n, int):
+            raise TypeError('n must be an integer percentage value')
+        if not 0 <= n <= 100:
+            raise ValueError('n must be between 0 and 100 inclusive')
+
+        percentage(self.device, n)
 
     @synchronized
     def show_text(self, text: str) -> None:

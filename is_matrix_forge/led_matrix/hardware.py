@@ -148,7 +148,7 @@ def get_brightness(dev):
 
 
 def get_framebuffer_brightness(dev) -> List[int]:
-    """Return the brightness for every pixel in the framebuffer."""
+    """Return the framebuffer brightness as a flat list of length ``FRAMEBUFFER_SIZE``."""
     res = send_command(
         dev,
         CommandVals.GetAllBrightness,
@@ -163,6 +163,18 @@ def get_framebuffer_brightness(dev) -> List[int]:
             f'Expected {FRAMEBUFFER_SIZE} brightness bytes, received {len(res)}.'
         )
     return list(res[:FRAMEBUFFER_SIZE])
+
+
+def _reshape_flat_to_grid(flat: List[int], width: int, height: int) -> List[List[int]]:
+    if len(flat) != width * height:
+        raise ValueError('Flat list size does not match width * height')
+    return [flat[i * width:(i + 1) * width] for i in range(height)]
+
+
+def get_framebuffer_brightness_grid(dev) -> List[List[int]]:
+    """Return framebuffer brightness as a ``height × width`` grid."""
+    flat = get_framebuffer_brightness(dev)
+    return _reshape_flat_to_grid(flat, WIDTH, HEIGHT)
 
 
 def animate(dev, b: bool):

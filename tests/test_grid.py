@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import Mock
 
 from is_matrix_forge.led_matrix.display.grid.base import Grid, MATRIX_WIDTH, MATRIX_HEIGHT
+from is_matrix_forge.assets.font_map.base import FontMap
 
 # Mocks for helpers/constants
 import is_matrix_forge.led_matrix.display.grid.base as grid_mod
@@ -148,6 +149,28 @@ def test_grid_fill_value_setter_invalid(value):
     # Act & Assert
     with pytest.raises(ValueError, match="fill_value must be 0 or 1"):
         grid.fill_value = value
+
+
+def test_font_map_case_insensitive_lookup():
+    fm = FontMap({'A': [[1]], '?': [[0]]})
+    assert fm.lookup('a') == [[1]]
+
+
+def test_font_map_case_sensitive_lookup():
+    fm = FontMap({'A': [[1]], '?': [[0]]}, case_sensitive=True)
+    assert fm.lookup('A') == [[1]]
+    assert fm.lookup('a') == [[0]]
+
+
+def test_font_map_fallback_character_update():
+    fm = FontMap({'A': [[1]], '?': [[9]], ' ': [[0]]})
+    fm.fallback_char = ' '
+    assert fm.lookup('Z') == [[0]]
+
+
+def test_font_map_missing_fallback_raises():
+    with pytest.raises(ValueError):
+        FontMap({'A': [[1]]})
 
 def test_grid_cols_rows_aliases():
     # Arrange
