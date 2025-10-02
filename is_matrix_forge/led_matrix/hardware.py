@@ -12,7 +12,7 @@ from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 
-from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC
+from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC, WIDTH, HEIGHT
 from is_matrix_forge.led_matrix.helpers import disconnect_dev, DISCONNECTED_DEVS
 
 from is_matrix_forge.log_engine import ROOT_LOGGER
@@ -22,6 +22,8 @@ MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.hardware')
 
 del ROOT_LOGGER
 
+
+FRAMEBUFFER_SIZE = WIDTH * HEIGHT
 
 class Game(IntEnum):
     Snake = 0x00
@@ -145,6 +147,24 @@ def get_brightness(dev):
     return int(res[0])
 
 
+def get_framebuffer_brightness(dev) -> List[int]:
+    """Return the brightness for every pixel in the framebuffer."""
+    res = send_command(
+        dev,
+        CommandVals.GetAllBrightness,
+        with_response=True,
+        response_size=FRAMEBUFFER_SIZE,
+        response_timeout=1.0,
+    )
+    if not res:
+        raise IOError('No data returned for framebuffer brightness request.')
+    if len(res) < FRAMEBUFFER_SIZE:
+        raise IOError(
+            f'Expected {FRAMEBUFFER_SIZE} brightness bytes, received {len(res)}.'
+        )
+    return list(res[:FRAMEBUFFER_SIZE])
+
+
 def animate(dev, b: bool):
     """Enable or disable animation."""
     send_command(dev, CommandVals.Animate, [0x01 if b else 0x00])
@@ -209,7 +229,13 @@ def send_serial(
         disconnect_dev(controller.device)
 
 
-def send_command_raw(dev: ListPortInfo, command: List[int], with_response: bool = False, response_size: Optional[int] = None) -> Optional[ByteString]:
+def send_command_raw(
+    dev: ListPortInfo,
+    command: List[int],
+    with_response: bool = False,
+    response_size: Optional[int] = None,
+    response_timeout: Optional[float] = None,
+) -> Optional[ByteString]:
     """
     Send a command to the device using a new serial connection.
 
@@ -230,10 +256,18 @@ def send_command_raw(dev: ListPortInfo, command: List[int], with_response: bool 
     #print(f"Sending command (hex):  {[f'0x{b:02X}' for b in cmd_bytes]}")
     #print(f"Raw bytes: {cmd_bytes!r}")
     res_size = response_size or RESPONSE_SIZE
+    timeout = response_timeout if with_response else None
+    if timeout is None and with_response:
+        timeout = 1.0
     try:
-        with serial.Serial(dev.device, 115200) as s:
+        with serial.Serial(dev.device, 115200, timeout=timeout) as s:
             s.write(cmd_bytes)
-            return s.read(res_size) if with_response else None
+            if not with_response:
+                return None
+
+            if timeout is not None:
+                s.timeout = timeout
+            return s.read(res_size)
     except (IOError, OSError) as _ex:
         disconnect_dev(dev.device)
         return None
@@ -244,7 +278,9 @@ def send_command(
         dev:           ListPortInfo,
         command:       int,
         parameters:    Optional[List[int]] = None,
-        with_response: bool                = False
+        with_response: bool                = False,
+        response_size: Optional[int]       = None,
+        response_timeout: Optional[float]  = None,
 ) -> Optional[ByteString]:
     """
     Send a command to the device using a new serial connection.
@@ -262,10 +298,24 @@ def send_command(
         with_response (bool, optional):
             Whether to wait for a response from the device. Defaults to False.
 
+        response_size (Optional[int], optional):
+            Number of bytes to read when awaiting a response. Defaults to
+            :data:`is_matrix_forge.led_matrix.constants.RESPONSE_SIZE`.
+
+        response_timeout (Optional[float], optional):
+            How long to wait for a response before giving up. Defaults to 1s
+            when a response is requested.
+
     Returns:
         Optional[ByteString]:
             The response from the device, if any, or None if no response or an error occurred.
     """
     if parameters is None:
         parameters = []
-    return send_command_raw(dev, FWK_MAGIC + [command] + parameters, with_response)
+    return send_command_raw(
+        dev,
+        FWK_MAGIC + [command] + parameters,
+        with_response,
+        response_size=response_size,
+        response_timeout=response_timeout,
+    )

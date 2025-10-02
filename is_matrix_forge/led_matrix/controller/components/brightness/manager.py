@@ -34,7 +34,11 @@ from time import sleep
 from typing import Callable, Optional, Union
 
 from is_matrix_forge.common.helpers import percentage_to_value
-from is_matrix_forge.led_matrix.hardware import brightness as _set_brightness_raw
+from is_matrix_forge.led_matrix.constants import WIDTH as MATRIX_WIDTH, HEIGHT as MATRIX_HEIGHT
+from is_matrix_forge.led_matrix.hardware import (
+    brightness as _set_brightness_raw,
+    get_framebuffer_brightness as _get_framebuffer_brightness,
+)
 from is_matrix_forge.led_matrix.errors import InvalidBrightnessError
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 
@@ -310,6 +314,17 @@ class BrightnessManager:
         except ValueError as e:
             raise InvalidBrightnessError(raw) from e
         self._brightness = pct
+
+    @synchronized(pause_breather=False)
+    def get_brightness_grid(self) -> list[list[int]]:
+        """Retrieve the per-pixel brightness values as a 9×34 grid."""
+        flat = _get_framebuffer_brightness(self.device)
+        grid = [[0] * MATRIX_HEIGHT for _ in range(MATRIX_WIDTH)]
+        for idx, level in enumerate(flat):
+            x = idx % MATRIX_WIDTH
+            y = idx // MATRIX_WIDTH
+            grid[x][y] = level
+        return grid
 
     # -------------------- Orchestration --------------------
 
