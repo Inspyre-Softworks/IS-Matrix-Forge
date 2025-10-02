@@ -150,7 +150,7 @@ class AnimationManager:
         self._current_animation = anim
 
         # IMPORTANT: play using this controller so frames reuse the existing device connection
-        anim.play(devices=[self])
+        self.play_animation(anim)
         return anim
 
     # --- Utilities ----------------------------------------------------------------

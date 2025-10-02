@@ -66,13 +66,28 @@ class DrawingManager(Aliases):
         BuiltInPatterns(self).render(pattern)
 
     @synchronized
+    def draw_percentage(self, n: int) -> None:
+        """
+        Draws a percentage on a graphical interface or display. This function ensures thread safety through synchronization
+        to prevent concurrent access issues. It updates the interface to be `n` percent lit.
+
+        Parameters:
+            n (int):
+              The percentage value to be drawn on the display. Must be an integer value within the
+              range of 0 to 100.
+        """
+        from is_matrix_forge.led_matrix.hardware import percentage
+
+        percentage(self.device, int(n))
+
+    @synchronized
     def show_text(self, text: str) -> None:
         from is_matrix_forge.led_matrix.display.text import show_string
         show_string(self.device, text)
 
-    @synchronized
-    def scroll_text(self, text: str) -> None:
-        from is_matrix_forge.led_matrix.display.animations.text_scroller import TextScroller, TextScrollerConfig
-        print('scrolling')
-        animation = TextScroller(TextScrollerConfig(text=text)).generate_animation()
-        animation.play(devices=self)
+    # @synchronized
+    # def scroll_text(self, text: str) -> None:
+    #     from is_matrix_forge.led_matrix.display.animations.text_scroller import TextScroller, TextScrollerConfig
+    #     print('scrolling')
+    #     animation = TextScroller(TextScrollerConfig(text=text)).generate_animation()
+    #     animation.play(devices=self)
