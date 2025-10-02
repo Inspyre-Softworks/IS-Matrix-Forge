@@ -43,7 +43,9 @@ class FontMap(Mapping[str, Glyph]):
         case_sensitive:
             When False (default), keys are normalized to uppercase.
         fallback_char:
-            Glyph to use when a key is missing. Defaults to '?' (or ' ' if '?' not present).
+            Glyph to use when a key is missing. Defaults to '?'. If the glyph for '?' is
+            unavailable the implementation falls back to ' ' when present, otherwise a
+            :class:`ValueError` is raised requesting an explicit fallback.
 
     Properties:
         is_case_sensitive (bool): Current case-sensitivity flag.
@@ -144,9 +146,23 @@ class FontMap(Mapping[str, Glyph]):
         return key if self._case_sensitive else key.upper()
 
     def _validate_fallback(self) -> None:
-        # Ensure fallback exists; prefer '?' then space, otherwise keep as-is but don't explode.
-        if self._normalize_key(self._fallback_char) not in self._glyphs and self._normalize_key(' ') in self._glyphs:
+        # Ensure fallback exists; prefer '?' then space, otherwise require an explicit fallback.
+        normalized = self._normalize_key(self._fallback_char)
+        if normalized in self._glyphs:
+            return
+
+        space_key = self._normalize_key(' ')
+        if space_key in self._glyphs:
             self._fallback_char = ' '
+            return
+
+        if not self._glyphs:
+            raise ValueError('font_map must contain at least one glyph definition')
+
+        raise ValueError(
+            "Fallback character is missing from the font_map and no space fallback is available. "
+            "Provide a valid fallback_char or include an appropriate glyph."
+        )
 
     # ---------- Mapping protocol ----------
 

@@ -167,6 +167,11 @@ def test_font_map_fallback_character_update():
     fm.fallback_char = ' '
     assert fm.lookup('Z') == [[0]]
 
+
+def test_font_map_missing_fallback_raises():
+    with pytest.raises(ValueError):
+        FontMap({'A': [[1]]})
+
 def test_grid_cols_rows_aliases():
     # Arrange
     grid = Grid(width=5, height=7, fill_value=0)

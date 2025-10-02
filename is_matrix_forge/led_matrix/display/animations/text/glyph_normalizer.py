@@ -27,7 +27,7 @@ class GlyphNormalizer:
         if not flat:
             return [[0]]
 
-        if not all(v in (0, 1) for v in flat):
+        if any(v not in (0, 1) for v in flat):
             raise ValueError('Flat glyph list must contain only 0/1 values')
 
         total = len(flat)
@@ -69,9 +69,9 @@ class GlyphNormalizer:
         if height is None:
             height = max(1, max(c.bit_length() for c in cols))
 
-        out: GlyphRows = []
-        for r in range(height - 1, -1, -1):
-            out.append([(c >> r) & 1 for c in cols])
+        out: GlyphRows = [
+            [(c >> r) & 1 for c in cols] for r in range(height - 1, -1, -1)
+        ]
         return out
 
     def normalize(self, glyph: Any) -> GlyphRows:

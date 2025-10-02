@@ -74,6 +74,34 @@ def test_set_brightness_valid(monkeypatch, controller):
     assert controller.brightness == 50
 
 
+def test_set_brightness_zero(monkeypatch, controller):
+    recorded = {}
+
+    def fake_set(_dev, raw):
+        recorded['raw'] = raw
+
+    monkeypatch.setattr(brightness_manager_module, '_set_brightness_raw', fake_set)
+    controller.set_brightness(0)
+
+    expected_raw = brightness_manager_module.percentage_to_value(max_value=255, percent=0)
+    assert recorded['raw'] == expected_raw
+    assert controller.brightness == 0
+
+
+def test_set_brightness_hundred(monkeypatch, controller):
+    recorded = {}
+
+    def fake_set(_dev, raw):
+        recorded['raw'] = raw
+
+    monkeypatch.setattr(brightness_manager_module, '_set_brightness_raw', fake_set)
+    controller.set_brightness(100)
+
+    expected_raw = brightness_manager_module.percentage_to_value(max_value=255, percent=100)
+    assert recorded['raw'] == expected_raw
+    assert controller.brightness == 100
+
+
 def test_set_brightness_invalid(monkeypatch, controller):
     def boom(_dev, _raw):
         raise ValueError('nope')
@@ -103,3 +131,15 @@ def test_fade_to_zero_duration(monkeypatch, controller):
     controller.set_brightness(25)
     controller.fade_to(80, duration=0)
     assert controller.brightness == 80
+
+
+def test_fade_to_target_below_range(controller):
+    controller.set_brightness(25)
+    with pytest.raises(ValueError):
+        controller.fade_to(-10, duration=0)
+
+
+def test_fade_to_target_above_range(controller):
+    controller.set_brightness(25)
+    with pytest.raises(ValueError):
+        controller.fade_to(150, duration=0)

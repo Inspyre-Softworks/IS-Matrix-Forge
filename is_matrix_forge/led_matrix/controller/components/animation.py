@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Optional
+from typing import Any, Optional
 
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.display.animations import flash_matrix
@@ -127,15 +127,17 @@ class AnimationManager:
 
         if isinstance(fm, FontMap):
             case_sensitive = fm.is_case_sensitive
-            glyph_map = {(
-                key if case_sensitive else str(key).upper()
-            ): fm.lookup(key) for key in fm.keys()}
-            for ch in text:
-                key = ch if case_sensitive else ch.upper()
-                glyph_map[key] = fm.lookup(ch)
+            glyph_map = {
+                (key if case_sensitive else str(key).upper()): fm.lookup(key)
+                for key in fm.keys()
+            }
         elif isinstance(fm, Mapping):
-            case_sensitive = True
-            glyph_map = {str(k): v for k, v in fm.items()}
+            str_items = [(str(k), v) for k, v in fm.items()]
+            case_sensitive = any(key != key.upper() for key, _ in str_items)
+            glyph_map = {
+                (key if case_sensitive else key.upper()): value
+                for key, value in str_items
+            }
         else:
             raise TypeError('font_map must be a FontMap or mapping of glyphs')
 

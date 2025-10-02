@@ -129,6 +129,8 @@ class TextScroller:
         frames: List[Frame] = []
 
         if not glyphs:
+            if self.config.text:
+                raise ValueError('No glyphs could be generated for the configured text')
             blank = Grid()
             frames.append(Frame(grid=blank))
             anim = Animation(frame_data=frames)
