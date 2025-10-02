@@ -1,150 +1,68 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Dict, List, Any
+from typing import Dict, List, Callable
 
 from is_matrix_forge.led_matrix.display.grid.base import MATRIX_WIDTH, MATRIX_HEIGHT
 from is_matrix_forge.led_matrix.display.grid import Grid
 from is_matrix_forge.led_matrix.display.animations.animation import Animation, Frame
+from .text.glyph_normalizer import GlyphNormalizer, GlyphRows
 
 
 @dataclass(frozen=True)
 class TextScrollerConfig:
-    """Immutable configuration for the text scroller."""
+    """Configuration for :class:`TextScroller`.
+
+    Attributes:
+        text: The string to display.
+        font_map: Mapping of characters to glyph definitions (row-major 0/1 lists).
+        spacing: Number of blank columns/rows between glyphs.
+        frame_duration: Seconds each frame is displayed.
+        wrap: If ``True`` horizontal scroll loops seamlessly.
+        direction: ``"horizontal"``, ``"vertical_up"``, or ``"vertical_down"``.
+        fit: Behaviour when a glyph exceeds ``MATRIX_HEIGHT``. Valid values are
+            ``"error"`` (raise), ``"truncate"`` (center crop), and ``"clip"``
+            (downscale with pooling). Legacy values ``"crop"`` and ``"scale"``
+            are also accepted for backward compatibility.
+        case_sensitive: When ``False`` (default) characters are normalized to
+            uppercase before lookup.
+    """
+
     text: str
-    font_map: Dict[str, List[List[int]]]
+    font_map: Mapping[str, List[List[int]]]
     spacing: int = 1
     frame_duration: float = 0.05
     wrap: bool = False  # unused for vertical mode
     direction: str = "horizontal"  # one of: "horizontal", "vertical_up", "vertical_down"
-
-
-GlyphRows = List[List[int]]
+    fit: str = "error"
+    case_sensitive: bool = False
 
 
 class TextScroller:
-    """Generates scrolling‐text Animations in horizontal or vertical directions."""
+    """Generates scrolling-text Animations in horizontal or vertical directions."""
 
     VALID_DIRS = {"horizontal", "vertical_up", "vertical_down"}
+    VALID_FIT_MODES = ("error", "truncate", "clip")
 
     def __init__(self, config: TextScrollerConfig):
         self.config = config
         if config.direction not in self.VALID_DIRS:
             raise ValueError(f'Unsupported scroll direction: {config.direction}')
 
-        # Build a rows×cols map regardless of input shapes
-        self._rows_map: Dict[str, GlyphRows] = {}
-        for k, v in config.font_map.items():
-            self._rows_map[k] = self._to_rows_cols(v)
+        self._normalizer = GlyphNormalizer(MATRIX_WIDTH, MATRIX_HEIGHT)
 
-        # sanity sample AFTER normalization
-        sample = next(iter(self._rows_map.values()))
+        normalized_map: Dict[str, GlyphRows] = {}
+        for key, glyph in dict(config.font_map).items():
+            normal_key = key if config.case_sensitive else str(key).upper()
+            normalized_map[normal_key] = self._normalizer.normalize(glyph)
+
+        if not normalized_map:
+            raise ValueError('font_map must contain at least one glyph definition')
+
+        sample = next(iter(normalized_map.values()))
         if len(sample) > MATRIX_HEIGHT:
             raise ValueError(f'Font height {len(sample)} > display height {MATRIX_HEIGHT}')
 
-        # -------- normalization helpers --------
-
-    # Add near the top of TextScroller (just a tiny helper)
-    def _rows_to_cols(self, rows: List[List[int]]) -> List[List[int]]:
-        if not rows:
-            return []
-        h, w = len(rows), len(rows[0])
-        return [[rows[r][c] for r in range(h)] for c in range(w)]
-
-    def _binary_flat_to_rows(self, flat: List[int]) -> GlyphRows:
-        """Interpret a flat binary list as row-major glyph data."""
-
-        if not flat:
-            return [[0]]
-
-        if not all(v in (0, 1) for v in flat):
-            raise ValueError("Flat glyph list must contain only 0/1 values")
-
-        total = len(flat)
-        max_width = min(MATRIX_WIDTH, total)
-        candidates: List[tuple[int, int]] = []
-        for width in range(1, max_width + 1):
-            if total % width:
-                continue
-            height = total // width
-            if height <= MATRIX_HEIGHT:
-                candidates.append((width, height))
-
-        if not candidates:
-            # Fallback: treat the glyph as a single row up to the display width.
-            return [flat[:max_width]]
-
-        preferred_widths = [5, 4, 6, 7, 8, 9, 3, 2, 1]
-        chosen: tuple[int, int] | None = None
-        for pref in preferred_widths:
-            for width, height in candidates:
-                if width == pref:
-                    chosen = (width, height)
-                    break
-            if chosen:
-                break
-
-        if chosen is None:
-            # Choose the candidate with the widest glyph to preserve detail.
-            chosen = max(candidates, key=lambda wh: (wh[0], wh[1]))
-
-        width, height = chosen
-        rows: GlyphRows = []
-        for r in range(height):
-            start = r * width
-            rows.append(flat[start:start + width])
-        return rows
-
-    def _to_rows_cols(self, glyph: Any) -> GlyphRows:
-        # Already rows×cols?
-        if isinstance(glyph, list) and glyph and isinstance(glyph[0], list):
-            return glyph
-
-        # 1-D list of ints? Distinguish flat binary glyphs from bit masks.
-        if isinstance(glyph, list) and glyph and isinstance(glyph[0], int):
-            if all(isinstance(v, int) and v in (0, 1) for v in glyph):
-                return self._binary_flat_to_rows(glyph)
-            return self._cols_mask_to_rows(glyph)
-
-        # String rows like '01010'?
-        if isinstance(glyph, list) and glyph and isinstance(glyph[0], str):
-            return [[1 if ch == '1' else 0 for ch in row] for row in glyph]
-
-        # Model object? Try common attributes/methods.
-        if hasattr(glyph, 'rows'):
-            rows = getattr(glyph, 'rows')
-            if isinstance(rows, list) and rows and isinstance(rows[0], list):
-                return rows
-        if hasattr(glyph, 'grid'):
-            grid = getattr(glyph, 'grid')
-            if isinstance(grid, list) and grid and isinstance(grid[0], list):
-                return grid
-        if hasattr(glyph, 'to_rows'):
-            rows = glyph.to_rows()  # type: ignore[attr-defined]
-            if isinstance(rows, list) and rows and isinstance(rows[0], list):
-                return rows
-        if hasattr(glyph, 'cols'):  # columns as bit-masks
-            cols = getattr(glyph, 'cols')
-            if isinstance(cols, list) and cols and isinstance(cols[0], int):
-                # if glyph exposes an explicit height, use it
-                h = getattr(glyph, 'height', None)
-                return self._cols_mask_to_rows(cols, height=h)
-
-        # Completely blank? Treat as 1-col blank.
-        if glyph in (None, 0, []):
-            return [[0]]
-
-        raise TypeError(f'Unsupported glyph format: {type(glyph)!r}')
-
-    def _cols_mask_to_rows(self, cols: List[int], *, height: int | None = None) -> GlyphRows:
-        if not cols:
-            return [[0]]
-        if height is None:
-            height = max(1, max(c.bit_length() for c in cols))
-        # Top row = MSB. Flip the loop if your font expects LSB-at-top.
-        out: GlyphRows = []
-        for r in range(height - 1, -1, -1):
-            out.append([(c >> r) & 1 for c in cols])
-        return out
+        self._rows_map = normalized_map
 
     def generate_animation(self) -> Animation:
         '''
@@ -155,29 +73,35 @@ class TextScroller:
                 If any character is missing from the font_map, or if a glyph exceeds
                 MATRIX_HEIGHT and fit='error'.
         '''
-        # prefer normalized map if present (from __init__), otherwise use config.font_map
-        source_map = getattr(self, '_rows_map', self.config.font_map)
+        source_map = self._rows_map
 
-        # --- local helpers -------------------------------------------------------
-        def center_crop_rows(rows, target_h: int):
-            h = len(rows)
-            if h <= target_h:
-                return rows
-            trim = h - target_h
+        legacy_fit = {'crop': 'truncate', 'scale': 'clip'}
+        fit_mode = legacy_fit.get(self.config.fit, self.config.fit)
+        if fit_mode not in self.VALID_FIT_MODES:
+            valid_str = ', '.join(self.VALID_FIT_MODES)
+            raise ValueError(f"Invalid fit mode '{self.config.fit}'. Valid options are: {valid_str}")
+
+        transform: Callable[[str], str]
+        transform = (lambda c: c) if self.config.case_sensitive else str.upper
+
+        def center_crop_rows(rows: GlyphRows, target_h: int) -> GlyphRows:
+            if len(rows) <= target_h:
+                return [r[:] for r in rows]
+            trim = len(rows) - target_h
             top = trim // 2
-            return rows[top:top + target_h]
+            return [row[:] for row in rows[top:top + target_h]]
 
-        def downscale_rows_or_pool(rows, target_h: int):
+        def downscale_rows_or_pool(rows: GlyphRows, target_h: int) -> GlyphRows:
             src_h = len(rows)
             if src_h <= target_h:
-                return rows
-            out = []
+                return [r[:] for r in rows]
+            out: GlyphRows = []
+            width = len(rows[0]) if rows and rows[0] else 0
             for t in range(target_h):
                 start = int(t * src_h / target_h)
                 end = int((t + 1) * src_h / target_h)
                 if end == start:
                     end = min(start + 1, src_h)
-                width = len(rows[0])
                 pooled = [0] * width
                 for r in range(start, end):
                     src_row = rows[r]
@@ -186,25 +110,30 @@ class TextScroller:
                 out.append(pooled)
             return out
 
-        # --- assemble glyphs -----------------------------------------------------
-        fit_mode = getattr(self.config, 'fit', 'error')
-        glyphs = []
+        glyphs: List[GlyphRows] = []
         for ch in self.config.text:
-            ch = ch.upper()
-            raw = source_map.get(ch)
+            lookup = transform(ch)
+            raw = source_map.get(lookup)
             if raw is None:
                 raise ValueError(f'Character {ch!r} not found in font_map')
-            g = self._to_rows_cols(raw)
-            if len(g) > MATRIX_HEIGHT:
-                if fit_mode == 'crop':
-                    g = center_crop_rows(g, MATRIX_HEIGHT)
-                elif fit_mode == 'scale':
-                    g = downscale_rows_or_pool(g, MATRIX_HEIGHT)
+            glyph_rows = [row[:] for row in raw]
+            if len(glyph_rows) > MATRIX_HEIGHT:
+                if fit_mode == 'truncate':
+                    glyph_rows = center_crop_rows(glyph_rows, MATRIX_HEIGHT)
+                elif fit_mode == 'clip':
+                    glyph_rows = downscale_rows_or_pool(glyph_rows, MATRIX_HEIGHT)
                 else:
-                    raise ValueError(f'Font height {len(g)} > display height {MATRIX_HEIGHT}')
-            glyphs.append(g)
+                    raise ValueError(f'Font height {len(glyph_rows)} > display height {MATRIX_HEIGHT}')
+            glyphs.append(glyph_rows)
 
         frames: List[Frame] = []
+
+        if not glyphs:
+            blank = Grid()
+            frames.append(Frame(grid=blank))
+            anim = Animation(frame_data=frames)
+            anim.set_all_frame_durations(self.config.frame_duration)
+            return anim
 
         # --- horizontal scroll ---------------------------------------------------
         if self.config.direction == 'horizontal':
@@ -212,6 +141,12 @@ class TextScroller:
             total_w = sum(glyph_ws) + self.config.spacing * (len(glyph_ws) - 1 if glyph_ws else 0)
 
             # canvas is rows×total_w, height = MATRIX_HEIGHT
+            if total_w == 0:
+                frames.append(Frame())
+                anim = Animation(frame_data=frames)
+                anim.set_all_frame_durations(self.config.frame_duration)
+                return anim
+
             canvas = [[0] * max(total_w, 1) for _ in range(MATRIX_HEIGHT)]
             x = 0
             for g, w in zip(glyphs, glyph_ws):
@@ -222,7 +157,7 @@ class TextScroller:
                         canvas[vpad + r][x:x + w] = g[r]
                 x += w + self.config.spacing
 
-            offsets = range(0, total_w) if getattr(self.config, 'wrap', False) else range(-MATRIX_WIDTH, total_w)
+            offsets = range(total_w) if getattr(self.config, 'wrap', False) else range(-MATRIX_WIDTH, total_w)
             for off in offsets:
                 window = [
                     [canvas[r][off + c] if 0 <= off + c < total_w else 0 for c in range(MATRIX_WIDTH)]
@@ -237,7 +172,13 @@ class TextScroller:
             # 1) compute per-glyph sizes
             glyph_hs = [len(g) if g else 0 for g in glyphs]
             glyph_ws = [len(g[0]) if g and g[0] else 0 for g in glyphs]
-            render_w = max([1] + glyph_ws)  # avoid 0-width canvas
+            if all(w == 0 for w in glyph_ws):
+                blank_grid = Grid()
+                frames.append(Frame(grid=blank_grid))
+                anim = Animation(frame_data=frames)
+                anim.set_all_frame_durations(self.config.frame_duration)
+                return anim
+            render_w = max(glyph_ws)
             total_h = sum(glyph_hs) + self.config.spacing * (len(glyphs) - 1 if glyphs else 0)
 
             # 2) build a tall canvas (rows x cols)
@@ -271,7 +212,7 @@ class TextScroller:
                     [canvas[off + r][c] if 0 <= off + r < total_h else 0 for c in range(render_w)]
                     for r in range(MATRIX_HEIGHT)
                 ]
-                cols = self._rows_to_cols(window_rows)
+                cols = self._normalizer.rows_to_cols(window_rows)
                 frames.append(Frame(grid=Grid(init_grid=cols)))
         anim = Animation(frame_data=frames)
         anim.set_all_frame_durations(self.config.frame_duration)

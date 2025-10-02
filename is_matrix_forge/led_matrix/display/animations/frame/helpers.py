@@ -63,8 +63,8 @@ def sleep_with_cancel(seconds: float, stop_event: Event | None) -> None:
         remaining = end - time.monotonic()
         if remaining <= 0:
             break
-        # short waits so Ctrl+C/stop() is responsive
-        stop_event.wait(min(0.05, remaining))
+        interval = 0.01 if remaining < 0.05 else 0.05
+        stop_event.wait(min(interval, remaining))
 
 
 def migrate_frame(matrix_spec: List[List[int]], duration: Union[int, str]) -> dict:

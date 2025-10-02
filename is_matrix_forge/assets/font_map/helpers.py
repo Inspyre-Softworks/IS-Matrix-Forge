@@ -7,9 +7,12 @@ from .models.glyph import Glyph
 
 
 def load_builtin_char_map() -> Dict[str, Glyph]:
-    data = json.loads(files('is_matrix_forge.assets').joinpath('char_map.json').read_text())
+    resource = files('is_matrix_forge.assets').joinpath('char_map.json')
+    if not resource.is_file():
+        raise FileNotFoundError('char_map.json missing from is_matrix_forge.assets package data')
+    data = json.loads(resource.read_text())
 
-    return {k: v for k, v in data.items()}
+    return dict(data)
 
 
 def has_key_ignore_case(
@@ -18,7 +21,7 @@ def has_key_ignore_case(
 ) -> bool:
     kf = key.casefold()
 
-    return any(k.casefold() == kf for k in d.keys())
+    return any(k.casefold() == kf for k in d)
 
 
 def get_ignore_case(
@@ -28,9 +31,5 @@ def get_ignore_case(
 ):
     kf = key.casefold()
 
-    for k, v in d.items():
-        if k.casefold() == kf:
-            return v
-
-    return default
+    return next((v for k, v in d.items() if k.casefold() == kf), default)
 

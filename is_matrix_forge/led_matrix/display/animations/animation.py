@@ -1,3 +1,4 @@
+import logging
 import threading
 from threading import Event
 from typing import List, Dict, Optional, Union, Any
@@ -10,6 +11,9 @@ from serial.tools.list_ports_common import ListPortInfo
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Animation:
@@ -353,8 +357,6 @@ class Animation:
         if self.cursor_at_end:
             raise AnimationFinishedError('Try rewinding the animation first.')
 
-        print('animation')
-
         self.__check_ready()
         devices = self.__normalize_devices(devices)
 
@@ -387,17 +389,25 @@ class Animation:
                     self.__clear_screen(devices)
 
         except KeyboardInterrupt:
-            print('Received keyboard interrupt!')
+            LOGGER.info('Animation playback interrupted by user input.')
             self.stop()
 
-    def play_frame(self, index: int, devices, *, stop_event: Event | None = None) -> None:
+    def play_frame(
+        self,
+        index: int,
+        devices,
+        *,
+        stop_event: Event | None = None,
+        advance_cursor: bool = True,
+    ) -> None:
         frame = self.__frames[index]
 
         for device in devices:
             # Frame.play cooperates with stop_event for cancellable sleeps
             frame.play(device, stop_event)
 
-        self.__cursor = index + 1
+        if advance_cursor:
+            self.__cursor = index + 1
 
     def resume(self) -> None:
         """Resumes playback from paused state."""
@@ -405,6 +415,7 @@ class Animation:
             raise RuntimeError("resume() requires thread-safe mode to be enabled.")
 
         with self.thread_lock:
+            self._stop_event.clear()
             self.__playing = True
             self.__pause_event.set()
 
@@ -423,6 +434,7 @@ class Animation:
             if pos > self.cursor:
                 raise ValueError('Maybe you meant "fast_forward"... Cursor target position greater than current...')
 
+        self._stop_event.clear()
         self.cursor = pos if pos is not None else 0
 
     def stop(self) -> None:

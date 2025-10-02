@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Iterator
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple, Callable
 
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from .models.glyph import Glyph
@@ -136,21 +136,17 @@ class FontMap(Mapping[str, Glyph]):
     def _merge_into_glyphs(self, mapping: Dict[str, Glyph]) -> None:
         if not mapping:
             return
-        if self._case_sensitive:
-            for k, v in mapping.items():
-                self._glyphs[str(k)] = v
-        else:
-            for k, v in mapping.items():
-                self._glyphs[str(k).upper()] = v
+        normalise: Callable[[str], str] = str if self._case_sensitive else lambda key: str(key).upper()
+        for k, v in mapping.items():
+            self._glyphs[normalise(k)] = v
 
     def _normalize_key(self, key: str) -> str:
         return key if self._case_sensitive else key.upper()
 
     def _validate_fallback(self) -> None:
         # Ensure fallback exists; prefer '?' then space, otherwise keep as-is but don't explode.
-        if self._normalize_key(self._fallback_char) not in self._glyphs:
-            if self._normalize_key(' ') in self._glyphs:
-                self._fallback_char = ' '
+        if self._normalize_key(self._fallback_char) not in self._glyphs and self._normalize_key(' ') in self._glyphs:
+            self._fallback_char = ' '
 
     # ---------- Mapping protocol ----------
 
@@ -230,9 +226,7 @@ class FontMap(Mapping[str, Glyph]):
 
     @property
     def symbol_map(self) -> Dict[str, Glyph]:
-        if self._raw_map is None:
-            return {}
-        return dict(self._raw_map['symbols'])
+        return {} if self._raw_map is None else dict(self._raw_map['symbols'])
 
     @property
     def characters(self) -> list[str]:

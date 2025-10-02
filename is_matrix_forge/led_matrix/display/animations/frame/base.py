@@ -107,6 +107,8 @@ class Frame:
             )
 
         self.__number_of_plays: int = 0
+        self.__align_x: Literal['left', 'center', 'right'] = align_x
+        self.__align_y: Literal['top', 'center', 'bottom'] = align_y
 
     # ──────────────────────────────────────────────────────────────────────
     # Duration helpers
@@ -239,7 +241,13 @@ class Frame:
         return self.__grid
 
     @grid.setter
-    def grid(self, value: Union[Grid, List[List[int]], List[int]]) -> None:
+    def grid(
+        self,
+        value: Union[Grid, List[List[int]], List[int]],
+        *,
+        align_x: Optional[Literal['left', 'center', 'right']] = None,
+        align_y: Optional[Literal['top', 'center', 'bottom']] = None,
+    ) -> None:
         """
         Replace the frame's grid content.
 
@@ -252,15 +260,20 @@ class Frame:
             ValueError:
                 If provided content cannot be normalized/validated.
         """
+        use_align_x = align_x if align_x is not None else getattr(self, '_Frame__align_x', 'center')
+        use_align_y = align_y if align_y is not None else getattr(self, '_Frame__align_y', 'center')
+
         if isinstance(value, Grid):
             self.__grid = self._fit_grid_to_canvas(
                 src=value,
                 dst_w=self.width,
                 dst_h=self.height,
                 fill_value=self.__grid.fill_value if hasattr(self, '_Frame__grid') else 0,
-                align_x='center',
-                align_y='center',
+                align_x=use_align_x,
+                align_y=use_align_y,
             )
+            self.__align_x = use_align_x
+            self.__align_y = use_align_y
             return
 
         # Normalize raw into our current canvas
@@ -269,9 +282,19 @@ class Frame:
             height=self.height,
             fill_value=self.__grid.fill_value if hasattr(self, '_Frame__grid') else 0,
             init_grid=value,
-            align_x='center',
-            align_y='center',
+            align_x=use_align_x,
+            align_y=use_align_y,
         )
+        self.__align_x = use_align_x
+        self.__align_y = use_align_y
+
+    def get_grid(self) -> Grid:
+        """Return the underlying :class:`Grid` instance for this frame."""
+        return self.__grid
+
+    def get_grid_data(self) -> List[List[int]]:
+        """Return a defensive copy of the frame's raw grid data."""
+        return [col[:] for col in self.__grid.grid]
 
     @property
     def width(self) -> int:

@@ -60,6 +60,10 @@ pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 path = "presets/**"
 format = "sdist"
 
+[[tool.poetry.include]]
+path = "is_matrix_forge/assets/char_map.json"
+format = "sdist"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
