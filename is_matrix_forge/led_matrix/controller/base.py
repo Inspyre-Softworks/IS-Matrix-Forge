@@ -22,6 +22,14 @@ class DeviceBase(Aliases):
         device (ListPortInfo): The serial device to control.
         thread_safe (bool): Enables use of an internal RLock for synchronized ops.
         cmd_lock (Optional[threading.RLock]): Lazily created lock when thread_safe.
+    
+    Properties:
+        location (Dict[str, Any]): Physical location information for the device.
+        location_abbrev (str): Abbreviated location identifier (e.g., 'R1', 'L2').
+        name (str): Device name.
+        serial_number (str): Device serial number.
+        side_of_keyboard (str): Which side of the keyboard the device is on ('left' or 'right').
+        slot (int): The slot number of the device (1 or 2).
     """
     def __init__(self, *, device: ListPortInfo, thread_safe: bool = False, **kwargs: Any) -> None:
         # Initialize core device/threading state BEFORE forwarding to super(), so
