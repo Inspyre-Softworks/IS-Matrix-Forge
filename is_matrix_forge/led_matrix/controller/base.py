@@ -73,6 +73,28 @@ class DeviceBase(Aliases):
     def serial_number(self) -> str:
         return self.device.serial_number
 
+    @property
+    def side_of_keyboard(self) -> str:
+        """
+        Get which side of the keyboard the device is on.
+
+        Returns:
+            str:
+                The side of the keyboard ('left' or 'right').
+        """
+        return self.location['side']
+
+    @property
+    def slot(self) -> int:
+        """
+        Get the slot number of the device.
+
+        Returns:
+            int:
+                The slot number (1 or 2).
+        """
+        return self.location['slot']
+
     def _ping(self) -> None:
         try:
             _ = self.animating
