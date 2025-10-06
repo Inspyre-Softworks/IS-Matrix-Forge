@@ -3,10 +3,46 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from pathlib import Path
+from types import ModuleType
+from typing import Optional
 
 import pytest
 
+
+def _install_test_stubs() -> None:
+    """Provide lightweight stand-ins for optional runtime dependencies."""
+
+    import sys
+
+    if "is_matrix_forge.common.dirs" not in sys.modules:
+        dirs_module = ModuleType("is_matrix_forge.common.dirs")
+        dirs_module.APP_DIRS = type("_Dirs", (), {"user_data_path": Path("/tmp/led-matrix")})()
+        dirs_module.APP_DIR = dirs_module.APP_DIRS.user_data_path
+        dirs_module.PRESETS_DIR = dirs_module.APP_DIR / "presets"
+        sys.modules["is_matrix_forge.common.dirs"] = dirs_module
+
+    if "is_matrix_forge.led_matrix.helpers.device" not in sys.modules:
+        helpers_module = ModuleType("is_matrix_forge.led_matrix.helpers.device")
+        helpers_module.DEVICES = []
+        sys.modules["is_matrix_forge.led_matrix.helpers.device"] = helpers_module
+
+    if "is_matrix_forge.led_matrix.controller.controller" not in sys.modules:
+        controller_module = ModuleType("is_matrix_forge.led_matrix.controller.controller")
+
+        class LEDMatrixController:  # pragma: no cover - type stub for imports
+            pass
+
+        controller_module.LEDMatrixController = LEDMatrixController
+        sys.modules["is_matrix_forge.led_matrix.controller.controller"] = controller_module
+
+
+_install_test_stubs()
+
+from is_matrix_forge.led_matrix.Scripts.identify_matrices import (
+    find_leftmost_matrix,
+    find_rightmost_matrix,
+)
 from is_matrix_forge.led_matrix.constants import SLOT_MAP
 
 
@@ -79,30 +115,6 @@ class MockController:
         return self._location_info["slot"]
 
 
-def select_leftmost(controllers: Iterable[MockController]) -> Optional[MockController]:
-    """Replicate ``find_leftmost_matrix`` selection logic for mock controllers."""
-
-    if left_devices := [c for c in controllers if c.side_of_keyboard == "left"]:
-        return min(left_devices, key=lambda controller: controller.slot)
-    return min(
-        (c for c in controllers if c.side_of_keyboard == "right"),
-        key=lambda controller: controller.slot,
-        default=None,
-    )
-
-
-def select_rightmost(controllers: Iterable[MockController]) -> Optional[MockController]:
-    """Replicate ``find_rightmost_matrix`` selection logic for mock controllers."""
-
-    if right_devices := [c for c in controllers if c.side_of_keyboard == "right"]:
-        return max(right_devices, key=lambda controller: controller.slot)
-    return max(
-        (c for c in controllers if c.side_of_keyboard == "left"),
-        key=lambda controller: controller.slot,
-        default=None,
-    )
-
-
 def assert_controller_matches(
     controller: Optional[MockController], *, name: Optional[str], side: Optional[str], slot: Optional[int], location: Optional[str]
 ) -> None:
@@ -141,6 +153,23 @@ def test_side_of_keyboard_and_slot_properties(
     assert controller.location_abbrev == expected_abbrev
 
 
+def test_mock_controller_defaults() -> None:
+    """Controllers without explicit metadata expose deterministic defaults."""
+
+    controller = MockController("1-4.2")
+    assert controller.name == "1-4.2"
+    assert controller.device_name == "1-4.2"
+    assert controller.serial_number == "SN-1-4.2"
+    assert controller.device.serial_number == "SN-1-4.2"
+
+
+def test_mock_controller_unknown_location() -> None:
+    """Unknown locations raise ValueError to mirror DeviceBase safeguards."""
+
+    with pytest.raises(ValueError, match="Unknown controller location"):
+        MockController("9-9.9")
+
+
 @pytest.mark.parametrize(
     "controllers, expected",
     [
@@ -171,7 +200,21 @@ def test_side_of_keyboard_and_slot_properties(
 def test_find_leftmost_matrix(controllers: list[MockController], expected: dict[str, Optional[object]]) -> None:
     """Leftmost selection prefers left devices and falls back appropriately."""
 
-    assert_controller_matches(select_leftmost(controllers), **expected)
+    assert_controller_matches(find_leftmost_matrix(controllers), **expected)
+
+
+def test_find_leftmost_matrix_with_duplicate_slots() -> None:
+    """Selecting the leftmost matrix is stable when slot numbers tie."""
+
+    controllers = [
+        MockController("1-4.2", "left-first"),
+        MockController("1-4.2", "left-second"),
+    ]
+
+    result = find_leftmost_matrix(controllers)
+    assert result is not None
+    assert result.name == "left-first"
+    assert result.device_location == "1-4.2"
 
 
 @pytest.mark.parametrize(
@@ -204,4 +247,18 @@ def test_find_leftmost_matrix(controllers: list[MockController], expected: dict[
 def test_find_rightmost_matrix(controllers: list[MockController], expected: dict[str, Optional[object]]) -> None:
     """Rightmost selection prefers right devices and falls back appropriately."""
 
-    assert_controller_matches(select_rightmost(controllers), **expected)
+    assert_controller_matches(find_rightmost_matrix(controllers), **expected)
+
+
+def test_find_rightmost_matrix_with_duplicate_slots() -> None:
+    """Selecting the rightmost matrix is stable when slot numbers tie."""
+
+    controllers = [
+        MockController("1-3.3", "right-second"),
+        MockController("1-3.3", "right-first"),
+    ]
+
+    result = find_rightmost_matrix(controllers)
+    assert result is not None
+    assert result.name == "right-second"
+    assert result.device_location == "1-3.3"
