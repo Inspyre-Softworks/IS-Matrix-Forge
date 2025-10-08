@@ -260,6 +260,14 @@ def test_find_leftmost_matrix_with_duplicate_slots() -> None:
             id="fallback-to-left-devices",
         ),
         pytest.param(
+            [
+                MockController(name="L3", side="left", slot=3, location="1-4.4"),
+                MockController(name="R3", side="right", slot=3, location="1-4.5"),
+            ],
+            {"name": "R3", "side": "right", "slot": 3, "location": "1-4.5"},
+            id="rightmost-preferred-when-same-slot",
+        ),
+        pytest.param(
             [],
             {"name": None, "side": None, "slot": None, "location": None},
             id="no-devices",
