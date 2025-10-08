@@ -205,6 +205,14 @@ def test_mock_controller_unknown_location() -> None:
             id="fallback-to-right-devices",
         ),
         pytest.param(
+            [
+                {"name": "L1", "side": "left", "slot": 2, "location": "1-2.1"},
+                {"name": "R1", "side": "right", "slot": 2, "location": "1-2.2"},
+            ],
+            {"name": "L1", "side": "left", "slot": 2, "location": "1-2.1"},
+            id="mixed-sides-identical-slot-left-preferred",
+        ),
+        pytest.param(
             [],
             {"name": None, "side": None, "slot": None, "location": None},
             id="no-devices",
