@@ -163,6 +163,20 @@ def test_mock_controller_defaults() -> None:
     assert controller.device.serial_number == "SN-1-4.2"
 
 
+def test_mock_controller_explicit_overrides() -> None:
+    """Controllers with explicit name and serial_number use the provided values."""
+
+    controller = MockController(
+        "1-4.2",
+        name="CustomName",
+        serial_number="CustomSerial"
+    )
+    assert controller.name == "CustomName"
+    assert controller.device_name == "CustomName"
+    assert controller.serial_number == "CustomSerial"
+    assert controller.device.serial_number == "CustomSerial"
+
+
 def test_mock_controller_unknown_location() -> None:
     """Unknown locations raise ValueError to mirror DeviceBase safeguards."""
 
