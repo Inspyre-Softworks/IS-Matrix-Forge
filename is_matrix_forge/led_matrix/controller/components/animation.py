@@ -4,12 +4,8 @@ from collections.abc import Mapping
 from typing import Any, Optional
 
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
-from is_matrix_forge.led_matrix.display.animations import flash_matrix
+
 from is_matrix_forge.led_matrix.display.animations import Animation
-from is_matrix_forge.led_matrix.display.animations.text_scroller import (
-    TextScroller,
-    TextScrollerConfig,
-)
 from is_matrix_forge.assets.font_map.base import FontMap
 
 
@@ -123,7 +119,15 @@ class AnimationManager:
             set_duration_override:
                 Optional override for all frame durations.
         """
-        fm = font_map or FontMap()
+        from is_matrix_forge.led_matrix.display.animations.text_scroller import (
+            TextScroller,
+            TextScrollerConfig,
+        )
+
+        fm = font_map or FontMap(case_sensitive=False)
+
+        if isinstance(text, str):
+            text = text.upper()
 
         if isinstance(fm, FontMap):
             case_sensitive = fm.is_case_sensitive
@@ -177,6 +181,8 @@ class AnimationManager:
             interval:
                 Seconds between on/off toggles.
         """
+        from is_matrix_forge.led_matrix.display.animations import flash_matrix
+
         flash_matrix(self, num_flashes=num_flashes, interval=interval)
 
     @synchronized
@@ -188,7 +194,6 @@ class AnimationManager:
             self.animate(False)
 
     # --- Accessors ----------------------------------------------------------------
-
     @property
     def current_animation(self) -> Optional[Animation]:
         """The most recently played Animation (if any)."""

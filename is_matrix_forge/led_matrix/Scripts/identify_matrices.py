@@ -152,11 +152,12 @@ class Arguments(ArgumentParser):
 
 
 def main(
-    runtime:     Optional[Union[int, float]] = None,
-    only_left:   Optional[bool]              = None,
-    only_right:  Optional[bool]              = None,
-    skip_clear:  Optional[bool]              = None,
-    cycle_count: Optional[int]               = None
+    runtime:         Optional[Union[int, float]]  = None,
+    only_left:       Optional[bool]               = None,
+    only_right:      Optional[bool]               = None,
+    skip_clear:      Optional[bool]               = None,
+    cycle_count:     Optional[int]                = None,
+    argument_parser: Optional[ArgumentParser]     = None,
 ):
     """
     The main function of the script.
@@ -176,6 +177,9 @@ def main(
 
         cycle_count (Optional[int]):
             The number of cycles to run per message, for each selected device.
+
+        argument_parser (Optional[ArgumentParser]):
+            The argument parser to use. If not provided, the default parser will be used.
 
     Returns:
         List[Thread]:

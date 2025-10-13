@@ -14,10 +14,12 @@ class Arguments(ArgumentParser):
             *args,
             **kwargs
         )
-        self.__building = False
-        self.__built    = False
-        self.__parsed   = None
-        self.__scroll_parser = None
+        self.__building        = False
+        self.__built           = False
+        self.__parsed          = None
+        self.__identify_parser = None
+        self.__scroll_parser   = None
+
         self.SUBCOMMANDS = self.add_subparsers(
             dest='subcommand',
             required=True,
@@ -36,8 +38,26 @@ class Arguments(ArgumentParser):
         return self.__built
 
     @property
+    def identify_parser(self):
+        """
+        The command-line argument parser for the 'identify-matrices' command.
+
+        Note:
+            This will get a definition when `__build_identify_matrices` is run.
+
+        Returns:
+            ArgumentParser:
+                The command-line argument parser for the 'identify-matrices' sub-command.
+        """
+        return self.__identify_parser
+
+    @property
     def scroll_parser(self):
         return self.__scroll_parser
+
+    def __build_identify_matrices(self):
+        from .commands.identify_matrices import register_command
+        self.__identify_parser = register_command(self)
 
     def __build_scroll_text(self):
         from .commands.scroll_text import register_command
@@ -46,7 +66,11 @@ class Arguments(ArgumentParser):
     def __build(self):
         self.__building = True
 
+        self.__build_identify_matrices()
+        print('built identify matrices command')
+
         self.__build_scroll_text()
+        print('built scroll text command')
 
         self.__building = False
         self.__built    = True

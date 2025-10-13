@@ -9,8 +9,10 @@ It includes functions for rendering strings, fonts, and special symbols.
 from ..assets import fonts as font
 from ...hardware import send_command
 from ...commands.map import CommandVals
+from aliaser import alias
 
 
+@alias('show_text')
 def show_string(dev, s):
     """Render a string with up to five letters"""
     show_font(dev, [font.convert_font(letter) for letter in str(s)[:5]])

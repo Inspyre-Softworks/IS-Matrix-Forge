@@ -22,7 +22,6 @@ MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.hardware')
 
 del ROOT_LOGGER
 
-
 FRAMEBUFFER_SIZE = WIDTH * HEIGHT
 
 class Game(IntEnum):
@@ -235,7 +234,7 @@ def send_serial(
         print(f"[send_serial] Raw bytes:    {cmd_bytes!r}")
 
     try:
-        with serial.Serial(controller.device, baud) as ser:
+        with serial.Serial(controller.device.name, baud) as ser:
             ser.write(cmd_bytes)
     except (IOError, OSError) as _ex:
         disconnect_dev(controller.device)
@@ -272,7 +271,7 @@ def send_command_raw(
     if timeout is None and with_response:
         timeout = 1.0
     try:
-        with serial.Serial(dev.device, 115200, timeout=timeout) as s:
+        with serial.Serial(str(dev.device), 115200, timeout=timeout) as s:
             s.write(cmd_bytes)
             if not with_response:
                 return None
