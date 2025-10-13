@@ -130,8 +130,14 @@ def main(arguments: argparse.Namespace) -> List[Thread]:
 
     if arguments.only_right:
         selected = [device for device in [find_rightmost_matrix(selected)] if device]
+        if not selected:
+            print("Error: No rightmost matrix found in the selection.")
+            return
     elif arguments.only_left:
         selected = [device for device in [find_leftmost_matrix(selected)] if device]
+        if not selected:
+            print("Error: No leftmost matrix found in the selection.")
+            return
 
     threads = [
         Thread(
