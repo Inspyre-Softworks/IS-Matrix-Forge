@@ -5,15 +5,10 @@ from ....identify_matrices import DEFAULT_CYCLES, DEFAULT_RUNTIME
 COMMAND = 'identify-matrices'
 
 
-CONTROLLER_MAP = {
-    'all': 'all',
-    'l': 'leftmost',
-    'r': 'rightmost'
-}
-
-
-HELP_TXT = ('Each found and configured controller will run the identification routine. This will have the device '
-            'display it\'s own information.')
+HELP_TXT = (
+    'Each found and configured controller will run the identification routine. '
+    "Use the global '--only-left/--only-right' flags to limit which matrices participate."
+)
 
 
 def register_command(parser: ArgumentParser):
@@ -42,23 +37,6 @@ def register_command(parser: ArgumentParser):
         type=int,
         default=DEFAULT_CYCLES,
         help='The number of cycles to run per message, for each selected device.'
-    )
-
-    # Set up the mutually exclusive arguments for the left and right matrices
-    left_right = id_parser.add_mutually_exclusive_group()
-
-    left_right.add_argument(
-        '-R', '--only-right',
-        action='store_true',
-        default=False,
-        help='Only display identifying information for/on the rightmost matrix.'
-    )
-
-    left_right.add_argument(
-        '-L', '--only-left',
-        action='store_true',
-        default=False,
-        help='Only display identifying information for/on the leftmost matrix.'
     )
 
     return id_parser

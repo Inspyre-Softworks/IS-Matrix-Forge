@@ -20,6 +20,20 @@ class Arguments(ArgumentParser):
         self.__identify_parser = None
         self.__scroll_parser   = None
 
+        selection_group = self.add_mutually_exclusive_group()
+        selection_group.add_argument(
+            '-L', '--only-left',
+            action='store_true',
+            default=False,
+            help='Only target the leftmost matrix when executing commands.'
+        )
+        selection_group.add_argument(
+            '-R', '--only-right',
+            action='store_true',
+            default=False,
+            help='Only target the rightmost matrix when executing commands.'
+        )
+
         self.SUBCOMMANDS = self.add_subparsers(
             dest='subcommand',
             required=True,

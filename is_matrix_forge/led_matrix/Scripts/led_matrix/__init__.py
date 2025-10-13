@@ -7,20 +7,69 @@ The object that holds the command-line arguments. This is a subclass of `argpars
 """
 
 
-def execute_get_controllers():
-    """
-    Invokes the command to get the controller objects for each available LED matrix.
+def _filter_controllers_by_side(controllers, cli_args):
+    """Return the controllers that match the requested keyboard side."""
+
+    if cli_args is None:
+        return controllers
+
+    if getattr(cli_args, 'only_left', False):
+        return [
+            controller for controller in controllers
+            if getattr(controller, 'side_of_keyboard', None) == 'left'
+        ]
+
+    if getattr(cli_args, 'only_right', False):
+        return [
+            controller for controller in controllers
+            if getattr(controller, 'side_of_keyboard', None) == 'right'
+        ]
+
+    return list(controllers)
+
+
+def _describe_selection(cli_args):
+    if cli_args is None:
+        return 'any LED matrix'
+
+    if getattr(cli_args, 'only_left', False):
+        return 'the leftmost LED matrix'
+
+    if getattr(cli_args, 'only_right', False):
+        return 'the rightmost LED matrix'
+
+    return 'any LED matrix'
+
+
+def execute_get_controllers(cli_args=None):
+    """Return the available controllers honoring any CLI matrix selection.
+
+    Parameters:
+        cli_args (Optional[argparse.Namespace]):
+            The parsed command-line arguments. When provided, any matrix
+            selection flags (``--only-left`` / ``--only-right``) are applied to
+            the available controllers.
 
     Returns:
         List[LEDMatrixController]:
             A list of controller objects, each representing an available LED matrix.
     """
     from is_matrix_forge.led_matrix.controller import get_controllers
-    return get_controllers(
+    controllers = get_controllers(
         threaded                 = True,
         skip_all_init_animations = True,
         clear_on_init            = True
     )
+
+    if not controllers:
+        raise SystemExit('No LED matrices are available.')
+
+    filtered = _filter_controllers_by_side(controllers, cli_args)
+
+    if not filtered:
+        raise SystemExit(f'No LED matrices matched the requested selection ({_describe_selection(cli_args)}).')
+
+    return filtered
 
 
 def scroll_text_command(cli_args=ARGUMENTS):
@@ -36,10 +85,9 @@ def scroll_text_command(cli_args=ARGUMENTS):
         None
     """
     from .arguments.commands.scroll_text import DIRECTION_MAP
-    controllers = execute_get_controllers()
+    controllers = execute_get_controllers(cli_args)
 
     # ToDo:
-    #    - Add ability to control which matrix the message is scrolled on if more than one is available.
     #    - Add ability to control the scroll speed.
     #    - Add ability to loop message scrolling;
     #        - Indefinitely, or;
@@ -58,21 +106,7 @@ def identify_matrices_command(cli_args):
         cli_args: argparse.Namespace
             The parsed arguments for the ``identify-matrices`` sub-command.
     """
-    controllers = execute_get_controllers()
-
-    if cli_args.only_left:
-        controllers = [
-            controller for controller in controllers
-            if getattr(controller, 'side_of_keyboard', None) == 'left'
-        ]
-    elif cli_args.only_right:
-        controllers = [
-            controller for controller in controllers
-            if getattr(controller, 'side_of_keyboard', None) == 'right'
-        ]
-
-    if not controllers:
-        raise SystemExit('No LED matrices matched the requested selection.')
+    controllers = execute_get_controllers(cli_args)
 
     for controller in controllers:
         controller.identify(
