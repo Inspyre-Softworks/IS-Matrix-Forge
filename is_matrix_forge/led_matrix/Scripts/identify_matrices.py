@@ -158,6 +158,7 @@ def main(
     skip_clear:      Optional[bool]               = None,
     cycle_count:     Optional[int]                = None,
     argument_parser: Optional[ArgumentParser]     = None,
+    arguments:       Optional[argparse.Namespace] = None,
 ):
     """
     The main function of the script.
@@ -185,26 +186,29 @@ def main(
         List[Thread]:
             A list of threads, one for each LED matrix being identified.
     """
+    parser = argument_parser or ARGS
+    parsed = arguments or parser.parse_args()
+
     selected = [LEDMatrixController(device, 100, thread_safe=True) for device in DEVICES]
 
-    if not skip_clear:
-        skip_clear = ARGS.parsed.skip_clear
+    if skip_clear is None:
+        skip_clear = parsed.skip_clear
 
     if only_left is None:
-        only_left = ARGS.parsed.only_left
+        only_left = parsed.only_left
 
     if only_right is None:
-        only_right = ARGS.parsed.only_right
+        only_right = parsed.only_right
 
     if only_right:
         selected = [find_rightmost_matrix(selected)]
     elif only_left:
         selected = [find_leftmost_matrix(selected)]
 
-    cycle_count = ARGS.parsed.cycle_count if cycle_count is None else cycle_count
+    cycle_count = parsed.cycle_count if cycle_count is None else cycle_count
 
     if runtime is None:
-        runtime = ARGS.parsed.runtime
+        runtime = parsed.runtime
 
     threads = []
 
@@ -225,8 +229,7 @@ def main(
     return threads
 
 
-ARGS   = Arguments()
-PARSED = ARGS.parse_args()
+ARGS = Arguments()
 
 if __name__ == '__main__':
-    threads = main()
+    threads = main(argument_parser=ARGS)

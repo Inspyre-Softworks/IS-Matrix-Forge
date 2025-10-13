@@ -61,3 +61,4 @@ def register_command(parser: ArgumentParser):
         help='Only display identifying information for/on the leftmost matrix.'
     )
 
+    return id_parser

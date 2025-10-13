@@ -67,10 +67,8 @@ class Arguments(ArgumentParser):
         self.__building = True
 
         self.__build_identify_matrices()
-        print('built identify matrices command')
 
         self.__build_scroll_text()
-        print('built scroll text command')
 
         self.__building = False
         self.__built    = True

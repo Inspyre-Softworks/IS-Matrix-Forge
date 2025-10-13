@@ -1,5 +1,3 @@
-from typing import Optional
-
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 
 
@@ -53,18 +51,35 @@ def scroll_text_command(cli_args=ARGUMENTS):
     matrix.scroll_text(cli_args.input, direction=DIRECTION_MAP[cli_args.direction.strip().lower()])
 
 
-def identify_matrices_command(which: Optional[str]):
-    """
-    Runs the identification routine on each found controller (or one, if configured to do so).
+def identify_matrices_command(cli_args):
+    """Run the identification routine on the selected LED matrices.
 
-    Returns:
-        None
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``identify-matrices`` sub-command.
     """
-    from ..identify_matrices import main as identify_matrices
     controllers = execute_get_controllers()
 
+    if cli_args.only_left:
+        controllers = [
+            controller for controller in controllers
+            if getattr(controller, 'side_of_keyboard', None) == 'left'
+        ]
+    elif cli_args.only_right:
+        controllers = [
+            controller for controller in controllers
+            if getattr(controller, 'side_of_keyboard', None) == 'right'
+        ]
+
+    if not controllers:
+        raise SystemExit('No LED matrices matched the requested selection.')
+
     for controller in controllers:
-        controller.identify()
+        controller.identify(
+            skip_clear=cli_args.skip_clear,
+            duration=float(cli_args.runtime),
+            cycles=int(cli_args.cycle_count),
+        )
 
 
 def main(cli_args=ARGUMENTS):
@@ -89,7 +104,13 @@ def main(cli_args=ARGUMENTS):
 
     # Register `scroll_text_command` as the function to run if the
     # `scroll-text` command is called;
+    if scroll_parser is None:
+        raise RuntimeError('Scroll text command parser was not initialized.')
     scroll_parser.set_defaults(func=scroll_text_command)
+
+    if identify_parser is None:
+        raise RuntimeError('Identify matrices command parser was not initialized.')
+    identify_parser.set_defaults(func=identify_matrices_command)
 
     # Parse command-line arguments;
     parsed = cli_args.parse()
