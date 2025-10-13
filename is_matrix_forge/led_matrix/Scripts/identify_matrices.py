@@ -20,7 +20,7 @@ Since:
 import argparse
 from argparse import ArgumentParser
 from threading import Thread
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.constants import DEVICES
@@ -75,161 +75,85 @@ def find_rightmost_matrix(matrices: List[LEDMatrixController]) -> Optional[LEDMa
     return max(left_devices, key=lambda m: m.slot) if left_devices else None
 
 
-class Arguments(ArgumentParser):
-    def __init__(self):
-        super().__init__('IdentifyLEDMatrices')
-        self.__parsed = None
+def build_parser() -> ArgumentParser:
+    parser = ArgumentParser('IdentifyLEDMatrices')
 
-        # Set up the arguments
-        self.add_argument(
-            '--runtime', '-t',
-            action='store',
-            default=DEFAULT_RUNTIME,
-            help='The total runtime'
-        )
+    parser.add_argument(
+        '--runtime', '-t',
+        action='store',
+        type=float,
+        default=float(DEFAULT_RUNTIME),
+        help='The total runtime in seconds.',
+    )
 
-        self.add_argument(
-            '--skip-clear',
-            action='store_true',
-            default=False,
-            help='Skip clearing LEDs'
-        )
+    parser.add_argument(
+        '--skip-clear',
+        action='store_true',
+        default=False,
+        help='Skip clearing LEDs.',
+    )
 
-        self.add_argument(
-            '-c', '--cycle-count',
-            action='store',
-            type=int,
-            default=DEFAULT_CYCLES,
-            help='The number of cycles to run per message, for each selected device.'
-        )
+    parser.add_argument(
+        '-c', '--cycle-count',
+        action='store',
+        type=int,
+        default=DEFAULT_CYCLES,
+        help='The number of cycles to run per message, for each selected device.',
+    )
 
-        # Set up the mutually exclusive arguments for the left and right matrices
-        left_right = self.add_mutually_exclusive_group()
+    left_right = parser.add_mutually_exclusive_group()
+    left_right.add_argument(
+        '-R', '--only-right',
+        action='store_true',
+        default=False,
+        help='Only display identifying information for/on the rightmost matrix.',
+    )
 
-        left_right.add_argument(
-            '-R', '--only-right',
-            action='store_true',
-            default=False,
-            help='Only display identifying information for/on the rightmost matrix.'
-        )
+    left_right.add_argument(
+        '-L', '--only-left',
+        action='store_true',
+        default=False,
+        help='Only display identifying information for/on the leftmost matrix.',
+    )
 
-        left_right.add_argument(
-            '-L', '--only-left',
-            action='store_true',
-            default=False,
-            help='Only display identifying information for/on the leftmost matrix.'
-        )
-
-    @property
-    def parsed(self) -> Optional[argparse.Namespace]:
-        """
-        The parsed arguments (if they've been parsed).
-
-        Returns:
-            argparse.Namespace:
-                The parsed arguments.
-
-            None:
-                If the arguments have not yet been parsed.
-        """
-        return self.__parsed
-
-    def parse_args(self, *args, **kwargs):
-        """
-        (Overrides the parent method, since we need to cache the parsed arguments. Does only that and then calls the
-        parent method.)
-
-        Parameters:
-            *args:
-            **kwargs:
-
-        Returns:
-            argparse.Namespace:
-                The parsed arguments
-        """
-        self.__parsed = super().parse_args(*args, **kwargs)
-        return self.__parsed
+    return parser
 
 
-def main(
-    runtime:         Optional[Union[int, float]]  = None,
-    only_left:       Optional[bool]               = None,
-    only_right:      Optional[bool]               = None,
-    skip_clear:      Optional[bool]               = None,
-    cycle_count:     Optional[int]                = None,
-    argument_parser: Optional[ArgumentParser]     = None,
-    arguments:       Optional[argparse.Namespace] = None,
-):
-    """
-    The main function of the script.
+def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    return build_parser().parse_args(args=args)
 
-    Parameters:
-        runtime (Optional[Union[int, float]]):
-            The total runtime in seconds.
 
-        only_left (Optional[bool]):
-            Only display identifying information for/on the leftmost matrix.
-
-        only_right (Optional[bool]):
-            Only display identifying information for/on the rightmost matrix.
-
-        skip_clear (Optional[bool]):
-            Skip clearing LEDs.
-
-        cycle_count (Optional[int]):
-            The number of cycles to run per message, for each selected device.
-
-        argument_parser (Optional[ArgumentParser]):
-            The argument parser to use. If not provided, the default parser will be used.
-
-    Returns:
-        List[Thread]:
-            A list of threads, one for each LED matrix being identified.
-    """
-    parser = argument_parser or ARGS
-    parsed = arguments or parser.parse_args()
+def main(arguments: argparse.Namespace) -> List[Thread]:
+    """Execute the identification routine based on parsed arguments."""
 
     selected = [LEDMatrixController(device, 100, thread_safe=True) for device in DEVICES]
 
-    if skip_clear is None:
-        skip_clear = parsed.skip_clear
+    if arguments.only_right:
+        selected = [device for device in [find_rightmost_matrix(selected)] if device]
+    elif arguments.only_left:
+        selected = [device for device in [find_leftmost_matrix(selected)] if device]
 
-    if only_left is None:
-        only_left = parsed.only_left
-
-    if only_right is None:
-        only_right = parsed.only_right
-
-    if only_right:
-        selected = [find_rightmost_matrix(selected)]
-    elif only_left:
-        selected = [find_leftmost_matrix(selected)]
-
-    cycle_count = parsed.cycle_count if cycle_count is None else cycle_count
-
-    if runtime is None:
-        runtime = parsed.runtime
-
-    threads = []
-
-    threads.extend(
+    threads = [
         Thread(
             target=device.identify,
             kwargs={
-                'skip_clear': skip_clear,
-                'duration':   runtime,
-                'cycles':     cycle_count
+                'skip_clear': arguments.skip_clear,
+                'duration':   arguments.runtime,
+                'cycles':     arguments.cycle_count,
             },
         )
         for device in selected
-    )
-    for t in threads:
-        t.start()
+    ]
+
+    for thread in threads:
+        thread.start()
 
     return threads
 
 
-ARGS = Arguments()
+def run_from_cli(args: Optional[List[str]] = None) -> List[Thread]:
+    return main(parse_args(args=args))
+
 
 if __name__ == '__main__':
-    threads = main(argument_parser=ARGS)
+    run_from_cli()

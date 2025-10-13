@@ -1,13 +1,13 @@
+import logging
 import threading
-from typing import Iterable
+from typing import Callable, Iterable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 
 
+LOGGER = logging.getLogger(__name__)
+
 ARGUMENTS = Arguments()
-"""
-The object that holds the command-line arguments. This is a subclass of `argparse.ArgumentParser`
-"""
 
 
 def _filter_controllers_by_side(controllers, cli_args):
@@ -67,12 +67,10 @@ def execute_get_controllers(cli_args=None):
     if not controllers:
         raise SystemExit('No LED matrices are available.')
 
-    filtered = _filter_controllers_by_side(controllers, cli_args)
+    if filtered := _filter_controllers_by_side(controllers, cli_args):
+        return filtered
 
-    if not filtered:
-        raise SystemExit(f'No LED matrices matched the requested selection ({_describe_selection(cli_args)}).')
-
-    return filtered
+    raise SystemExit(f'No LED matrices matched the requested selection ({_describe_selection(cli_args)}).')
 
 
 def _ensure_positive_duration(value):
@@ -92,19 +90,68 @@ def _cleanup_controllers(controllers: Iterable, *, clear_after: bool) -> None:
         try:
             controller.keep_alive = False
         except Exception as exc:  # noqa: BLE001 - best-effort cleanup
+            LOGGER.exception('Exception while disabling keep_alive for %r', controller)
             cleanup_errors.append(exc)
 
-        if clear_after:
+        if not clear_after:
+            continue
+
+        try:
+            controller.clear()
+        except AttributeError:
             try:
-                controller.clear()
-            except AttributeError:
                 controller.clear_grid()
             except Exception as exc:  # noqa: BLE001 - best-effort cleanup
+                LOGGER.exception('Exception while clearing grid for %r', controller)
                 cleanup_errors.append(exc)
+        except Exception as exc:  # noqa: BLE001 - best-effort cleanup
+            LOGGER.exception('Exception while clearing display for %r', controller)
+            cleanup_errors.append(exc)
 
     if cleanup_errors:
         messages = '\n'.join(str(err) for err in cleanup_errors)
         raise SystemExit(f'Cleanup encountered issues:\n{messages}')
+
+
+def _run_with_guard(
+    controllers: Iterable,
+    *,
+    run_for,
+    clear_after: bool,
+    activator: Callable[[Iterable, threading.Event], None],
+    thread_name: str,
+) -> None:
+    duration = _ensure_positive_duration(run_for)
+    stop_event = threading.Event()
+
+    def guard() -> None:
+        try:
+            if duration is None:
+                stop_event.wait()
+            else:
+                stop_event.wait(timeout=duration)
+        finally:
+            try:
+                _cleanup_controllers(controllers, clear_after=clear_after)
+            finally:
+                stop_event.set()
+
+    sentinel = threading.Thread(name=thread_name, target=guard, daemon=True)
+    sentinel.start()
+
+    try:
+        activator(controllers, stop_event)
+    except Exception:
+        stop_event.set()
+        sentinel.join()
+        raise
+
+    try:
+        while sentinel.is_alive():
+            sentinel.join(timeout=0.2)
+    except KeyboardInterrupt:
+        stop_event.set()
+        sentinel.join()
 
 
 def scroll_text_command(cli_args=ARGUMENTS):
@@ -122,56 +169,41 @@ def scroll_text_command(cli_args=ARGUMENTS):
     from .arguments.commands.scroll_text import DIRECTION_MAP
     controllers = execute_get_controllers(cli_args)
 
-    # ToDo:
-    #    - Add ability to control the scroll speed.
-    #    - Add ability to loop message scrolling;
-    #        - Indefinitely, or;
-    #        - A specified number of times, or;
-    #        - A specified duration in seconds.
+    direction = DIRECTION_MAP[cli_args.direction.strip().lower()]
+    text = cli_args.input
 
-    matrix = controllers[0]
+    def activator(devices, _stop_event):
+        for controller in devices:
+            controller.keep_alive = True
+            controller.scroll_text(text, direction=direction)
 
-    matrix.scroll_text(cli_args.input, direction=DIRECTION_MAP[cli_args.direction.strip().lower()])
+    _run_with_guard(
+        controllers,
+        run_for=None,
+        clear_after=False,
+        activator=activator,
+        thread_name='scroll-text-guard',
+    )
 
 
 def display_text_command(cli_args):
     """Display static text on the selected LED matrices until interrupted."""
-
     controllers = execute_get_controllers(cli_args)
 
-    run_for = _ensure_positive_duration(cli_args.run_for)
     clear_after = not cli_args.skip_clear
-    stop_event = threading.Event()
 
-    try:
-        for controller in controllers:
+    def activator(devices, _stop_event):
+        for controller in devices:
             controller.keep_alive = True
             controller.show_text(cli_args.text)
-    except Exception:
-        _cleanup_controllers(controllers, clear_after=clear_after)
-        raise
 
-    def waiter():
-        try:
-            if run_for is None:
-                stop_event.wait()
-            else:
-                stop_event.wait(timeout=run_for)
-        finally:
-            try:
-                _cleanup_controllers(controllers, clear_after=clear_after)
-            finally:
-                stop_event.set()
-
-    sentinel = threading.Thread(name='display-text-waiter', target=waiter, daemon=True)
-    sentinel.start()
-
-    try:
-        while sentinel.is_alive():
-            sentinel.join(timeout=0.2)
-    except KeyboardInterrupt:
-        stop_event.set()
-        sentinel.join()
+    _run_with_guard(
+        controllers,
+        run_for=cli_args.run_for,
+        clear_after=clear_after,
+        activator=activator,
+        thread_name='display-text-guard',
+    )
 
 
 def identify_matrices_command(cli_args):
@@ -207,24 +239,17 @@ def main(cli_args=ARGUMENTS):
             subcommand configurations. It must have attributes `scroll_parser`
             and a callable `parse` function. (Defaults to `ARGUMENTS`)
     """
-    # Grab the subparser for the `scroll-text` command;
-    scroll_parser   = cli_args.scroll_parser
-    identify_parser = cli_args.identify_parser
-    display_parser = cli_args.display_parser
+    parser_bindings = (
+        ('scroll_parser', 'Scroll text command parser was not initialized.', scroll_text_command),
+        ('identify_parser', 'Identify matrices command parser was not initialized.', identify_matrices_command),
+        ('display_parser', 'Display text command parser was not initialized.', display_text_command),
+    )
 
-    # Register `scroll_text_command` as the function to run if the
-    # `scroll-text` command is called;
-    if scroll_parser is None:
-        raise RuntimeError('Scroll text command parser was not initialized.')
-    scroll_parser.set_defaults(func=scroll_text_command)
-
-    if identify_parser is None:
-        raise RuntimeError('Identify matrices command parser was not initialized.')
-    identify_parser.set_defaults(func=identify_matrices_command)
-
-    if display_parser is None:
-        raise RuntimeError('Display text command parser was not initialized.')
-    display_parser.set_defaults(func=display_text_command)
+    for attr_name, error_message, handler in parser_bindings:
+        parser = getattr(cli_args, attr_name)
+        if parser is None:
+            raise RuntimeError(error_message)
+        parser.set_defaults(func=handler)
 
     # Parse command-line arguments;
     parsed = cli_args.parse()
