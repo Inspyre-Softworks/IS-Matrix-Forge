@@ -57,8 +57,26 @@ def run_with_guard(
     clear_after: bool,
     activator: Callable[[Iterable, threading.Event], None],
     thread_name: str,
+    wait_for_interrupt: bool = False,
 ) -> None:
-    """Execute an action while keeping controllers alive until timeout or interruption."""
+    """Execute an action while keeping controllers alive until timeout or interruption.
+
+    Parameters:
+        controllers:
+            The controller collection to operate on.
+        run_for:
+            Optional duration in seconds before the guard triggers cleanup.
+        clear_after:
+            Whether to clear each controller once the guard finishes.
+        activator:
+            Callable that performs the desired work while the guard thread runs.
+        thread_name:
+            Name assigned to the guard thread for easier debugging.
+        wait_for_interrupt:
+            When ``True`` and no duration is provided, the guard waits for an
+            external interrupt (such as Ctrl+C) instead of stopping once the
+            activator completes.
+    """
 
     duration = _ensure_positive_duration(run_for)
     stop_event = threading.Event()
@@ -84,6 +102,9 @@ def run_with_guard(
         stop_event.set()
         sentinel.join()
         raise
+    else:
+        if duration is None and not wait_for_interrupt:
+            stop_event.set()
 
     try:
         while sentinel.is_alive():

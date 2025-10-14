@@ -148,6 +148,7 @@ def display_text_command(cli_args):
         clear_after=clear_after,
         activator=activator,
         thread_name='display-text-guard',
+        wait_for_interrupt=True,
     )
 
 
