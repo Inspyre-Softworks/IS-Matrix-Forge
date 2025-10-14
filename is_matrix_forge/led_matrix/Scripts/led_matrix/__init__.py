@@ -1,3 +1,6 @@
+import threading
+from collections.abc import Callable, Iterable
+
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
 
@@ -70,6 +73,25 @@ def _describe_selection(cli_args):
     return 'any LED matrix'
 
 
+def _run_operation(controllers: Iterable, operation: Callable, *, concurrent: bool) -> None:
+    """Run an operation against one or more controllers, optionally in parallel."""
+
+    if concurrent and len(controllers) > 1:
+        threads = []
+
+        for controller in controllers:
+            thread = threading.Thread(target=operation, args=(controller,), daemon=True)
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
+        return
+
+    for controller in controllers:
+        operation(controller)
+
+
 def execute_get_controllers(cli_args=None):
     """Return the available controllers honoring any CLI matrix selection.
 
@@ -119,10 +141,14 @@ def scroll_text_command(cli_args=ARGUMENTS):
 
     sequential = getattr(cli_args, 'sequential', False) and len(controllers) > 1
 
+    concurrent = not sequential
+
     def activator(devices, _stop_event):
-        for controller in devices:
+        def operation(controller):
             controller.keep_alive = True
             controller.scroll_text(text, direction=direction)
+
+        _run_operation(devices, operation, concurrent=concurrent)
 
     def invoke(targets, index=None):
         run_with_guard(
@@ -153,10 +179,14 @@ def display_text_command(cli_args):
     wait_for_interrupt = cli_args.run_for is None
     text = cli_args.text
 
+    concurrent = not sequential
+
     def activator(devices, _stop_event):
-        for controller in devices:
+        def operation(controller):
             controller.keep_alive = True
             controller.show_text(text)
+
+        _run_operation(devices, operation, concurrent=concurrent)
 
     def invoke(targets, index=None):
         run_with_guard(
