@@ -34,4 +34,11 @@ def register_command(parser: ArgumentParser):
         help='Do not clear the matrix after the display stops.',
     )
 
+    display_parser.add_argument(
+        '--sequential',
+        action='store_true',
+        default=False,
+        help='When multiple matrices are active, present the text on one matrix at a time.',
+    )
+
     return display_parser

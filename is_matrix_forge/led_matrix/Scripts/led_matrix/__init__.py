@@ -117,18 +117,27 @@ def scroll_text_command(cli_args=ARGUMENTS):
     direction = DIRECTION_MAP[cli_args.direction.strip().lower()]
     text = cli_args.input
 
+    sequential = getattr(cli_args, 'sequential', False) and len(controllers) > 1
+
     def activator(devices, _stop_event):
         for controller in devices:
             controller.keep_alive = True
             controller.scroll_text(text, direction=direction)
 
-    run_with_guard(
-        controllers,
-        run_for=None,
-        clear_after=False,
-        activator=activator,
-        thread_name='scroll-text-guard',
-    )
+    def invoke(targets, index=None):
+        run_with_guard(
+            targets,
+            run_for=None,
+            clear_after=False,
+            activator=activator,
+            thread_name='scroll-text-guard' if index is None else f'scroll-text-guard-{index}',
+        )
+
+    if sequential:
+        for index, controller in enumerate(controllers, start=1):
+            invoke([controller], index)
+    else:
+        invoke(controllers)
 
 
 def display_text_command(cli_args):
@@ -136,20 +145,34 @@ def display_text_command(cli_args):
     controllers = execute_get_controllers(cli_args)
 
     clear_after = not cli_args.skip_clear
+    sequential = getattr(cli_args, 'sequential', False) and len(controllers) > 1
+
+    if sequential and cli_args.run_for is None:
+        raise SystemExit('--sequential requires --run-for when multiple matrices are targeted.')
+
+    wait_for_interrupt = cli_args.run_for is None
+    text = cli_args.text
 
     def activator(devices, _stop_event):
         for controller in devices:
             controller.keep_alive = True
-            controller.show_text(cli_args.text)
+            controller.show_text(text)
 
-    run_with_guard(
-        controllers,
-        run_for=cli_args.run_for,
-        clear_after=clear_after,
-        activator=activator,
-        thread_name='display-text-guard',
-        wait_for_interrupt=True,
-    )
+    def invoke(targets, index=None):
+        run_with_guard(
+            targets,
+            run_for=cli_args.run_for,
+            clear_after=clear_after,
+            activator=activator,
+            thread_name='display-text-guard' if index is None else f'display-text-guard-{index}',
+            wait_for_interrupt=wait_for_interrupt,
+        )
+
+    if sequential:
+        for index, controller in enumerate(controllers, start=1):
+            invoke([controller], index)
+    else:
+        invoke(controllers)
 
 
 def identify_matrices_command(cli_args):

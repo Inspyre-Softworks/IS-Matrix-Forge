@@ -32,4 +32,11 @@ def register_command(parser: ArgumentParser):
         help='The direction to scroll the text in. Default is up.'
     )
 
+    scroll_parser.add_argument(
+        '--sequential',
+        action='store_true',
+        default=False,
+        help='Scroll across one matrix at a time when multiple are selected.',
+    )
+
     return scroll_parser
