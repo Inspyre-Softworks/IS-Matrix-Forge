@@ -5,35 +5,66 @@ from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
 ARGUMENTS = Arguments()
 
 
+def _normalize_side(value):
+    if isinstance(value, str):
+        return value.strip().lower()
+    return None
+
+
+def _desired_side(cli_args):
+    if cli_args is None:
+        return None
+
+    if getattr(cli_args, 'only_left', False):
+        return 'left'
+
+    if getattr(cli_args, 'only_right', False):
+        return 'right'
+
+    return None
+
+
+def _controller_side(controller):
+    side = getattr(controller, 'side_of_keyboard', None)
+    normalized = _normalize_side(side)
+
+    if normalized is not None:
+        return normalized
+
+    location = getattr(controller, 'location', None)
+
+    if isinstance(location, dict):
+        return _normalize_side(location.get('side'))
+
+    if isinstance(location, str):
+        from is_matrix_forge.led_matrix.constants import SLOT_MAP
+
+        return _normalize_side(SLOT_MAP.get(location, {}).get('side'))
+
+    return None
+
+
 def _filter_controllers_by_side(controllers, cli_args):
     """Return the controllers that match the requested keyboard side."""
 
-    if cli_args is None:
-        return controllers
+    desired = _desired_side(cli_args)
 
-    if getattr(cli_args, 'only_left', False):
-        return [
-            controller for controller in controllers
-            if getattr(controller, 'side_of_keyboard', None) == 'left'
-        ]
+    if desired is None:
+        return list(controllers)
 
-    if getattr(cli_args, 'only_right', False):
-        return [
-            controller for controller in controllers
-            if getattr(controller, 'side_of_keyboard', None) == 'right'
-        ]
-
-    return list(controllers)
+    return [
+        controller for controller in controllers
+        if _controller_side(controller) == desired
+    ]
 
 
 def _describe_selection(cli_args):
-    if cli_args is None:
-        return 'any LED matrix'
+    desired = _desired_side(cli_args)
 
-    if getattr(cli_args, 'only_left', False):
+    if desired == 'left':
         return 'the leftmost LED matrix'
 
-    if getattr(cli_args, 'only_right', False):
+    if desired == 'right':
         return 'the rightmost LED matrix'
 
     return 'any LED matrix'
