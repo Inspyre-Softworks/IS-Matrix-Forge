@@ -19,9 +19,7 @@ Since:
 """
 import argparse
 from argparse import ArgumentParser
-from typing import Optional
-
-from is_matrix_forge.led_matrix.Scripts.led_matrix import identify_matrices_command
+from typing import Optional, Callable
 
 
 DEFAULT_RUNTIME = 30
@@ -76,6 +74,14 @@ def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
     return build_parser().parse_args(args=args)
 
 
+def _load_identify_command() -> Callable[[argparse.Namespace], None]:
+    """Import the shared identify command without creating circular imports."""
+
+    from is_matrix_forge.led_matrix.Scripts.led_matrix import identify_matrices_command
+
+    return identify_matrices_command
+
+
 def main(arguments: argparse.Namespace) -> None:
     """Execute the identification routine based on parsed arguments.
 
@@ -83,7 +89,9 @@ def main(arguments: argparse.Namespace) -> None:
     mirrors the CLI behaviour without duplicating controller management logic.
     """
 
-    identify_matrices_command(arguments)
+    identify_command = _load_identify_command()
+
+    identify_command(arguments)
 
 
 def run_from_cli(args: Optional[list[str]] = None) -> None:
