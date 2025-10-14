@@ -19,6 +19,21 @@ class Arguments(ArgumentParser):
         self.__parsed          = None
         self.__identify_parser = None
         self.__scroll_parser   = None
+        self.__display_parser  = None
+
+        selection_group = self.add_mutually_exclusive_group()
+        selection_group.add_argument(
+            '-L', '--only-left',
+            action='store_true',
+            default=False,
+            help='Only target the leftmost matrix when executing commands.'
+        )
+        selection_group.add_argument(
+            '-R', '--only-right',
+            action='store_true',
+            default=False,
+            help='Only target the rightmost matrix when executing commands.'
+        )
 
         self.SUBCOMMANDS = self.add_subparsers(
             dest='subcommand',
@@ -55,6 +70,10 @@ class Arguments(ArgumentParser):
     def scroll_parser(self):
         return self.__scroll_parser
 
+    @property
+    def display_parser(self):
+        return self.__display_parser
+
     def __build_identify_matrices(self):
         from .commands.identify_matrices import register_command
         self.__identify_parser = register_command(self)
@@ -63,14 +82,18 @@ class Arguments(ArgumentParser):
         from .commands.scroll_text import register_command
         self.__scroll_parser = register_command(self)
 
+    def __build_display_text(self):
+        from .commands.display_text import register_command
+        self.__display_parser = register_command(self)
+
     def __build(self):
         self.__building = True
 
         self.__build_identify_matrices()
-        print('built identify matrices command')
 
         self.__build_scroll_text()
-        print('built scroll text command')
+
+        self.__build_display_text()
 
         self.__building = False
         self.__built    = True

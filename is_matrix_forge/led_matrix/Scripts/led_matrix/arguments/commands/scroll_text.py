@@ -9,7 +9,7 @@ DIRECTION_MAP = {
 
 COMMAND = 'scroll-text'
 
-HELP_TXT = 'Scroll text across a matrix.'
+HELP_TXT = 'Scroll text across a matrix. Use --only-left/--only-right to target specific displays.'
 
 
 def register_command(parser: ArgumentParser):
