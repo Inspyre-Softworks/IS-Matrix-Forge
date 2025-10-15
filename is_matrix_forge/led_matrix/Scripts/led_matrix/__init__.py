@@ -47,6 +47,61 @@ def _controller_side(controller):
     return None
 
 
+def _slot_rank(controller):
+    slot = getattr(controller, 'slot', None)
+
+    try:
+        return int(slot)
+    except (TypeError, ValueError):
+        return 0
+
+
+def find_leftmost_matrix(controllers: Iterable):
+    """Return the controller that is physically positioned furthest left."""
+
+    ranked = []
+
+    for index, controller in enumerate(controllers):
+        side = _controller_side(controller)
+
+        if side == 'left':
+            side_rank = 0
+        elif side == 'right':
+            side_rank = 2
+        else:
+            side_rank = 1
+
+        ranked.append(((side_rank, _slot_rank(controller), index), controller))
+
+    if not ranked:
+        return None
+
+    return min(ranked, key=lambda item: item[0])[1]
+
+
+def find_rightmost_matrix(controllers: Iterable):
+    """Return the controller that is physically positioned furthest right."""
+
+    ranked = []
+
+    for index, controller in enumerate(controllers):
+        side = _controller_side(controller)
+
+        if side == 'right':
+            side_rank = 0
+        elif side == 'left':
+            side_rank = 2
+        else:
+            side_rank = 1
+
+        ranked.append(((side_rank, -_slot_rank(controller), index), controller))
+
+    if not ranked:
+        return None
+
+    return min(ranked, key=lambda item: item[0])[1]
+
+
 def _filter_controllers_by_side(controllers, cli_args):
     """Return the controllers that match the requested keyboard side."""
 
@@ -74,29 +129,30 @@ def _describe_selection(cli_args):
 
 
 def _order_controllers_for_span(controllers: Iterable):
-    indexed = list(enumerate(controllers))
+    controllers = list(controllers)
 
-    def sort_key(item):
-        index, controller = item
-        side = _controller_side(controller)
+    if len(controllers) <= 1:
+        return controllers
 
-        if side == 'left':
-            side_rank = 0
-        elif side == 'right':
-            side_rank = 2
-        else:
-            side_rank = 1
+    origin = find_leftmost_matrix(controllers)
 
-        slot = getattr(controller, 'slot', None)
+    if origin is None:
+        return controllers
 
-        try:
-            slot_rank = int(slot)
-        except (TypeError, ValueError):
-            slot_rank = 0
+    ordered = [origin]
+    remaining = [controller for controller in controllers if controller is not origin]
 
-        return (side_rank, slot_rank, index)
+    while remaining:
+        next_controller = find_rightmost_matrix(remaining)
 
-    return [controller for _, controller in sorted(indexed, key=sort_key)]
+        if next_controller is None:
+            ordered.extend(remaining)
+            break
+
+        ordered.append(next_controller)
+        remaining = [controller for controller in remaining if controller is not next_controller]
+
+    return ordered
 
 
 def _build_horizontal_span_animations(text: str, controllers: Iterable):
