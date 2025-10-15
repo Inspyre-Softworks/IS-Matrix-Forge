@@ -39,4 +39,11 @@ def register_command(parser: ArgumentParser):
         help='Scroll across one matrix at a time when multiple are selected.',
     )
 
+    scroll_parser.add_argument(
+        '--span-matrices',
+        action='store_true',
+        default=False,
+        help='Treat multiple matrices as a single wide canvas when scrolling horizontally.',
+    )
+
     return scroll_parser

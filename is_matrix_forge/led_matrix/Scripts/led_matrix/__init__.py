@@ -73,6 +73,137 @@ def _describe_selection(cli_args):
     return 'any LED matrix'
 
 
+def _order_controllers_for_span(controllers: Iterable):
+    indexed = list(enumerate(controllers))
+
+    def sort_key(item):
+        index, controller = item
+        side = _controller_side(controller)
+
+        if side == 'left':
+            side_rank = 0
+        elif side == 'right':
+            side_rank = 2
+        else:
+            side_rank = 1
+
+        slot = getattr(controller, 'slot', None)
+
+        try:
+            slot_rank = int(slot)
+        except (TypeError, ValueError):
+            slot_rank = 0
+
+        return (side_rank, slot_rank, index)
+
+    return [controller for _, controller in sorted(indexed, key=sort_key)]
+
+
+def _build_horizontal_span_animations(text: str, controllers: Iterable):
+    controllers = list(controllers)
+
+    if not controllers:
+        return {}
+
+    from is_matrix_forge.assets.font_map.base import FontMap
+    from is_matrix_forge.led_matrix.display.animations.animation import Animation, Frame
+    from is_matrix_forge.led_matrix.display.grid.base import MATRIX_HEIGHT, MATRIX_WIDTH, Grid
+
+    font_map = FontMap(case_sensitive=False)
+    case_sensitive = font_map.is_case_sensitive
+    normalized_text = text if case_sensitive else text.upper()
+
+    glyphs = []
+    for character in normalized_text:
+        glyph_rows = font_map.lookup(character)
+        glyphs.append([row[:] for row in glyph_rows])
+
+    spacing = 1
+    glyph_widths = [len(glyph[0]) if glyph and glyph[0] else 0 for glyph in glyphs]
+    total_glyph_width = sum(glyph_widths) + spacing * (len(glyph_widths) - 1 if glyph_widths else 0)
+
+    segment_width = MATRIX_WIDTH
+    total_width = segment_width * len(controllers)
+    frame_duration = 0.05
+
+    if total_glyph_width == 0:
+        animations = {}
+
+        for controller in controllers:
+            blank_columns = [[0] * MATRIX_HEIGHT for _ in range(segment_width)]
+            grid = Grid(
+                width=segment_width,
+                height=MATRIX_HEIGHT,
+                init_grid=[column[:] for column in blank_columns],
+                align_x='left',
+            )
+            frame_one = Frame(grid=grid)
+            frame_two = Frame(grid=Grid(
+                width=segment_width,
+                height=MATRIX_HEIGHT,
+                init_grid=[column[:] for column in blank_columns],
+                align_x='left',
+            ))
+            animation = Animation(frame_data=[frame_one, frame_two])
+            animation.set_all_frame_durations(frame_duration)
+            animations[controller] = animation
+
+        return animations
+
+    canvas = [[0] * max(total_glyph_width, 1) for _ in range(MATRIX_HEIGHT)]
+    x_cursor = 0
+
+    for glyph, width in zip(glyphs, glyph_widths):
+        glyph_height = len(glyph)
+        vertical_padding = max((MATRIX_HEIGHT - glyph_height) // 2, 0)
+
+        for row_index in range(glyph_height):
+            if width:
+                canvas_row = canvas[vertical_padding + row_index]
+                canvas_row[x_cursor:x_cursor + width] = glyph[row_index]
+
+        x_cursor += width + spacing
+
+    offsets = range(-total_width, total_glyph_width)
+    frame_columns_by_controller = {controller: [] for controller in controllers}
+
+    for offset in offsets:
+        window_rows = [
+            [canvas[row][offset + column] if 0 <= offset + column < total_glyph_width else 0 for column in range(total_width)]
+            for row in range(MATRIX_HEIGHT)
+        ]
+
+        window_columns = [
+            [window_rows[row][column] for row in range(MATRIX_HEIGHT)]
+            for column in range(total_width)
+        ]
+
+        for index, controller in enumerate(controllers):
+            start = index * segment_width
+            end = start + segment_width
+            segment = [column[:] for column in window_columns[start:end]]
+
+            if len(segment) < segment_width:
+                segment.extend([[0] * MATRIX_HEIGHT for _ in range(segment_width - len(segment))])
+
+            grid = Grid(
+                width=segment_width,
+                height=MATRIX_HEIGHT,
+                init_grid=segment,
+                align_x='left',
+            )
+            frame_columns_by_controller[controller].append(Frame(grid=grid))
+
+    animations = {}
+
+    for controller, frames in frame_columns_by_controller.items():
+        animation = Animation(frame_data=frames or [Frame(width=segment_width, height=MATRIX_HEIGHT)])
+        animation.set_all_frame_durations(frame_duration)
+        animations[controller] = animation
+
+    return animations
+
+
 def _run_operation(controllers: Iterable, operation: Callable, *, concurrent: bool) -> None:
     """Run an operation against one or more controllers, optionally in parallel."""
 
@@ -139,14 +270,36 @@ def scroll_text_command(cli_args=ARGUMENTS):
     direction = DIRECTION_MAP[cli_args.direction.strip().lower()]
     text = cli_args.input
 
-    sequential = getattr(cli_args, 'sequential', False) and len(controllers) > 1
+    sequential_requested = getattr(cli_args, 'sequential', False) and len(controllers) > 1
+    span_requested = getattr(cli_args, 'span_matrices', False) and len(controllers) > 1
 
-    concurrent = not sequential
+    span_animations = None
+
+    if span_requested:
+        if cli_args.direction.strip().lower() != 'h':
+            raise SystemExit('--span-matrices requires --direction h.')
+
+        if sequential_requested:
+            raise SystemExit('--span-matrices cannot be combined with --sequential.')
+
+        controllers = _order_controllers_for_span(controllers)
+        span_animations = _build_horizontal_span_animations(text, controllers)
+        sequential = False
+        concurrent = True
+    else:
+        sequential = sequential_requested
+        concurrent = not sequential
 
     def activator(devices, _stop_event):
         def operation(controller):
             controller.keep_alive = True
-            controller.scroll_text(text, direction=direction)
+            if span_animations is not None:
+                animation = span_animations.get(controller)
+                if animation is None:
+                    return
+                controller.play_animation(animation)
+            else:
+                controller.scroll_text(text, direction=direction)
 
         _run_operation(devices, operation, concurrent=concurrent)
 
