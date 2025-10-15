@@ -107,6 +107,7 @@ def _build_horizontal_span_animations(text: str, controllers: Iterable):
 
     from is_matrix_forge.assets.font_map.base import FontMap
     from is_matrix_forge.led_matrix.display.animations.animation import Animation, Frame
+    from is_matrix_forge.led_matrix.display.animations.text.glyph_normalizer import GlyphNormalizer
     from is_matrix_forge.led_matrix.display.grid.base import MATRIX_HEIGHT, MATRIX_WIDTH, Grid
 
     font_map = FontMap(case_sensitive=False)
@@ -114,9 +115,11 @@ def _build_horizontal_span_animations(text: str, controllers: Iterable):
     normalized_text = text if case_sensitive else text.upper()
 
     glyphs = []
+    normalizer = GlyphNormalizer(MATRIX_WIDTH, MATRIX_HEIGHT)
     for character in normalized_text:
         glyph_rows = font_map.lookup(character)
-        glyphs.append([row[:] for row in glyph_rows])
+        normalized_rows = normalizer.normalize(glyph_rows)
+        glyphs.append([row[:] for row in normalized_rows])
 
     spacing = 1
     glyph_widths = [len(glyph[0]) if glyph and glyph[0] else 0 for glyph in glyphs]
