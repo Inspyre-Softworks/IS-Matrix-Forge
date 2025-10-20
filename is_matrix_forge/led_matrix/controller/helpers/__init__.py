@@ -65,3 +65,65 @@ def get_controllers(
         for fut in as_completed(futures):
             controllers.append(fut.result())
         return controllers
+
+
+def find_leftmost(controllers):
+    """
+    Return the physically leftmost controller on a Framework 16.
+
+    Layout order:
+        | L1 | L2 | [Keyboard] | R1 | R2 |
+
+    Parameters:
+        controllers (List[LEDMatrixController]):
+            List of controller objects with a `.location` dict.
+
+    Returns:
+        Optional[LEDMatrixController]:
+            The leftmost controller object, or None if list is empty.
+    """
+    if not controllers:
+        return None
+
+    def sort_key(ctrl):
+        side = ctrl.location.get('side')
+        slot = ctrl.location.get('slot', 0)
+        # Map physical order: left side before right side
+        side_order = 0 if side == 'left' else 1
+        # On left: smaller slot = more left; on right: smaller slot = more left too
+        return (side_order, slot)
+
+    return min(controllers, key=sort_key)
+
+
+def find_rightmost(controllers):
+    """
+    Return the physically rightmost controller on a Framework 16.
+
+    Layout order:
+        | L1 | L2 | [Keyboard] | R1 | R2 |
+
+    Parameters:
+        controllers (list):
+            List of controller objects with a `.location` dict.
+
+    Returns:
+        LEDMatrixController | None:
+            The rightmost controller object, or None if list is empty.
+    """
+    if not controllers:
+        return None
+
+    def sort_key(ctrl):
+        side = ctrl.location.get('side')
+        slot = ctrl.location.get('slot', 0)
+
+        # Map physical order: left side before right side
+        side_order = 0 if side == 'left' else 1
+
+        # On left: larger slot = more right; on right: larger slot = more right
+        return (side_order, slot)
+
+    return max(controllers, key=sort_key)
+
+

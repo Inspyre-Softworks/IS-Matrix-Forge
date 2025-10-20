@@ -20,8 +20,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional, Tuple, Callable
 
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
-from .models.glyph import Glyph
-from .helpers import load_builtin_char_map, get_ignore_case, has_key_ignore_case
+from is_matrix_forge.assets.font_map.models.glyph import Glyph
+from is_matrix_forge.assets.font_map.helpers import load_builtin_char_map, get_ignore_case, has_key_ignore_case
 
 
 @dataclass(init=False, slots=True)

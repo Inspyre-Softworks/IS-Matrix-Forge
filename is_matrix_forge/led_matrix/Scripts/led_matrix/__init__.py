@@ -1,9 +1,12 @@
+
+from typing import Iterable, Optional, Tuple
+
 import threading
 from collections.abc import Callable, Iterable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
-
+# from is_matrix_forge.led_matrix.Scripts.identify_matrices import
 
 ARGUMENTS = Arguments()
 
@@ -13,88 +16,141 @@ def _normalize_side(value):
         return value.strip().lower()
     return None
 
-
 def _desired_side(cli_args):
     if cli_args is None:
         return None
-
     if getattr(cli_args, 'only_left', False):
         return 'left'
-
     if getattr(cli_args, 'only_right', False):
         return 'right'
-
     return None
 
+def _resolve_location(controller) -> Tuple[Optional[str], Optional[int]]:
+    """
+    Return a normalized (side, slot) tuple from a controller.
 
-def _controller_side(controller):
-    side = getattr(controller, 'side_of_keyboard', None)
-    normalized = _normalize_side(side)
-
-    if normalized is not None:
-        return normalized
+    Looks in this order:
+      1) Explicit attributes: controller.side_of_keyboard, controller.slot
+      2) controller.location if it's a dict with 'side'/'slot'
+      3) controller.location if it's a dict with 'abbrev' (e.g. 'L0', 'R2')
+      4) controller.location if it's a str, resolved via SLOT_MAP
+    """
+    # 1) explicit attributes
+    side = _normalize_side(getattr(controller, 'side_of_keyboard', None))
+    slot = getattr(controller, 'slot', None)
 
     location = getattr(controller, 'location', None)
 
+    # 2) dict with 'side'/'slot'
     if isinstance(location, dict):
-        return _normalize_side(location.get('side'))
+        if side is None:
+            side = _normalize_side(location.get('side'))
+        if slot is None:
+            slot = location.get('slot')
 
-    if isinstance(location, str):
-        from is_matrix_forge.led_matrix.constants import SLOT_MAP
+        # 3) dict with 'abbrev' like 'L0', 'R1'
+        if (side is None or slot is None) and 'abbrev' in location and isinstance(location['abbrev'], str):
+            abbrev = location['abbrev'].strip().upper()
+            # Try SLOT_MAP first, then parse fallback
+            try:
+                from is_matrix_forge.led_matrix.constants import SLOT_MAP
+            except Exception:
+                SLOT_MAP = {}
 
-        return _normalize_side(SLOT_MAP.get(location, {}).get('side'))
+            entry = SLOT_MAP.get(abbrev) or {}
+            side = _normalize_side(side or entry.get('side'))
+            slot = slot if slot is not None else entry.get('slot')
 
-    return None
+            if (side is None or slot is None):
+                # Parse e.g. 'L0'/'R12' -> ('left'/'right', 0/12)
+                if len(abbrev) >= 2 and abbrev[0] in ('L', 'R') and abbrev[1:].isdigit():
+                    side = _normalize_side(side or ('left' if abbrev[0] == 'L' else 'right'))
+                    slot = slot if slot is not None else int(abbrev[1:])
+
+    # 4) location is a string -> SLOT_MAP lookup
+    if (side is None or slot is None) and isinstance(location, str):
+        try:
+            from is_matrix_forge.led_matrix.constants import SLOT_MAP
+        except Exception:
+            SLOT_MAP = {}
+        entry = SLOT_MAP.get(location, {})
+        side = _normalize_side(side or entry.get('side'))
+        slot = slot if slot is not None else entry.get('slot')
+
+    # normalize slot
+    try:
+        slot = int(slot) if slot is not None else None
+    except (TypeError, ValueError):
+        slot = None
+
+    return side, slot
 
 
-def _slot_rank(controller):
-    slot = getattr(controller, 'slot', None)
+def _controller_side(controller) -> Optional[str]:
+    side, _ = _resolve_location(controller)
+    return side
 
+def _slot_rank(controller) -> int:
+    """
+    Returns an integer for sorting. Unknown becomes 0 (neutral).
+    """
+    _, slot = _resolve_location(controller)
     try:
         return int(slot)
     except (TypeError, ValueError):
         return 0
 
-
 def find_leftmost_matrix(controllers: Iterable):
-    """Return the controller that is physically positioned furthest left."""
+    """Return the controller that is physically positioned furthest left.
 
+    Ordering:
+      1) left side first, unknown middle, right side last
+      2) within same side, lower slot = further left
+      3) stable tiebreaker by original index
+    """
     ranked = []
-
     for index, controller in enumerate(controllers):
         side = _controller_side(controller)
-
         if side == 'left':
             side_rank = 0
         elif side == 'right':
             side_rank = 2
         else:
-            side_rank = 1
+            side_rank = 1  # unknowns in the middle
 
-        ranked.append(((side_rank, _slot_rank(controller), index), controller))
+        rank_tuple = (side_rank, _slot_rank(controller), index)
+        print(f'Ranks: {rank_tuple[0]}, {rank_tuple[1]}, {rank_tuple[2]}')
+        ranked.append((rank_tuple, controller))
+        print(ranked)
 
     if not ranked:
         return None
 
     return min(ranked, key=lambda item: item[0])[1]
 
-
 def find_rightmost_matrix(controllers: Iterable):
-    """Return the controller that is physically positioned furthest right."""
+    """Return the controller that is physically positioned furthest right.
 
+    Ordering:
+      1) right side first, unknown middle, left side last
+      2) within same side, higher slot = further right
+      3) stable tiebreaker by original index
+    """
     ranked = []
-
     for index, controller in enumerate(controllers):
         side = _controller_side(controller)
-
         if side == 'right':
             side_rank = 0
         elif side == 'left':
             side_rank = 2
         else:
-            side_rank = 1
+            side_rank = 1  # unknowns in the middle
 
-        ranked.append(((side_rank, -_slot_rank(controller), index), controller))
+        # negate slot so larger slot numbers sort earlier for "rightmost"
+        rank_tuple = (side_rank, -_slot_rank(controller), index)
+        print(f'Ranks: {rank_tuple[0]}, {-rank_tuple[1]}, {rank_tuple[2]}')
+        ranked.append((rank_tuple, controller))
+        print(ranked)
 
     if not ranked:
         return None
@@ -134,7 +190,7 @@ def _order_controllers_for_span(controllers: Iterable):
     if len(controllers) <= 1:
         return controllers
 
-    origin = find_leftmost_matrix(controllers)
+    origin = find_rightmost_matrix(controllers)
 
     if origin is None:
         return controllers
@@ -143,7 +199,7 @@ def _order_controllers_for_span(controllers: Iterable):
     remaining = [controller for controller in controllers if controller is not origin]
 
     while remaining:
-        next_controller = find_rightmost_matrix(remaining)
+        next_controller = find_leftmost_matrix(remaining)
 
         if next_controller is None:
             ordered.extend(remaining)

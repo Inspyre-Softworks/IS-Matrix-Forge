@@ -202,11 +202,13 @@ class TextScroller:
 
             # 4) slide a MATRIX_HEIGHT window up or down over the tall canvas
             if self.config.direction == 'vertical_up':
-                # Start fully below the bottom and slide up into view
-                offsets = range(total_h, -MATRIX_HEIGHT - 1, -1)
-            else:  # 'vertical_down'
-                # Start fully above the top and slide down into view
+                # Start fully above the top and slide down across the canvas,
+                # which makes the content appear to move upward on the display.
                 offsets = range(-MATRIX_HEIGHT, total_h + 1)
+            else:  # 'vertical_down'
+                # Start fully below the bottom and slide up across the canvas,
+                # which makes the content appear to move downward on the display.
+                offsets = range(total_h, -MATRIX_HEIGHT - 1, -1)
 
             for off in offsets:
                 # Extract a MATRIX_HEIGHT x render_w window at vertical offset 'off'
