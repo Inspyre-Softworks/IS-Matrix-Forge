@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Type, Optional
 
 
-from typing import Optional, Type, List
 from concurrent.futures import ThreadPoolExecutor
 import inspect
 
