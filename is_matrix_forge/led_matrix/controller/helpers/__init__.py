@@ -3,6 +3,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Type, Optional
 
 
+from typing import Optional, Type, List
+from concurrent.futures import ThreadPoolExecutor
+import inspect
+
 def get_controllers(
     threaded: bool = False,
     max_workers: Optional[int] = None,
@@ -11,23 +15,8 @@ def get_controllers(
     **controller_kwargs
 ) -> List['LEDMatrixController']:
     """
-    Create LEDMatrixController objects, optionally in parallel threads.
-
-    Parameters:
-        threaded (bool): If True, create controllers in threads.
-        max_workers (int, optional): Maximum threads to use (default: len(devices)).
-        controller_cls (Type, optional): Alternate controller class (default: LEDMatrixController).
-        devices (list, optional): Device list (default: imported DEVICES).
-        **controller_kwargs: Additional kwargs for controller class.
-
-    Returns:
-        List[LEDMatrixController]: List of controller instances.
-
-    Compatibility:
-        When instantiating a custom controller via ``controller_cls``, this helper
-        will attempt to pass ``default_brightness`` and fall back gracefully if the
-        target class does not support it. This preserves compatibility with legacy
-        controller signatures.
+    Create LEDMatrixController objects, optionally in parallel threads, and
+    propagate the 'threaded' flag to the controller constructor when supported.
     """
     from is_matrix_forge.led_matrix.constants import DEVICES
     from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
@@ -36,35 +25,36 @@ def get_controllers(
     _controller_cls = controller_cls or LEDMatrixController
     _max_workers = max_workers or len(_devices)
 
-    def create_controller(device):
-        # Here’s where you could add try/except if your hardware is flaky!
-        # Backward-compatibility: Some controllers may not accept
-        # ``default_brightness``; try with it first, then fall back.
-        try:
-            return _controller_cls(
-                device=device,
-                default_brightness=100,
-                thread_safe=True,
-                **controller_kwargs,
-            )
-        except TypeError as e:
-            if 'default_brightness' in str(e):
-                return _controller_cls(
-                    device=device,
-                    thread_safe=True,
-                    **controller_kwargs,
-                )
-            raise
+    # Introspect constructor to see which kwargs it accepts (so we don't
+    # rely on brittle try/except around TypeErrors for unexpected kwargs).
+    sig = inspect.signature(_controller_cls.__init__)
+    accepted = set(sig.parameters.keys()) - {'self'}
 
-    if not threaded:
+    def create_controller(device):
+        # Start with caller-provided kwargs
+        kwargs = dict(controller_kwargs)
+        kwargs['device'] = device
+
+        # Only pass what the controller actually supports
+        if 'default_brightness' in accepted and 'default_brightness' not in kwargs:
+            kwargs['default_brightness'] = 100
+
+        # Respect the factory's 'threaded' argument for the controller instance:
+        # Prefer 'threaded', fall back to 'thread_safe', else omit.
+        if 'threaded' in accepted:
+            kwargs['threaded'] = threaded
+        elif 'thread_safe' in accepted:
+            kwargs['thread_safe'] = threaded
+
+        return _controller_cls(**kwargs)
+
+    # Factory threading (independent of controller threading)
+    if not threaded or len(_devices) <= 1:
         return [create_controller(dev) for dev in _devices]
 
-    with ThreadPoolExecutor(max_workers=_max_workers) as executor:
-        futures = [executor.submit(create_controller, dev) for dev in _devices]
-        controllers = []
-        for fut in as_completed(futures):
-            controllers.append(fut.result())
-        return controllers
+    with ThreadPoolExecutor(max_workers=_max_workers) as ex:
+        return list(ex.map(create_controller, _devices))
+
 
 
 def find_leftmost(controllers):
