@@ -171,7 +171,7 @@ class DisplayHistoryManager:
 
     def draw_percentage(self, n: int, *args, **kwargs):
         ret = super().draw_percentage(n, *args, **kwargs)  # type: ignore[misc]
-        self._record_event('percentage', meta={'value': int(n)}, grid=None)
+        self._record_event('percentage', meta={'value': n}, grid=None)
         return ret
 
     def show_text(self, text: str, *args, **kwargs):
