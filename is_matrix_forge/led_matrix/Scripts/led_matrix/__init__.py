@@ -2,7 +2,7 @@
 from typing import Iterable, Optional, Tuple
 
 import threading
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
