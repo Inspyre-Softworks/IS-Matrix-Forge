@@ -75,11 +75,19 @@ def find_leftmost(controllers):
         return None
 
     def sort_key(ctrl):
-        side = ctrl.location.get('side')
-        slot = ctrl.location.get('slot', 0)
-        # Map physical order: left side before right side
+        location = getattr(ctrl, 'location', None)
+        if not isinstance(location, dict):
+            # Malformed or missing location: order last
+            return (2, float('inf'))
+        side = location.get('side')
+        slot = location.get('slot')
+        # If side is missing or invalid, order last
+        if side not in ('left', 'right'):
+            return (2, float('inf'))
         side_order = 0 if side == 'left' else 1
-        # On left: smaller slot = more left; on right: smaller slot = more left too
+        # If slot is missing or not an int, order last within side
+        if not isinstance(slot, int):
+            slot = float('inf')
         return (side_order, slot)
 
     return min(controllers, key=sort_key)
