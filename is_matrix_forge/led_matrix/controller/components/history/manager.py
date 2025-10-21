@@ -59,7 +59,6 @@ class DisplayHistoryManager:
         meta: Optional[dict[str, Any]] = None,
         grid: Optional[list[list[int]]] = None,
     ) -> None:
-        from collections import deque
         if not hasattr(self, '_display_history') or self._display_history is None:
             self._display_history = deque(maxlen=256)
 
