@@ -15,7 +15,7 @@ class DisplayHistoryManager:
 
     def __init__(self, *, history_maxlen: int = 256, **kwargs):
         # History fields must exist before any parent init triggers draws.
-        self._display_history: Deque[DisplayEvent] = deque(maxlen=int(history_maxlen))
+        self._display_history: Deque[DisplayEvent] = deque(maxlen=history_maxlen)
         self._current_event: Optional[DisplayEvent] = None
 
         # Brightness tracking
