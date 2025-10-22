@@ -234,7 +234,7 @@ def send_serial(
         print(f"[send_serial] Raw bytes:    {cmd_bytes!r}")
 
     try:
-        with serial.Serial(controller.device.name, baud) as ser:
+        with serial.Serial(str(controller.device), baud) as ser:
             ser.write(cmd_bytes)
     except (IOError, OSError) as _ex:
         disconnect_dev(controller.device)
