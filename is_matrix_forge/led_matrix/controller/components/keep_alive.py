@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 import threading
-from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
+from contextlib import nullcontext
 
 
 class KeepAliveManager:
@@ -15,13 +16,17 @@ class KeepAliveManager:
         self._KEEP_ALIVE_INTERVAL: float = float(keep_alive_interval)
         self._keep_alive_thread: threading.Thread | None = None
         self._keep_alive_stop_evt: threading.Event | None = None
+        self._keep_alive_guard = threading.Lock()
 
-    @synchronized
-    def _keep_alive_worker(self):
-        stop_evt = self._keep_alive_stop_evt or threading.Event()
-        self._keep_alive_stop_evt = stop_evt
+    def _keep_alive_worker(self, stop_evt: threading.Event) -> None:
         while not stop_evt.is_set():
-            self._ping()
+            lock_ctx = nullcontext()
+            if getattr(self, '_thread_safe', False):
+                lock = self.cmd_lock
+                if lock is not None:
+                    lock_ctx = lock
+            with lock_ctx:
+                self._ping()
             stop_evt.wait(self._KEEP_ALIVE_INTERVAL)
 
     @property
@@ -47,23 +52,30 @@ class KeepAliveManager:
         Returns:
             None
         """
-        if enable == self._keep_alive:
-            return
-        if enable:
-            self._keep_alive_stop_evt = threading.Event()
-            import threading as _t
-            self._keep_alive_thread = _t.Thread(
-                target=self._keep_alive_worker,
-                name=f'{self.__class__.__name__}-KeepAlive-{self.device.name}',
-                daemon=True,
-            )
-            self._keep_alive_thread.start()
-            self._keep_alive = True
-        else:
-            if self._keep_alive_stop_evt is not None:
-                self._keep_alive_stop_evt.set()
-            if self._keep_alive_thread is not None and self._keep_alive_thread.is_alive():
-                self._keep_alive_thread.join(timeout=self._KEEP_ALIVE_INTERVAL + 1)
+        with self._keep_alive_guard:
+            if enable == self._keep_alive:
+                return
+
+            if enable:
+                stop_evt = threading.Event()
+                self._keep_alive_stop_evt = stop_evt
+                thread = threading.Thread(
+                    target=self._keep_alive_worker,
+                    args=(stop_evt,),
+                    name=f'{self.__class__.__name__}-KeepAlive-{self.device.name}',
+                    daemon=True,
+                )
+                self._keep_alive_thread = thread
+                thread.start()
+                self._keep_alive = True
+                return
+
+            stop_evt = self._keep_alive_stop_evt
+            thread = self._keep_alive_thread
+            if stop_evt is not None:
+                stop_evt.set()
+            if thread is not None and thread.is_alive():
+                thread.join(timeout=self._KEEP_ALIVE_INTERVAL + 1)
             self._keep_alive_thread = None
             self._keep_alive_stop_evt = None
             self._keep_alive = False

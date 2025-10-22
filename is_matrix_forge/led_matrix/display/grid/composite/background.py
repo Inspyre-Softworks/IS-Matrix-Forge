@@ -1,4 +1,4 @@
-from is_matrix_forge.led_matrix.display.grid.grid import Grid
+from is_matrix_forge.led_matrix.display.grid.base import Grid
 
 
 class BackgroundGrid(Grid):

@@ -1,47 +1,200 @@
 from __future__ import annotations
-from typing import Optional
+
+from collections.abc import Mapping
+from typing import Any, Optional
+
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
-from is_matrix_forge.led_matrix.display.animations import flash_matrix
+
+from is_matrix_forge.led_matrix.display.animations import Animation
+from is_matrix_forge.assets.font_map.base import FontMap
 
 
 class AnimationManager:
-    def __init__(self, **kwargs):
+    """
+    AnimationManager
+
+    Description:
+        Mixin/manager for playing animations on a matrix device, including
+        text scrolling via the TextScroller pipeline (adapter + trimming aware).
+
+    Properties:
+        device:
+            The underlying hardware controller (provided by the concrete class).
+
+        current_animation:
+            The most recently played Animation (if any).
+
+    Methods:
+        animate(enable):
+            Enable/disable device-side animation mode.
+
+        play_animation(animation):
+            Validate and play a provided Animation (thread-safe).
+
+        scroll_text(...):
+            Build and play a scrolling text Animation with rich configuration.
+            All exposed parameters are honored and forwarded to the scroller.
+
+        flash(num_flashes, interval):
+            Flash the matrix.
+
+        halt_animation():
+            Stop the hardware animation mode if active.
+    """
+
+    def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        self._current_animation = None
+        self._current_animation: Optional[Animation] = None
+
+    # --- Hardware animation toggle -------------------------------------------------
 
     @synchronized
     def animate(self, enable: bool = True) -> None:
-        from is_matrix_forge.led_matrix.hardware import animate
-        animate(self.device, enable)
+        """
+        Enable or disable device-side animation mode.
 
-    def play_animation(self, animation):
-        from is_matrix_forge.led_matrix.display.animations.animation import Animation
+        Parameters:
+            enable:
+                True to enable, False to disable.
+        """
+        # Local import avoids hard import dependency for non-matrix test contexts
+        from is_matrix_forge.led_matrix.hardware import animate as hw_animate
+        hw_animate(self.device, enable)
+
+    # --- Animation playback --------------------------------------------------------
+
+    @synchronized
+    def play_animation(self, animation: Animation) -> None:
+        """
+        Validate and play a provided Animation.
+
+        Parameters:
+            animation:
+                An Animation instance to play on this device.
+
+        Raises:
+            TypeError:
+                If 'animation' is not an Animation.
+        """
         if not isinstance(animation, Animation):
             raise TypeError(f'Expected Animation; got {type(animation)}')
         self._current_animation = animation
-        return animation.play(devices=[self])
+        animation.play(devices=[self])
 
-    def scroll_text(self, text: str, skip_end_space: bool = False, loop: bool = False):
-        from is_matrix_forge.led_matrix.display.text.scroller import TextScroller
-        from is_matrix_forge.led_matrix.display.animations.animation import Animation
-        from is_matrix_forge.led_matrix.display.assets import fonts as font
-        anim = Animation(TextScroller(font).scroll(text, skip_end_space))
-        anim.set_all_frame_durations(0.03)
-        if loop:
-            anim.loop = True
+    # --- Text scrolling ------------------------------------------------------------
+
+    def scroll_text(
+            self,
+            text: str,
+            *,
+            spacing: int = 1,
+            frame_duration: float = 0.05,
+            wrap: bool = False,
+            direction: str = 'horizontal',
+            font_map: Optional[FontMap] = None,
+            loop: bool = False,
+            set_duration_override: Optional[float] = None,
+    ) -> Animation:
+        """
+        Build and play a scrolling text Animation using the current TextScrollerConfig API.
+
+        Parameters:
+            text:
+                Text to render.
+            spacing:
+                Columns (or rows for vertical scroll) between glyphs.
+            frame_duration:
+                Seconds to display each animation frame.
+            wrap:
+                Enable seamless horizontal wrapping.
+            direction:
+                One of ``'horizontal'``, ``'vertical_up'`` or ``'vertical_down'``.
+            font_map:
+                Either a :class:`FontMap` instance or any mapping of characters to glyphs.
+                When a :class:`FontMap` is supplied the entire map (including ligatures
+                and fallback glyphs) is passed through to :class:`TextScroller` to ensure
+                context-sensitive glyphs remain available.
+            loop:
+                Whether the resulting animation should loop when played via the manager.
+            set_duration_override:
+                Optional override for all frame durations.
+        """
+        from is_matrix_forge.led_matrix.display.animations.text_scroller import (
+            TextScroller,
+            TextScrollerConfig,
+        )
+
+        fm = font_map or FontMap(case_sensitive=False)
+
+        if isinstance(text, str):
+            text = text.upper()
+
+        if isinstance(fm, FontMap):
+            case_sensitive = fm.is_case_sensitive
+            glyph_map = {
+                (key if case_sensitive else str(key).upper()): fm.lookup(key)
+                for key in fm.keys()
+            }
+        elif isinstance(fm, Mapping):
+            str_items = [(str(k), v) for k, v in fm.items()]
+            case_sensitive = any(key != key.upper() for key, _ in str_items)
+            glyph_map = {
+                (key if case_sensitive else key.upper()): value
+                for key, value in str_items
+            }
+        else:
+            raise TypeError('font_map must be a FontMap or mapping of glyphs')
+
+        cfg = TextScrollerConfig(
+            text=text,
+            font_map=glyph_map,
+            spacing=spacing,
+            frame_duration=frame_duration,
+            wrap=wrap,
+            direction=direction,
+            case_sensitive=case_sensitive,
+        )
+
+        scroller = TextScroller(cfg)
+        anim = scroller.generate_animation()
+
+        if set_duration_override is not None:
+            anim.set_all_frame_durations(set_duration_override)
+
+        anim.loop = loop
         self._current_animation = anim
-        return anim.play(devices=[self])
+
+        # IMPORTANT: play using this controller so frames reuse the existing device connection
+        self.play_animation(anim)
+        return anim
+
+    # --- Utilities ----------------------------------------------------------------
 
     @synchronized
-    def flash(self, num_flashes: Optional[int] = None, interval: float = 0.33):
+    def flash(self, num_flashes: Optional[int] = None, interval: float = 0.33) -> None:
+        """
+        Flash the matrix on/off.
+
+        Parameters:
+            num_flashes:
+                Number of flashes; None means continuous until externally stopped.
+            interval:
+                Seconds between on/off toggles.
+        """
+        from is_matrix_forge.led_matrix.display.animations import flash_matrix
+
         flash_matrix(self, num_flashes=num_flashes, interval=interval)
 
     @synchronized
     def halt_animation(self) -> None:
-        if self.animating:
+        """
+        Stop device-side animation mode if active.
+        """
+        if getattr(self, 'animating', False):
             self.animate(False)
 
+    # --- Accessors ----------------------------------------------------------------
     @property
-    def current_animation(self):
+    def current_animation(self) -> Optional[Animation]:
+        """The most recently played Animation (if any)."""
         return self._current_animation
-

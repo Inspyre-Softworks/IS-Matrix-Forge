@@ -1,4 +1,6 @@
+import logging
 import threading
+from threading import Event
 from typing import List, Dict, Optional, Union, Any
 from time import sleep  # Potentially used by Frame.play()
 import time
@@ -6,10 +8,12 @@ from pathlib import Path
 
 from serial.tools.list_ports_common import ListPortInfo
 
-from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Animation:
@@ -38,6 +42,7 @@ class Animation:
             devices: list of ListPortInfo LED devices.
         """
         # 1) set all attributes to defaults
+        self._stop_event = Event()
         self.__lock = None
         self.__thread_lock = None
         self.__pause_event = None
@@ -49,6 +54,7 @@ class Animation:
         self.__playing = False
         self.__frames: List[Frame] = []
         self.__devices: List[ListPortInfo] = []
+        self.__loop = False
 
         # 2) configure devices & threading
         self._configure_devices(devices, thread_safe, breathe_on_pause)
@@ -283,6 +289,7 @@ class Animation:
             dev.clear()
             
     def __normalize_devices(self, devices):
+        from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
         if devices is None:
             if self.devices is None:
@@ -329,7 +336,7 @@ class Animation:
                 )
                 self.__breathing_thread.start()
 
-    def play(self, devices: Optional[List[LEDMatrixController]] = None, skip_clear_screen: bool = False) -> None:
+    def play(self, devices: Optional[List['LEDMatrixController']] = None, skip_clear_screen: bool = False) -> None:
         """
         Play the animation on the LED matrix.
 
@@ -353,67 +360,54 @@ class Animation:
         self.__check_ready()
         devices = self.__normalize_devices(devices)
 
+        self._stop_event.clear()
         # The loop below will handle cursor advancement.
         self.is_playing = True
-        while self.is_playing:
-            # Iterate from current cursor to the end of frames
-            for i in range(self.__cursor, len(self.__frames)):
-                try:
-                    self.play_frame(i, devices)  # Frame.play() is responsible for its own duration (e.g., sleep)
-                except KeyboardInterrupt:
-                    self.is_playing = False
-                    print('Received keyboard interrupt!')
-                    return
-
-            if self.__loop:
-                self.rewind()
-            else:
-                # If not looping, we've played to the end from the initial cursor.
-                self.is_playing = False  # Stop the while loop
-
-            if not skip_clear_screen:
-                self.__clear_screen(devices)
-
-    def play_frame(self, frame_index: Optional[int] = None, devices: Any = None) -> None:
-        """
-        Play a single frame of the animation.
-
-        Parameters:
-            frame_index (Optional[int]):
-                Index of the frame to play.
-                If None, play the current frame.
-
-            devices (Any, optional):
-                Devices to play on.
-
-        Raises:
-            ValueError:
-                If the animation has no frames.
-
-            IndexError:
-                If frame_index is out of bounds.
-        """
-        if self.is_empty:
-            raise ValueError("Cannot play a frame from an animation with no frames.")
-
-        if self.cursor_at_end:
-            raise AnimationFinishedError('Try rewinding the animation first.')
-
-        if frame_index is not None:
-            if not (0 <= frame_index < len(self.__frames)):
-                raise IndexError(f"Frame index {frame_index} out of bounds (0-{len(self.__frames) - 1}).")
-            self.__cursor = frame_index
-
-        # If frame_index was None, self.cursor is already the current frame.
-        # If frame_index was valid, self.cursor is now updated.
         try:
-            for device in devices:
-                self.frames[self.cursor].play(device)
+            while self.is_playing and not self._stop_event.is_set():
+                # Iterate from current cursor to the end of frames
+                for i in range(self.__cursor, len(self.__frames)):
+                    if self._stop_event.is_set():
+                        break
+
+                    self.play_frame(
+                        i,
+                        devices,
+                        stop_event=self._stop_event,
+                    )  # Frame.play() is responsible for its own duration (e.g., sleep)
+
+                if self._stop_event.is_set():
+                    break
+
+                if self.__loop:
+                    self.rewind()
+                else:
+                    # If not looping, we've played to the end from the initial cursor.
+                    self.is_playing = False  # Stop the while loop
+
+                if not skip_clear_screen:
+                    self.__clear_screen(devices)
 
         except KeyboardInterrupt:
-            self.is_playing = False
-            print('Received keyboard interrupt!')
-            return
+            LOGGER.info('Animation playback interrupted by user input.')
+            self.stop()
+
+    def play_frame(
+        self,
+        index: int,
+        devices,
+        *,
+        stop_event: Event | None = None,
+        advance_cursor: bool = True,
+    ) -> None:
+        frame = self.__frames[index]
+
+        for device in devices:
+            # Frame.play cooperates with stop_event for cancellable sleeps
+            frame.play(device, stop_event)
+
+        if advance_cursor:
+            self.__cursor = index + 1
 
     def resume(self) -> None:
         """Resumes playback from paused state."""
@@ -421,6 +415,7 @@ class Animation:
             raise RuntimeError("resume() requires thread-safe mode to be enabled.")
 
         with self.thread_lock:
+            self._stop_event.clear()
             self.__playing = True
             self.__pause_event.set()
 
@@ -439,7 +434,12 @@ class Animation:
             if pos > self.cursor:
                 raise ValueError('Maybe you meant "fast_forward"... Cursor target position greater than current...')
 
+        self._stop_event.clear()
         self.cursor = pos if pos is not None else 0
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        self.is_playing = False
 
     def _advance_cursor(self, step: int) -> bool:
         """
@@ -534,6 +534,27 @@ class Animation:
         for frame in self.__frames:
             frame.duration = float(duration)
 
+    def set_frame_duration(self, frame_index: int, duration: Union[float, int]) -> None:
+        """
+        Set the duration for a specific frame in the animation.
+
+        Parameters:
+            frame_index (int):
+                Index of the frame to set the duration for.
+
+            duration (Union[float, int]):
+                New duration for the frame in seconds.
+        """
+        if not isinstance(duration, (float, int)):
+            raise TypeError("Duration must be a float or integer.")
+        if duration < 0:
+            raise ValueError("Duration must be non-negative.")
+
+        if 0 <= frame_index < len(self.__frames):
+            self.__frames[frame_index].duration = float(duration)
+        else:
+            raise IndexError(f"Frame index {frame_index} out of bounds (0-{len(self.__frames) - 1}).")
+
     @classmethod
     def from_file(
             cls,
@@ -550,17 +571,25 @@ class Animation:
         2. A dictionary with a 'grid' key and an optional 'duration' key.
 
         Parameters:
-            filename: Path to the JSON file.
-            fallback_frame_duration: Default duration for the Animation instance,
-                                     and also used for raw grids from the file.
-            loop: Whether the created animation should loop.
+            filename:
+                Path to the JSON file.
+
+            fallback_frame_duration:
+                Default duration for the Animation instance, and also used for
+                raw grids from the file.
+
+            loop:
+                Whether the created animation should loop.
 
         Returns:
             Animation: A new Animation instance.
 
         Raises:
-            FileNotFoundError, IsADirectoryError: If file issues.
-            ValueError: If file content is not a valid JSON array or frame data is invalid.
+            FileNotFoundError, IsADirectoryError:
+                If file issues.
+
+            ValueError:
+                If file content is not a valid JSON array or frame data is invalid.
         """
         raw_data = get_json_from_file(filename)  # Expected to raise FileNotFoundError etc.
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "IS-Matrix-Forge"
-version = "1.0.0-dev.17"
+version = "1.0.0-dev.27"
 
 description = ""
 authors = ["Taylor B. <t.blackstone@inspyre.tech>"]
@@ -25,7 +25,6 @@ chime = ">=0.7.0,<0.8.0"
 pyserial = ">=3.5,<4.0"
 inspy-logger = ">=3.2.3,<4.0.0"
 inspyre-toolbox = ">=1.6.0.dev23"
-pillow = ">=11.2.1,<12.0.0"
 opencv-python = ">=4.11.0.86,<5.0.0.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
@@ -36,8 +35,9 @@ requests = "^2.32.4"
 aliaser = "^1.0.0.dev4"
 notebook = "^7.4.4"
 ipywidgets = "==8.1.7"
-psutil = "6.1.1"
 wmi = { version="^1.5.1", markers = "sys_platform == 'win32'" }
+platformdirs = "^4.5.0"
+pillow = "^12.0.0"
 
 [tool.poetry.extras]
 clipboard_support = ["clipboard"]
@@ -50,6 +50,7 @@ ipyboost = { version = "1.0.0.a3", source = "testpypi" }
 pytest = "^8.4.1"
 
 [tool.poetry.scripts]
+led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
 python-path = "Scripts.python_path:main"
 led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
 install-presets = "is_matrix_forge.led_matrix.Scripts.install_presets.main:main"
@@ -57,6 +58,10 @@ pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 
 [[tool.poetry.include]]
 path = "presets/**"
+format = "sdist"
+
+[[tool.poetry.include]]
+path = "is_matrix_forge/assets/char_map.json"
 format = "sdist"
 
 [build-system]

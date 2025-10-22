@@ -1,5 +1,7 @@
 from typing import Any, List, Union
 from pathlib import Path
+import time
+from threading import Event
 
 from inspyre_toolbox.path_man import provision_path
 
@@ -20,7 +22,6 @@ def load_frames_from_file(path: Union[str, Path]) -> List['Frame']:
     from is_matrix_forge.led_matrix.helpers import get_json_from_file
 
     path = provision_path(path)
-
 
 
 def is_valid_frames(raw: Any, width: int, height: int) -> bool:
@@ -51,6 +52,19 @@ def is_valid_frames(raw: Any, width: int, height: int) -> bool:
             and len(raw) > 0
             and all(is_valid_grid(frame, width, height) for frame in raw)
     )
+
+
+def sleep_with_cancel(seconds: float, stop_event: Event | None) -> None:
+    if stop_event is None:
+        time.sleep(seconds)
+        return
+    end = time.monotonic() + seconds
+    while not stop_event.is_set():
+        remaining = end - time.monotonic()
+        if remaining <= 0:
+            break
+        interval = 0.01 if remaining < 0.05 else 0.05
+        stop_event.wait(min(interval, remaining))
 
 
 def migrate_frame(matrix_spec: List[List[int]], duration: Union[int, str]) -> dict:

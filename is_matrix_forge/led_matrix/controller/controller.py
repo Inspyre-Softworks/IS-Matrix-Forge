@@ -14,6 +14,7 @@ Key design notes:
   fallback is supported. The controller passes ``parent_log_device`` through the chain;
   the fallback stub also accepts this parameter.
 """
+from is_matrix_forge.led_matrix.controller.components.history import DisplayHistoryManager
 from is_matrix_forge.led_matrix.controller.components.keep_alive import KeepAliveManager
 from is_matrix_forge.led_matrix.controller.components.animation import AnimationManager
 from is_matrix_forge.led_matrix.controller.components.drawing import DrawingManager
@@ -30,6 +31,7 @@ MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
 
 class LEDMatrixController(
     DeviceBase,
+    DisplayHistoryManager,
     KeepAliveManager,
     AnimationManager,
     DrawingManager,
@@ -44,10 +46,16 @@ class LEDMatrixController(
         single cooperative ``super().__init__`` chain.
 
         Parameters:
-            device: The serial device (pyserial ListPortInfo) to control.
-            thread_safe (bool): Enable internal locking for cross-thread calls.
-            parent_log_device: Logger to attach to this controller. If the installed
+            device:
+                The serial device (pyserial ListPortInfo) to control.
+
+            thread_safe (bool):
+                Enable internal locking for cross-thread calls.
+
+            parent_log_device:
+                Logger to attach to this controller. If the installed
                 Loggable expects ``logger`` instead, a fallback path maps it.
+
             **kwargs: Passed through to mixin initializers. All mixins must call
                 ``super().__init__(**kwargs)`` to maintain cooperative initialization.
         """

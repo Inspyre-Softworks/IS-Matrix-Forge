@@ -1,13 +1,19 @@
 from __future__ import annotations
+import logging
 from time import sleep
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class IdentifyManager:
     def __init__(self, *, skip_greeting: bool = False, skip_identify: bool = False,
                  skip_all_init_animations: bool = False, **kwargs):
         super().__init__(**kwargs)
+        if skip_all_init_animations:
+            LOGGER.info('Skipping all initialization animations')
 
         if not (skip_greeting or skip_all_init_animations):
             self._greet()

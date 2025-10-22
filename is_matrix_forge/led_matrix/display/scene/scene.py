@@ -27,7 +27,7 @@ class Scene:
 
     @property
     def background_grid(self) -> 'Grid':
-        from is_matrix_forge.led_matrix.display.grid.grid import Grid
+        from is_matrix_forge.led_matrix.display.grid.base import Grid
         return Grid(init_grid=self.__background)
 
     @property
@@ -42,7 +42,7 @@ class Scene:
 
     @property
     def foreground_grid(self) -> 'Grid':
-        from is_matrix_forge.led_matrix.display.grid.grid import Grid
+        from is_matrix_forge.led_matrix.display.grid.base import Grid
         return Grid(init_grid=self.__foreground) if self.__foreground is not None else None
 
     @property
@@ -55,7 +55,7 @@ class Scene:
         Compose foreground over background with inversion, cache as __grid.
         Returns a Grid.
         """
-        from is_matrix_forge.led_matrix.display.grid.grid import Grid
+        from is_matrix_forge.led_matrix.display.grid.base import Grid
         bg = self.__background
         fg = self.__foreground
         if bg is None:

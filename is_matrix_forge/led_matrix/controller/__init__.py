@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from is_matrix_forge.led_matrix.constants import HEIGHT, WIDTH
-from is_matrix_forge.led_matrix.display.grid.grid import Grid
+from is_matrix_forge.led_matrix.display.grid.base import Grid
 
 from .controller import LEDMatrixController
 from .helpers import get_controllers

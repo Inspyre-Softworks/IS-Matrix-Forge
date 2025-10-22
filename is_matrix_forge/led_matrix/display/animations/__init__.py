@@ -1,7 +1,8 @@
 from time import sleep
 
 from is_matrix_forge.led_matrix.hardware import brightness
-from is_matrix_forge.led_matrix.display.text import show_string
+from .animation import Animation
+from .frame import Frame
 from .audio_visualizer import AudioVisualizer
 
 
@@ -13,9 +14,11 @@ def flash_matrix(dev, num_flashes=6, interval=.33, min_brightness=None, max_brig
     initial_brightness = dev.brightness
     max_brightness = max_brightness or initial_brightness
     min_brightness = min_brightness or 0
-    for i in range(num_flashes):
+
+    for _ in range(num_flashes):
         dev.brightness = min_brightness
         sleep(interval)
+
         dev.brightness = max_brightness
         sleep(interval)
 
@@ -47,5 +50,6 @@ __all__ = [
     'AudioVisualizer',
     'clear',
     'checkerboard_cycle',
+    'flash_matrix',
     'goodbye_animation',
 ]
