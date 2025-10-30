@@ -55,7 +55,6 @@ def get_controllers(
         return list(ex.map(create_controller, _devices))
 
 
-
 def find_leftmost(controllers):
     """
     Return the physically leftmost controller on a Framework 16.
@@ -123,4 +122,10 @@ def find_rightmost(controllers):
 
     return max(controllers, key=sort_key)
 
+
+__all__ = [
+    'get_controllers',
+    'find_leftmost',
+    'find_rightmost',
+]
 

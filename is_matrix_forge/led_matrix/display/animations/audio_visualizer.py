@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, TYPE_CHECKING
+
+from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 import numpy as np
 
@@ -26,8 +28,9 @@ try:  # ``soundfile`` is also optional
 except ImportError:  # pragma: no cover - optional dependency missing
     sf = None  # type: ignore
 
-from is_matrix_forge.led_matrix import LEDMatrixController
-from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.controller import LEDMatrixController
 
 
 class AudioVisualizer:
