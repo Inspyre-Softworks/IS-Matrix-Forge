@@ -21,7 +21,6 @@ from .helpers import get_plugged_status
 from is_matrix_forge.log_engine import ROOT_LOGGER as PARENT_LOGGER
 from is_matrix_forge.notify.sounds import PLUGGED_NOTIFY, UNPLUGGED_NOTIFY
 
-
 DEFAULT_PLUGGED_SOUND   = PLUGGED_NOTIFY
 DEFAULT_UNPLUGGED_SOUND = UNPLUGGED_NOTIFY
 
@@ -53,6 +52,7 @@ def run_power_monitor(
             The filepath to the sound to play when the device is unplugged from power.
 
     """
+    from .monitor import PowerMonitor
     monitor = PowerMonitor(
         device,
         battery_check_interval=battery_check_interval,

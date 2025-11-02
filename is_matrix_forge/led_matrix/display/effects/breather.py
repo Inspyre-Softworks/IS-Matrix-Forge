@@ -54,7 +54,7 @@ class Breather(Loggable):
 
         self.controller = controller
         log = self.class_logger
-        self.__initial_brightness = self.controller.brightness
+        self.__initial_brightness = 255
         self.min_brightness = min_brightness
         self.max_brightness = max_brightness
         self.step = step

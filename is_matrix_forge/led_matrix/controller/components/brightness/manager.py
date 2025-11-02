@@ -38,6 +38,7 @@ from is_matrix_forge.led_matrix.constants import WIDTH as MATRIX_WIDTH, HEIGHT a
 from is_matrix_forge.led_matrix.hardware import (
     brightness as _set_brightness_raw,
     get_framebuffer_brightness as _get_framebuffer_brightness,
+    get_brightness as _get_brightness_raw,
 )
 from is_matrix_forge.led_matrix.errors import InvalidBrightnessError
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
@@ -165,12 +166,11 @@ class BrightnessManager:
 
     @property
     def brightness(self) -> int:
-        return self._brightness if self._brightness is not None else self._default_brightness
+        return Percent.from_ratio(self.actual_brightness, 255)
 
-    @brightness.setter
-    def brightness(self, new: Union[int, float, str]):
-        # Source of truth lives in set_brightness
-        self.set_brightness(new)
+    @property
+    def actual_brightness(self) -> int:
+        return self._get_brightness()
 
     # ---------- Public API ----------
 
@@ -300,6 +300,10 @@ class BrightnessManager:
             easing=easing,
         )
 
+    def _get_brightness(self):
+        print('getting brightness')
+        return _get_brightness_raw(self.device)
+
     def set_brightness(self, brightness: Union[int, float, str]) -> None:
         """
         Parameters:
@@ -309,6 +313,7 @@ class BrightnessManager:
         """
         pct = Percent.norm(brightness)
         raw = percentage_to_value(max_value=255, percent=pct)
+        print(self.device)
         try:
             _set_brightness_raw(self.device, raw)
         except ValueError as e:

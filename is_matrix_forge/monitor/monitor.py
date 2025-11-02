@@ -9,7 +9,8 @@ from inspy_logger import Loggable
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from serial.tools.list_ports_common import ListPortInfo
 from is_matrix_forge.common.helpers import percentage_to_value
-from is_matrix_forge.led_matrix import pattern, get_animate, animate, percentage, LEDMatrixController
+from is_matrix_forge.led_matrix.hardware import get_animate, get_brightness, animate, percentage
+from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations import goodbye_animation
 from is_matrix_forge.led_matrix.helpers.device import check_device
 from is_matrix_forge.monitor import DEFAULT_PLUGGED_SOUND, DEFAULT_UNPLUGGED_SOUND, MOD_LOGGER, get_plugged_status, \
