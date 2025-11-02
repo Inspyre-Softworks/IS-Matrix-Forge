@@ -143,7 +143,7 @@ class BrightnessManager:
             default_brightness if default_brightness is not None
             else self.FACTORY_DEFAULT_BRIGHTNESS
         )
-        self._brightness: Optional[int] = None
+        self._brightness: Optional[float] = None
         self._set_brightness_on_init = not skip_init_brightness_set
 
         # Optional user-settable easing – default to linear if not provided
@@ -166,34 +166,28 @@ class BrightnessManager:
 
     @property
     def brightness(self) -> int:
-        """Return the cached brightness percentage.
+        """Return the last known brightness percentage.
 
-        Accessing ``LEDMatrixController.brightness`` should be a quick,
-        side-effect free operation.  The previous implementation always hit
-        the hardware via :func:`_get_brightness_raw`, which blocks while the
-        controller waits for a serial response.  The history manager queries
-        this property whenever ``set_brightness`` is invoked so the blocking
-        call effectively caused ``set_brightness`` itself to hang.  Keeping a
-        local cache avoids the unnecessary round trip while still falling back
-        to the configured default when nothing has been set yet.
+        We lazily populate a cache from the hardware the first time the
+        property is accessed so callers that only want to know the current
+        brightness still see the device state, while subsequent lookups avoid
+        redundant blocking probes.
         """
 
-        if self._brightness is not None:
-            return int(self._brightness)
-        return int(self._default_brightness)
+        return int(self._ensure_cached_brightness())
 
     @property
     def actual_brightness(self) -> int:
-        """Best effort probe of the device's brightness value.
+        """Query the device for its raw brightness value (0-255).
 
-        When no cache is available this method reads from the device, but if
-        we have already normalised a brightness value we reuse it to avoid an
-        unnecessary hardware call.
+        The cache is refreshed with the device-reported value so future calls
+        to :pyattr:`brightness` stay in sync without forcing another hardware
+        round-trip unless explicitly requested.
         """
 
-        if self._brightness is not None:
-            return percentage_to_value(max_value=255, percent=self._brightness)
-        return self._get_brightness()
+        raw = self._get_brightness()
+        self._brightness = Percent.from_ratio(raw, 255)
+        return raw
 
     # ---------- Public API ----------
 
@@ -326,6 +320,12 @@ class BrightnessManager:
     def _get_brightness(self):
         return _get_brightness_raw(self.device)
 
+    def _ensure_cached_brightness(self) -> float:
+        if self._brightness is None:
+            raw = self._get_brightness()
+            self._brightness = Percent.from_ratio(raw, 255)
+        return self._brightness if self._brightness is not None else self._default_brightness
+
     def set_brightness(self, brightness: Union[int, float, str]) -> None:
         """
         Parameters:
@@ -335,7 +335,6 @@ class BrightnessManager:
         """
         pct = Percent.norm(brightness)
         raw = percentage_to_value(max_value=255, percent=pct)
-        print(self.device)
         try:
             _set_brightness_raw(self.device, raw)
         except ValueError as e:
