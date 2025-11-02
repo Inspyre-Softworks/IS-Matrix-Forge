@@ -166,10 +166,33 @@ class BrightnessManager:
 
     @property
     def brightness(self) -> int:
-        return Percent.from_ratio(self.actual_brightness, 255)
+        """Return the cached brightness percentage.
+
+        Accessing ``LEDMatrixController.brightness`` should be a quick,
+        side-effect free operation.  The previous implementation always hit
+        the hardware via :func:`_get_brightness_raw`, which blocks while the
+        controller waits for a serial response.  The history manager queries
+        this property whenever ``set_brightness`` is invoked so the blocking
+        call effectively caused ``set_brightness`` itself to hang.  Keeping a
+        local cache avoids the unnecessary round trip while still falling back
+        to the configured default when nothing has been set yet.
+        """
+
+        if self._brightness is not None:
+            return int(self._brightness)
+        return int(self._default_brightness)
 
     @property
     def actual_brightness(self) -> int:
+        """Best effort probe of the device's brightness value.
+
+        When no cache is available this method reads from the device, but if
+        we have already normalised a brightness value we reuse it to avoid an
+        unnecessary hardware call.
+        """
+
+        if self._brightness is not None:
+            return percentage_to_value(max_value=255, percent=self._brightness)
         return self._get_brightness()
 
     # ---------- Public API ----------
@@ -301,7 +324,6 @@ class BrightnessManager:
         )
 
     def _get_brightness(self):
-        print('getting brightness')
         return _get_brightness_raw(self.device)
 
     def set_brightness(self, brightness: Union[int, float, str]) -> None:
