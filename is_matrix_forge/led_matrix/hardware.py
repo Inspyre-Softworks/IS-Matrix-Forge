@@ -11,6 +11,7 @@ import serial
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.led_matrix.commands.map import CommandVals
+from is_matrix_forge.led_matrix.display.patterns.built_in.stencils.res import PatternVals
 
 from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC, WIDTH, HEIGHT
 from is_matrix_forge.led_matrix.helpers import disconnect_dev, DISCONNECTED_DEVS
@@ -189,7 +190,6 @@ def get_animate(dev):
 
 def percentage(dev, p):
     """Fill a percentage of the screen from bottom to top."""
-    from is_matrix_forge.inputmodule import PatternVals
 
     send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
 

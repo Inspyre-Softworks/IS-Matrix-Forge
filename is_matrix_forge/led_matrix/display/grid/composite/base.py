@@ -3,7 +3,7 @@ from typing import Union, List
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from is_matrix_forge.led_matrix.display.grid import Grid
 
-from .utils import load_grid, transpose
+from .helpers import load_grid, transpose
 
 
 class CompositeGrid(Grid):

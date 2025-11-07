@@ -2,6 +2,7 @@ from typing import Optional, List, Union
 
 from is_matrix_forge.led_matrix.display.grid import Grid
 from .base import CompositeGrid
+from .helpers import load_grid, transpose
 from is_matrix_forge.led_matrix.display.grid.composite import BackgroundGrid, ForegroundGrid
 from inspyre_toolbox.syntactic_sweets.classes.decorators.type_validation import validate_type
 from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
@@ -293,22 +294,4 @@ class PercentDisplayScene(Loggable):
         self.draw(controller)
 
 
-def transpose(grid: List[List[int]]) -> List[List[int]]:
-    """Transpose a 2D list (rows <-> columns)."""
-    return [list(col) for col in zip(*grid)]
-
-
-def load_grid(grid_like: Union[Grid, List[List[int]]]) -> Grid:
-    """Normalize a grid-like object into a Grid instance."""
-    if isinstance(grid_like, Grid):
-        return grid_like
-    if not isinstance(grid_like, list):
-        raise ValueError(f'grid_like must be a list of lists or a Grid, not {type(grid_like)}')
-
-    try:
-        return Grid(init_grid=grid_like)
-    except ValueError as e:
-        if str(e).startswith('ValueError: init_grid must be'):
-            print('Auto-transposing invalid grid...')
-            return Grid(init_grid=transpose(grid_like))
-        raise
+__all__ = ["load_grid", "transpose", "PercentDisplayScene"]

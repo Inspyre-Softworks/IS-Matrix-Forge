@@ -1,10 +1,7 @@
 from .background import BackgroundGrid
 from .foreground import ForegroundGrid
-from .utils import (
-    PercentDisplayScene,
-    load_grid,
-    transpose as transpose_grid
-)
+from .utils import PercentDisplayScene
+from .helpers import load_grid, transpose as transpose_grid
 from .base import CompositeGrid
 
 
