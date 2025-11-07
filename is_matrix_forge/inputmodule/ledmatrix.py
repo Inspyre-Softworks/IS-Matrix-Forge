@@ -139,69 +139,6 @@ def camera(dev):
             commit_cols(dev, s)
 
 
-def video(dev, video_file):
-    set_status('video')
-    """Resize and play back a video"""
-    with serial.Serial(dev.device, 115200) as s:
-        import cv2
-
-        capture = cv2.VideoCapture(video_file)
-        ret, frame = capture.read()
-
-        scale_y = HEIGHT / frame.shape[0]
-
-        # Scale the video to 34 pixels height
-        dim = (HEIGHT, int(round(frame.shape[1] * scale_y)))
-        # Find the starting position to crop the width to be centered
-        # For very narrow videos, make sure to stay in bounds
-        start_x = max(0, int(round(dim[1] / 2 - WIDTH / 2)))
-        end_x = min(dim[1], start_x + WIDTH)
-
-        processed = []
-
-        # Pre-process the video into resized, cropped, grayscale frames
-        while get_status() == 'video':
-            ret, frame = capture.read()
-            if not ret:
-                print("Failed to read video frames")
-                break
-
-            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-            resized = cv2.resize(gray, (dim[1], dim[0]))
-            cropped = resized[0:HEIGHT, start_x:end_x]
-
-            processed.append(cropped)
-
-        # Determine frame delay based on the video's FPS.  Default to 30 FPS if
-        # the information isn't available.
-        fps = capture.get(cv2.CAP_PROP_FPS)
-        try:
-            fps = float(fps)
-            if fps <= 0 or fps != fps:
-                raise ValueError
-        except Exception:
-            fps = 30.0
-        frame_delay = 1.0 / fps
-
-        # Write it out to the module one frame at a time while respecting the
-        # frame rate.
-        for frame in processed:
-            start = time.time()
-            for x in range(0, cropped.shape[1]):
-                vals = [0 for _ in range(HEIGHT)]
-
-                for y in range(0, HEIGHT):
-                    vals[y] = frame[y, x]
-
-                send_col(dev, s, x, vals)
-            commit_cols(dev, s)
-
-            elapsed = time.time() - start
-            if frame_delay > elapsed:
-                time.sleep(frame_delay - elapsed)
-
-
 def pixel_to_brightness(pixel):
     """Calculate pixel brightness from an RGB triple"""
     assert len(pixel) == 3

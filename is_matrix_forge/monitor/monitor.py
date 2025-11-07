@@ -1,4 +1,3 @@
-
 import time
 from pathlib import Path
 from threading import Thread
@@ -13,67 +12,113 @@ from is_matrix_forge.led_matrix.hardware import get_animate, get_brightness, ani
 from is_matrix_forge.led_matrix.controller import LEDMatrixController
 from is_matrix_forge.led_matrix.display.animations import goodbye_animation
 from is_matrix_forge.led_matrix.helpers.device import check_device
-from is_matrix_forge.monitor import DEFAULT_PLUGGED_SOUND, DEFAULT_UNPLUGGED_SOUND, MOD_LOGGER, get_plugged_status, \
-    PowerMonitorNotRunningError, ECH
+from is_matrix_forge.monitor import (
+    DEFAULT_PLUGGED_SOUND,
+    DEFAULT_UNPLUGGED_SOUND,
+    MOD_LOGGER,
+    get_plugged_status,
+    PowerMonitorNotRunningError,
+    ECH,
+)
 from is_matrix_forge.notify.sounds import Sound
 from is_matrix_forge.monitor.helpers import get_battery_percentage
 
 
 class PowerMonitor(Loggable):
+    '''
+    Author: Inspyre Softworks
+    Project: IS-Matrix-Forge
+    File: monitor.py
 
-    # Properties
-    #
-    _running         = False
+    Description:
+        Periodically checks AC power status and battery percentage,
+        triggers sounds on plug/unplug events, and updates the LED matrix.
+        Can run synchronously or in a background thread.
+
+    Properties:
+        battery_check_interval (float):
+            Seconds to wait between checks.
+        controller (LEDMatrixController):
+            Active LED matrix controller.
+        cycles (int):
+            Number of loop iterations since start.
+        dev (ListPortInfo):
+            The selected serial device (raw port info).
+        device (ListPortInfo):
+            Alias to dev.
+        last_state (Optional[bool]):
+            Last known "plugged in" state; None before first check.
+        plugged_alert (Sound):
+            Sound to play when AC becomes present.
+        unplugged_alert (Sound):
+            Sound to play when AC is removed.
+        plugged_in (bool):
+            Current AC status.
+        unplugged (bool):
+            Convenience negation of plugged_in.
+        running (bool):
+            Whether the monitor loop is active.
+        run_time (float):
+            Elapsed time in seconds between start and now/stop.
+        start_time/stop_time (Optional[float]):
+            Timestamps for last start/stop.
+        thread (Optional[Thread]):
+            Background thread if running threaded.
+
+    Methods:
+        start(threaded: bool = False) -> Optional[Thread]
+        stop(without_salutation: bool = False, reason: Optional[str] = None) -> None
+        run() -> None
+        notify(which: str) -> None
+        set_device(device: Union[ListPortInfo, LEDMatrixController]) -> None
+    '''
+
+    _running = False
     DEFAULT_CHECK_INTERVAL = 5
-    __cycles         = 0
+    __cycles = 0
 
     def __init__(
-            self,
-            device,
-            battery_check_interval: int = 5,
-            plugged_alert: Optional[Union[str, Path]] = DEFAULT_PLUGGED_SOUND,
-            unplugged_alert: Optional[Union[str, Path]] = DEFAULT_UNPLUGGED_SOUND,
-
+        self,
+        device,
+        battery_check_interval: int = 5,
+        plugged_alert: Optional[Union[str, Path]] = DEFAULT_PLUGGED_SOUND,
+        unplugged_alert: Optional[Union[str, Path]] = DEFAULT_UNPLUGGED_SOUND,
     ):
         super().__init__(MOD_LOGGER)
+        self.__active_animations = None
         self.__battery_check_interval = None
-        self.__dev                    = None
-        self._last_state             = None
-        self.__plugged_alert          = None
-        self.__start_time             = None
-        self.__stop_time              = None
-        self.__thread                 = None
-        self.__unplugged_alert        = None
-        self.__controller             = None
+        self.__dev = None
+        self._last_state = None
+        self.__plugged_alert = None
+        self.__start_time = None
+        self.__stop_time = None
+        self.__thread = None
+        self.__unplugged_alert = None
+        self.__controller = None
 
         self.set_device(device)
 
-        # Set some settings
-        # First alerts, if provided
         if plugged_alert:
             self.plugged_alert = plugged_alert
-
         if unplugged_alert:
             self.unplugged_alert = unplugged_alert
 
-        # Initialize the LED matrix brightness to a low value.
-        # The controller API expects a percentage between 0 and 100.
+        # Initialize the LED matrix brightness to a low value (0-100).
         self.controller.set_brightness(5)
         self.__battery_check_interval = battery_check_interval or self.DEFAULT_CHECK_INTERVAL
 
+    # --- Settings & state ---
+    @property
+    def active_animations(self)-> Optional[List[Animation]]:
+        return self.__active_animations
+
     @property
     def battery_check_interval(self):
-        """
-
-        Returns:
-
-        """
         return self.__battery_check_interval
 
     @battery_check_interval.setter
     @validate_type(int, str, float, preferred_type=float, conversion_funcs=[float])
     def battery_check_interval(self, new):
-
         self.__battery_check_interval = new
 
     @property
@@ -86,7 +131,8 @@ class PowerMonitor(Loggable):
 
     @property
     def dev(self):
-        return self.controller.device
+        # IMPORTANT: return the stored ListPortInfo, not via controller.
+        return self.__dev
 
     @property
     def device(self):
@@ -94,19 +140,12 @@ class PowerMonitor(Loggable):
 
     @property
     def last_state(self) -> Optional[bool]:
-        """
-        The state of the connection to the power supply on last-check.
+        '''
+        The last observed AC state.
 
         Returns:
-            Optional[bool]:
-                True;
-                    The device was plugged into power.
-                False;
-                    The device was unplugged from power.
-
-                None;
-                    The monitor hasn't completed a check yet.
-        """
+            Optional[bool]: True (plugged), False (unplugged), or None (not checked yet).
+        '''
         return self._last_state
 
     @property
@@ -118,87 +157,33 @@ class PowerMonitor(Loggable):
     def plugged_alert(self, new):
         if not isinstance(new, Sound):
             raise TypeError(f'plugged_alert must be of type `Sound`, not {type(new)}')
-
         self.__plugged_alert = new
 
     @property
     def plugged_in(self):
-        """
-        Whether the device is currently plugged into power.
-
-        Returns:
-            bool:
-                True;
-                    The device is currently plugged into power. This is not an indicator (necessarily) that;
-                        - The battery level is increasing
-                        - The battery level is not decreasing
-                        - The battery is gaining a net-positive charge level
-
-                    This is an indicator that;
-                        - A power supply is connected to the device
-
-                False;
-                    The device is currently unplugged from power.
-        """
+        '''
+        Whether AC is currently present (does not imply net charging).
+        '''
         return get_plugged_status()
 
     @property
     def running(self):
-        """
-        Whether the power-monitor is running.
-
-        Returns:
-            bool:
-                True;
-                    The monitor is running.
-
-                False;
-                    The monitor is not running.
-        """
         return self._running
 
     @running.setter
     def running(self, new):
-        """
-        The setter for the `running` property. You can only set `running` to `False`, this will stop the monitor.
-
-        Parameters:
-            new:
-                The new value for `running`.
-
-        Returns:
-            None
-
-        Raises:
-            RuntimeError:
-                If you try to set `running` to `True`
-
-            TypeError:
-                If `new` is not of type `bool`
-        """
         if not self._running and new:
-            raise RuntimeError('Cannot start monitor by setting running to `True`. Use the `start` method instead.')
-
+            raise RuntimeError('Cannot start monitor by setting running to True. Use start().')
         if not isinstance(new, bool):
             raise TypeError(f'running must be of type `bool`, not {type(new)}')
-
         self._running = new
 
     @property
     def run_time(self):
-        """
-        The time the monitor has been running. This is the time since the monitor was started, or the time between
-        starting and stopping the monitor if it has been stopped.
-
-        Returns:
-            float:
-                The run time in seconds.
-        """
-        if not hasattr(self, 'start_time'):
-            raise PowerMonitorNotRunningError('Monitor hasn\'t even been started yet!')
-
-        recent = self.stop_time if hasattr(self, 'stop_time') else time.time()
-        return recent - self.start_time
+        if self.__start_time is None:
+            raise PowerMonitorNotRunningError("Monitor hasn't been started yet.")
+        recent = self.__stop_time if self.__stop_time is not None else time.time()
+        return recent - self.__start_time
 
     @property
     def start_time(self) -> Optional[float]:
@@ -206,98 +191,37 @@ class PowerMonitor(Loggable):
 
     @property
     def stop_time(self) -> Optional[float]:
-        """
-        (**Read-only property**)
-
-        The time the monitor was last stopped.
-
-        Returns:
-            Optional[float]:
-                The time the monitor was last stopped.
-
-                `None`;
-                    The monitor hasn't been stopped yet
-
-        """
         return self.__stop_time
 
     @property
     def thread(self) -> Optional[Thread]:
-        """
-        The thread object that is running the monitor loop. If the monitor is not running in a separate thread, this
-        property will return `None`.
-
-        Returns:
-            Optional[Thread]:
-                The thread that is running the monitor loop; if the monitor is running in a separate thread.
-                None otherwise
-        """
         if self.__thread is None:
             self.class_logger.error('Either monitor is not running or it is not running in a separate thread.')
-
         return self.__thread
 
     @property
     def unplugged(self):
-        """
-        Whether the laptop is currently unplugged from AC power.
-
-        Returns:
-            bool:
-                True;
-                    The device is currently unplugged from power, and the battery is discharging.
-
-                False;
-                    The device is currently plugged into power. This is not an indicator (necessarily) that;
-                        - The battery level is increasing
-                        - The battery level is not decreasing
-                        - The battery is gaining a net-positive charge level
-        """
         return not self.plugged_in
 
     @property
     def unplugged_alert(self) -> 'Sound':
-        """
-        The sound to play when the device is unplugged from power.
-
-        Returns:
-            Sound:
-                The sound to play when the device is unplugged from power.
-        """
-        if not self.__unplugged_alert:
-            return DEFAULT_UNPLUGGED_SOUND
-
-        return self.__unplugged_alert
+        return self.__unplugged_alert or DEFAULT_UNPLUGGED_SOUND
 
     @validate_type()
     @unplugged_alert.setter
     def unplugged_alert(self, new):
-        """
-        The setter for the `unplugged_alert` property. This must be of type `Sound`.
-
-        Parameters:
-            new:
-
-
-        Returns:
-
-        """
         if not isinstance(new, Sound):
             raise TypeError(f'unplugged_alert must be of type `Sound`, not {type(new)}')
-
         self.__unplugged_alert = new
 
+    # --- Behavior ---
+
     def notify(self, which: str):
-        """
-        Notify the user of a power event (plugged, unplugged).
-
-        Parameters:
-            which (str):
-                The type of notification to send ('plugged' or 'unplugged').
-        """
+        '''
+        Send a plug/unplug notification sound, but only when the state changes and
+        after at least one status check has occurred.
+        '''
         log = self.method_logger
-        # Just return if the first check hasn't been completed yet.
-
         if self.last_state is None:
             log.debug('Status: Not yet checked')
             return
@@ -314,27 +238,17 @@ class PowerMonitor(Loggable):
                 self.unplugged_alert.notify()
 
     def run(self):
-        """
-        Run the power monitor. This is where the main loop of the monitor is located. It (roughly) does the following
-        while playing notification sounds when the power supply is plugged in or unplugged:
-          1. Check the battery level.
-          2. If the power supply is unplugged, display the battery level on the LED matrix.
-          3. If the power supply is plugged in, animate the LED matrix.
-          4. Repeat.
-
-        Note:
-            This method is called by the `start` method and should not be called directly.
-        """
+        '''
+        Main loop; dispatches to event handlers based on AC state and sleeps between checks.
+        '''
         from .events import handle_event
         log = self.method_logger
         if not self._running:
             log.error('Monitor is not running')
-            raise RuntimeError('Monitor is not running. If you want to start it, use the `start` method.')
+            raise RuntimeError('Monitor is not running. Use start().')
 
         log.debug('Running monitor...')
-
         while self.running:
-            
             state = 'plugged' if self.plugged_in else 'unplugged'
             handle_event(state, self)
 
@@ -343,14 +257,16 @@ class PowerMonitor(Loggable):
                 break
 
             self.__cycles += 1
-
             sleep(self.battery_check_interval)
 
     def set_device(self, device):
-
+        '''
+        Accept either a LEDMatrixController or a ListPortInfo and wire the class up.
+        '''
         if isinstance(device, LEDMatrixController):
             self.__controller = device
-            device = self.controller.device
+            self.__dev = device.device
+            return
         elif not isinstance(device, ListPortInfo):
             raise TypeError(f'device must be of type `ListPortInfo`, not {type(device)}')
 
@@ -358,22 +274,12 @@ class PowerMonitor(Loggable):
             raise ValueError(f'device {device} is not available')
 
         self.__dev = device
-        self.__controller = LEDMatrixController(self.dev)
+        self.__controller = LEDMatrixController(device)
 
     def start(self, threaded=False):
-        """
-        Start the power monitor.
-
-        Parameters:
-            threaded (bool):
-                If True, run the monitor in a separate thread.
-
-        Returns:
-            Optional[Thread]:
-                The thread that is running the monitor loop; if `threaded` is True.
-                None otherwise.
-
-        """
+        '''
+        Start the monitor. When threaded, returns the Thread; otherwise blocks.
+        '''
         log = self.method_logger
         log.debug('Starting monitor')
 
@@ -388,23 +294,20 @@ class PowerMonitor(Loggable):
         if threaded:
             t = Thread(target=self.run, daemon=True)
             t.start()
+            self.__thread = t
             ECH.register_handler(self.stop, kwargs={'reason': 'Program exited.'})
-
-        try:
-            self.run()
-        except KeyboardInterrupt:
-            log.warning('KeyboardInterrupt received, stopping monitor...')
-            self.stop(without_salutation=True, reason='Keyboard interrupt.')
+            return t
+        else:
+            try:
+                self.run()
+            except KeyboardInterrupt:
+                log.warning('KeyboardInterrupt received, stopping monitor...')
+                self.stop(without_salutation=True, reason='Keyboard interrupt.')
 
     def stop(self, without_salutation=False, reason=None):
-        """
-        Stop the power monitor.
-
-        Parameters:
-            without_salutation (bool):
-                If True, skip the goodbye animation that plays by default on the LED matrix.
-        """
-
+        '''
+        Stop the monitor and play a farewell animation unless suppressed.
+        '''
         log = self.method_logger
 
         if not self.running:

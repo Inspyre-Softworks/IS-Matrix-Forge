@@ -1,4 +1,8 @@
-from is_matrix_forge.led_matrix.display.grid.composite import BackgroundGrid, CompositeGrid, ForegroundGrid
+from typing import Optional, List, Union
+
+from is_matrix_forge.led_matrix.display.grid import Grid
+from .base import CompositeGrid
+from is_matrix_forge.led_matrix.display.grid.composite import BackgroundGrid, ForegroundGrid
 from inspyre_toolbox.syntactic_sweets.classes.decorators.type_validation import validate_type
 from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
@@ -15,19 +19,22 @@ class PercentDisplayScene(Loggable):
 
     def __init__(
             self,
+            initial_percent = None,
             brightness=None,
             invert_on_overlap=None,
             max_percent_for_digits_on_top=None,
             min_percent_for_digits_on_bottom=None,
-            controller=None
+            controller=None,
     ):
         super().__init__(MOD_LOGGER)
+        self.__percent = initial_percent or 0
+        self.__controller = None
         self.__last_scene = None
 
         # Set `provisioned` flag to False.
         self.__provisioned = False
 
-        self.__controller = None
+        self.controller = controller
 
         # Set up placeholders for our composite and its constituent grids;
 
@@ -57,6 +64,9 @@ class PercentDisplayScene(Loggable):
         )
 
         self.class_logger.debug('PercentDisplayScene initialized')
+
+        print(self.percent)
+        print(self.controller)
 
         if not self.provisioned:
             self.class_logger.error('Error provisioning PercentDisplayScene')
@@ -208,6 +218,11 @@ class PercentDisplayScene(Loggable):
     def percent(self):
         return self.__percent
 
+    @percent.setter
+    @validate_type(int, float, str, preferred_type=int)
+    def percent(self, new):
+        self.__percent = new
+
     @property
     def provisioned(self):
         return self.__provisioned
@@ -215,6 +230,8 @@ class PercentDisplayScene(Loggable):
     def build_scene(self, percent=None):
         if not self.provisioned:
             raise ValueError("Scene is not provisioned.")
+
+        percent = percent or self.percent
 
         if percent is None:
             raise ValueError("Percent is required.")
@@ -236,7 +253,13 @@ class PercentDisplayScene(Loggable):
             invert_on_overlap=self.invert_on_overlap,
         )
 
-    def draw(self, controller):
+    def draw(self, controller=None):
+
+        if not self.controller and controller is None:
+            raise ValueError("Controller is required.")
+        elif controller is not None:
+            self.__controller = controller
+
         if not self.provisioned:
             raise ValueError("Scene is not provisioned.")
 
@@ -249,10 +272,43 @@ class PercentDisplayScene(Loggable):
         print(self.__last_scene)
 
 
-        self.composite.draw(controller)
+        self.composite.draw(self.controller)
 
         self.__last_scene = self.composite
 
-    def redraw(self, percent, controller):
+    def redraw(self, controller: Optional[LEDMatrixController] = None, percent: Optional[float] = None):
+        if self.controller is None:
+            raise ValueError("Controller is required for redraw. (Try using `draw` instead)")
+
+        percent    = percent or self.percent
+        controller = controller or self.controller
+
+        if percent is None:
+            raise ValueError("Percent is required.")
+
+        if controller is None:
+            raise ValueError("Controller is required for redraw. (Try using `draw` instead)")
+
         self.build_scene(percent)
         self.draw(controller)
+
+
+def transpose(grid: List[List[int]]) -> List[List[int]]:
+    """Transpose a 2D list (rows <-> columns)."""
+    return [list(col) for col in zip(*grid)]
+
+
+def load_grid(grid_like: Union[Grid, List[List[int]]]) -> Grid:
+    """Normalize a grid-like object into a Grid instance."""
+    if isinstance(grid_like, Grid):
+        return grid_like
+    if not isinstance(grid_like, list):
+        raise ValueError(f'grid_like must be a list of lists or a Grid, not {type(grid_like)}')
+
+    try:
+        return Grid(init_grid=grid_like)
+    except ValueError as e:
+        if str(e).startswith('ValueError: init_grid must be'):
+            print('Auto-transposing invalid grid...')
+            return Grid(init_grid=transpose(grid_like))
+        raise

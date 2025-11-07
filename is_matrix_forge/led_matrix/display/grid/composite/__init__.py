@@ -1,13 +1,18 @@
-from is_matrix_forge.led_matrix.display.grid.composite.composite import CompositeGrid
-from is_matrix_forge.led_matrix.display.grid.composite.background import BackgroundGrid
-from is_matrix_forge.led_matrix.display.grid.composite.foreground import ForegroundGrid
-
-
-
+from .background import BackgroundGrid
+from .foreground import ForegroundGrid
+from .utils import (
+    PercentDisplayScene,
+    load_grid,
+    transpose as transpose_grid
+)
+from .base import CompositeGrid
 
 
 __all__ = [
     'CompositeGrid',
     'BackgroundGrid',
     'ForegroundGrid',
+    'load_grid',
+    'PercentDisplayScene',
+    'transpose_grid'
 ]
