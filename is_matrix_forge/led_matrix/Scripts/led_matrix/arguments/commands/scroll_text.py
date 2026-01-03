@@ -2,8 +2,8 @@ from argparse import ArgumentParser
 
 
 DIRECTION_MAP = {
-    'up': 'vertical_down',
-    'down': 'vertical_up',
+    'up': 'vertical_up',
+    'down': 'vertical_down',
     'h': 'horizontal'
 }
 
@@ -30,6 +30,13 @@ def register_command(parser: ArgumentParser):
         choices=DIRECTION_MAP.keys(),
         default='up',
         help='The direction to scroll the text in. Default is up.'
+    )
+
+    scroll_parser.add_argument(
+        '-f', '--frame-duration',
+        type=float,
+        default=.33,
+        help='The length of time (in seconds) that each frame of the text scroll stays active.'
     )
 
     scroll_parser.add_argument(
