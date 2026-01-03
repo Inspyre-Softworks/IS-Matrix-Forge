@@ -123,7 +123,7 @@ class AnimationManager(Aliases):
             text: str,
             *,
             spacing: int = 1,
-            frame_duration: float = 0.05,
+            frame_duration: float = 0.33,
             wrap: bool = False,
             direction: str = 'horizontal',
             font_map: Optional[FontMap] = None,

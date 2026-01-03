@@ -2,8 +2,8 @@ from argparse import ArgumentParser
 
 
 DIRECTION_MAP = {
-    'up': 'vertical_down',
-    'down': 'vertical_up',
+    'up': 'vertical_up',
+    'down': 'vertical_down',
     'h': 'horizontal'
 }
 
