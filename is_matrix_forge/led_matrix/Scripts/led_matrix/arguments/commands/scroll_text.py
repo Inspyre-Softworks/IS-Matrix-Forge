@@ -34,6 +34,7 @@ def register_command(parser: ArgumentParser):
 
     scroll_parser.add_argument(
         '-f', '--frame-duration',
+        type=float,
         default=.33,
         help='The length of time (in seconds) that each frame of the text scroll stays active.'
     )
