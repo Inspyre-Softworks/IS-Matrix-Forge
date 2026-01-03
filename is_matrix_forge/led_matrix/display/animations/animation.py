@@ -14,8 +14,7 @@ from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
 
 
-LOGGER = ROOT_LOGGER.get_child('.'.join(__name__.split('.')[1:]))
-LOGGER.info('Test')
+LOGGER = ROOT_LOGGER.get_child('IS-Matrix-Forge.led_matrix.display.animations.animation')
 
 
 class Animation(Loggable):
@@ -48,6 +47,9 @@ class Animation(Loggable):
             devices: list of ListPortInfo LED devices.
         """
         super().__init__(parent_log_device=LOGGER)
+
+        log = self.class_logger
+
         # 1) set all attributes to defaults
         self._stop_event = Event()
         self.__lock = None
@@ -65,14 +67,24 @@ class Animation(Loggable):
 
         # 2) configure devices & threading
         self._configure_devices(devices, thread_safe, breathe_on_pause)
+        log.debug(f'Configured device{"s" if len(self.devices) != 1 else ""} {devices}')
 
         # 3) apply high-level settings
         self.fallback_frame_duration = fallback_frame_duration
+        log.debug(f'Fallback frame duration: {fallback_frame_duration}')
         self.loop = loop
+        log.debug(f'Loop: {loop}')
 
         # 4) load any provided frames
         if frame_data:
             self._load_frames(frame_data)
+
+        if self.frames and len(self.frames) >= 1:
+            log.debug(f'Loaded {len(self.frames)} frames')
+        else:
+            log.debug('No frames loaded.')
+            if frame_data:
+                log.error(f'Provided frame data: {frame_data} but no frames loaded!')
 
         # 5) reset cursor into valid range
         self._reset_cursor()

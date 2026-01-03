@@ -187,11 +187,13 @@ class AnimationManager(Aliases):
             frame_duration=frame_duration,
             wrap=wrap,
             direction=direction,
-            case_sensitive=case_sensitive,
+            case_sensitive=case_sensitive
         )
 
         scroller = TextScroller(cfg)
         anim = scroller.generate_animation()
+
+        anim.set_all_frame_durations(duration=frame_duration)
 
         if set_duration_override is not None:
             anim.set_all_frame_durations(set_duration_override)

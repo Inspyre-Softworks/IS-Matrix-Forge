@@ -33,6 +33,12 @@ def register_command(parser: ArgumentParser):
     )
 
     scroll_parser.add_argument(
+        '-f', '--frame-duration',
+        default=.33,
+        help='The length of time (in seconds) that each frame of the text scroll stays active.'
+    )
+
+    scroll_parser.add_argument(
         '--sequential',
         action='store_true',
         default=False,
