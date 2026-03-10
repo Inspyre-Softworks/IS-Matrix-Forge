@@ -1,5 +1,5 @@
 from easy_exit_calls import ExitCallHandler
-from is_matrix_forge.common.decorators import freeze_setter, validate_type
+from is_matrix_forge.common.decorators import validate_type
 
 
 ECH = ExitCallHandler()
@@ -12,25 +12,27 @@ class MatrixJiggler:
     def __init__(
             self,
             controller    = None,
-            power_monitor = None,
             interval: int = None,
             do_not_clear_on_stop: bool = False,
 
     ):
-        if controller and power_monitor:
-            raise ValueError("Cannot specify both `controller` and `power_monitor`")
-
-        self.controller         = controller
-        self.power_monitor      = power_monitor
-        self.clear_on_stop      = not do_not_clear_on_stop
         self._controller        = None
         self.__interval         = None
         self.__last_jiggle_time = None
-        self._power_monitor     = None
+        self.clear_on_stop      = not do_not_clear_on_stop
+
+        if controller is not None:
+            self.controller = controller
 
     @property
     def controller(self):
         return self._controller
+
+    @controller.setter
+    def controller(self, new):
+        if new is None:
+            raise ValueError("controller cannot be None")
+        self._controller = new
 
     @property
     def interval(self) -> float:
@@ -40,22 +42,6 @@ class MatrixJiggler:
     @validate_type([float, int], float)
     def interval(self, new):
         self.__interval = new
-
-    @property
-    def power_monitor(self):
-        return self._power_monitor
-
-    @power_monitor.setter
-    @freeze_setter()
-    def power_monitor(self, new):
-        from is_matrix_forge.monitor.monitor import PowerMonitor
-
-        if not isinstance(new, PowerMonitor):
-            raise TypeError(f"Expected {PowerMonitor}, got {type(new)}")
-
-        self._controller = new.controller
-
-        self._power_monitor = new
 
     def cleanup(self):
         if self.clear_on_stop:

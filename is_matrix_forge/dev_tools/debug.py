@@ -3,13 +3,13 @@ from platformdirs import PlatformDirs
 from easy_exit_calls import ExitCallHandler
 from is_matrix_forge.log_engine import ROOT_LOGGER as PARENT_LOGGER
 
-MOD_LOGGER = PARENT_LOGGER.get_child('monitor.gui.debug')
+MOD_LOGGER = PARENT_LOGGER.get_child('dev_tools.debug')
 
 DEBUG_MODE_KEYFILE_NAME = 'marauder.map'
 
 ECH: ExitCallHandler
 
-PLATFORM_DIRS = PlatformDirs('LEDMatrixPowerMonitor', 'Inspyre-Softworks')
+PLATFORM_DIRS = PlatformDirs('IS-Matrix-Forge', 'Inspyre-Softworks')
 
 
 def get_debug_mode_keyfile_path():

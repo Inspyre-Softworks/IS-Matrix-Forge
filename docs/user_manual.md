@@ -1,134 +1,96 @@
-# LED Matrix Battery Monitor - User Manual
+# IS Matrix Forge - User Manual
 
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Hardware Setup](#hardware-setup)
 3. [Software Installation](#software-installation)
-4. [System Configuration](#system-configuration)
-5. [Using the Features](#using-the-features)
-6. [Troubleshooting](#troubleshooting)
+4. [Using the Features](#using-the-features)
+5. [Troubleshooting](#troubleshooting)
 
 ## Introduction
 
-The LED Matrix Battery Monitor is a system that displays your computer's battery status on an LED matrix display. It provides visual feedback about battery level, charging status, and other power-related information through customizable animations and patterns.
+IS Matrix Forge is a Python framework for creating applications that drive
+9×34 LED matrix displays. It provides high-level helpers for talking to the
+hardware, tools for building animations, and utilities such as progress bars.
 
 ## Hardware Setup
 
 ### Required Components
-- LED Matrix display compatible with this software
+- LED Matrix display compatible with this software (VID: 0x32AC, PID: 0x20, SN prefix: FRAK)
 - USB cable for connecting the LED Matrix to your computer
 - Computer with available USB port
 
 ### Connection Steps
-1. Identify the correct USB port on your computer. The application supports multiple LED matrices connected simultaneously.
-2. Connect the LED Matrix to your computer using the USB cable.
-3. Verify that the LED Matrix is recognized by your operating system:
+1. Connect the LED Matrix to your computer using the USB cable.
+2. Verify that the LED Matrix is recognized by your operating system:
    - On Windows: Check Device Manager under "Ports (COM & LPT)"
    - On macOS: Open Terminal and run `ls /dev/tty.*`
    - On Linux: Open Terminal and run `ls /dev/ttyUSB*` or `ls /dev/ttyACM*`
-4. Note the port name (e.g., COM3, /dev/ttyUSB0) as you may need it for configuration.
-
-### Physical Placement
-- Position the LED Matrix where it's easily visible
-- Ensure the USB cable doesn't create strain on the connections
-- Keep the LED Matrix away from liquids and extreme temperatures
 
 ## Software Installation
 
 ### System Requirements
-- Windows 10/11, macOS 10.14+, or Linux
-- Python 3.7 or higher
-- 50MB of free disk space
+- Python 3.12 or higher
 
-### Installation Steps
+### Using Poetry (Recommended)
 
-#### Using pip
 ```bash
-pip install led-matrix-battery
+git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+cd IS-Matrix-Forge
+poetry install
+poetry shell
 ```
 
-#### From Source
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Inspyre-Softworks/led-matrix-battery.git
-   cd led-matrix-battery
-   ```
+### Using pip
 
-2. Install dependencies:
-   ```bash
-   pip install -e .
-   ```
+```bash
+git clone https://github.com/Inspyre-Softworks/IS-Matrix-Forge.git
+cd IS-Matrix-Forge
+pip install .
+```
 
 ### Verifying Installation
-To verify that the installation was successful, run:
+To verify installation, run the identify command:
 ```bash
-python -m is_matrix_forge.led_matrix.tools.identify
+led-matrix-identify
 ```
 
-This command should detect your connected LED Matrix and display identification information on it.
-
-## System Configuration
-
-### Configuration File
-The application uses a configuration file located at:
-- Windows: `%APPDATA%\LEDMatrixLib\config.json`
-- macOS: `~/Library/Application Support/LEDMatrixLib/config.json`
-- Linux: `~/.config/LEDMatrixLib/config.json`
-
-### Basic Configuration Options
-- `brightness`: Set the brightness level (0-100)
-- `check_interval`: How often to check battery status (in seconds)
-- `animations`: Enable/disable animations
-- `sound_notifications`: Enable/disable sound notifications
-
-### Example Configuration
-```json
-{
-  "brightness": 75,
-  "check_interval": 60,
-  "animations": true,
-  "sound_notifications": true,
-  "devices": {
-    "COM3": {
-      "enabled": true,
-      "side": "left",
-      "slot": 1
-    }
-  }
-}
-```
-
-### Applying Configuration Changes
-Configuration changes are applied automatically when the application is restarted. To restart the application:
-1. Close any running instances
-2. Launch the application again using the methods described in the next section
+This command detects connected LED matrices and displays identification information on each one.
 
 ## Using the Features
 
-### Starting the Battery Monitor
-To start the battery monitor:
-```bash
-python -m is_matrix_forge.monitor
+### Identify Connected Devices
+
+```python
+from is_matrix_forge.led_matrix.helpers.device import DEVICES
+
+for dev in DEVICES:
+    print(dev)
 ```
 
-Or use the provided script:
-```bash
-Scripts/battery_monitor.py
+### Display Text on the Matrix
+
+```python
+from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+from is_matrix_forge.led_matrix.helpers.device import DEVICES
+
+ctrl = LEDMatrixController(DEVICES[0])
+ctrl.scroll_text("Hello World!", loop=False)
 ```
 
-### Understanding the Display
-- **Battery Level**: The number of lit LEDs indicates the current battery percentage
-- **Charging Status**: Different animations indicate whether the device is charging or discharging
-- **Critical Battery**: Special animation when battery level is critically low
+### Progress Bars
 
-### Available Commands
-- `--help`: Display help information
-- `--brightness VALUE`: Set the brightness level (0-100)
-- `--identify`: Make the LED Matrix display its identification information
-- `--clear`: Clear the LED Matrix display
+```python
+import time
+from is_matrix_forge.progress import tqdm
+
+for _ in tqdm(range(100)):
+    time.sleep(0.05)
+```
 
 ### Customizing Animations
-You can customize animations by creating or modifying preset files in the `presets` directory. Each preset is a JSON file that defines animation frames and timing.
+You can customize animations by creating or modifying preset files in the `presets`
+directory. Each preset is a JSON file that defines animation frames and timing.
 
 To install sample presets:
 ```bash
@@ -137,26 +99,23 @@ install-presets
 
 ## Troubleshooting
 
-### Common Issues
-
-#### LED Matrix Not Detected
+### LED Matrix Not Detected
 1. Check the USB connection
 2. Verify that the device appears in your system's device list
 3. Try a different USB port
 4. Restart the application
 
-#### Incorrect Display
-1. Verify the configuration file has the correct device information
-2. Check that the brightness setting is appropriate for your environment
-3. Try running the identify command to ensure the correct device is being used
+### Audio Notifications Not Working
+1. Ensure your system's audio is working correctly.
+2. Verify that the chime library is properly installed.
 
-#### Application Crashes
-1. Check the log file at `%APPDATA%\LEDMatrixLib\logs\` (Windows) or equivalent
-2. Verify that you're using a compatible Python version
-3. Reinstall the application
+### Animation Issues
+1. Verify that the LED matrix is functioning correctly.
+2. Check that the matrix dimensions match the expected 9x34 size.
+3. Try clearing the matrix and restarting the application.
 
 ### Getting Help
-If you encounter issues not covered in this troubleshooting section, please:
+If you encounter issues not covered here, please:
 1. Check the GitHub repository for known issues
 2. Submit a new issue with detailed information about your problem
 3. Include log files and system information in your report
