@@ -91,6 +91,9 @@ class PresetInstaller(Loggable):
     def run(self):
         log = self.method_logger
         log.debug(f"Fetching file list from {self.url}")
+
+        self._remove_legacy_directory()
+
         try:
             files = self.get_file_list()
         except requests.RequestException as e:
@@ -113,6 +116,47 @@ class PresetInstaller(Loggable):
         manifest = GridPresetManifest(manifest_path)
         manifest.scan(self.presets_dir)
         return 0
+
+    def _remove_legacy_directory(self) -> None:
+        """Migrate presets from the old LEDMatrixLib data directory then remove it.
+
+        The application was previously stored under the ``LEDMatrixLib``
+        PlatformDirs name.  Any ``.json`` preset files that do not yet exist in
+        the current location are copied across so no user-created presets are
+        lost.  The old directory tree is then deleted.
+        """
+        import shutil
+
+        log = self.method_logger
+
+        try:
+            from platformdirs import PlatformDirs as _PD
+            legacy_data_dir = _PD('LEDMatrixLib', appauthor='Inspyre Softworks').user_data_path
+        except Exception:
+            return
+
+        if not legacy_data_dir.exists():
+            return
+
+        log.info(f'Migrating legacy data directory: {legacy_data_dir}')
+
+        legacy_presets = legacy_data_dir / 'presets'
+        if legacy_presets.is_dir():
+            self.presets_dir.mkdir(parents=True, exist_ok=True)
+            for preset_file in legacy_presets.glob('*.json'):
+                dest = self.presets_dir / preset_file.name
+                if not dest.exists():
+                    try:
+                        shutil.copy2(preset_file, dest)
+                        log.debug(f'Migrated preset: {preset_file.name}')
+                    except Exception as exc:
+                        log.warning(f'Could not migrate {preset_file.name}: {exc}')
+
+        try:
+            shutil.rmtree(legacy_data_dir)
+            log.info(f'Removed legacy data directory: {legacy_data_dir}')
+        except Exception as exc:
+            log.warning(f'Could not remove legacy data directory {legacy_data_dir}: {exc}')
 
     def get_file_list(self) -> List[Dict]:
         files: List[Dict] = []

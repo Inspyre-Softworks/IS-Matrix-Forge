@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 
+from . import add_matrix_selection_args
+
 
 DIRECTION_MAP = {
     'up': 'vertical_down',
@@ -9,7 +11,7 @@ DIRECTION_MAP = {
 
 COMMAND = 'scroll-text'
 
-HELP_TXT = 'Scroll text across a matrix. Use --only-left/--only-right to target specific displays.'
+HELP_TXT = 'Scroll text across a matrix.'
 
 
 def register_command(parser: ArgumentParser):
@@ -45,5 +47,7 @@ def register_command(parser: ArgumentParser):
         default=False,
         help='Treat multiple matrices as a single wide canvas when scrolling horizontally. Cannot be used with --sequential.',
     )
+
+    add_matrix_selection_args(scroll_parser)
 
     return scroll_parser

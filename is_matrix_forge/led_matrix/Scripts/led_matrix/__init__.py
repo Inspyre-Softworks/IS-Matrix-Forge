@@ -2,11 +2,11 @@
 from typing import Iterable, Optional, Tuple
 
 import threading
+import time
 from collections.abc import Callable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
-# from is_matrix_forge.led_matrix.Scripts.identify_matrices import
 
 ARGUMENTS = Arguments()
 
@@ -119,9 +119,7 @@ def find_leftmost_matrix(controllers: Iterable):
             side_rank = 1  # unknowns in the middle
 
         rank_tuple = (side_rank, _slot_rank(controller), index)
-        print(f'Ranks: {rank_tuple[0]}, {rank_tuple[1]}, {rank_tuple[2]}')
         ranked.append((rank_tuple, controller))
-        print(ranked)
 
     if not ranked:
         return None
@@ -148,9 +146,7 @@ def find_rightmost_matrix(controllers: Iterable):
 
         # negate slot so larger slot numbers sort earlier for "rightmost"
         rank_tuple = (side_rank, -_slot_rank(controller), index)
-        print(f'Ranks: {rank_tuple[0]}, {-rank_tuple[1]}, {rank_tuple[2]}')
         ranked.append((rank_tuple, controller))
-        print(ranked)
 
     if not ranked:
         return None
@@ -490,26 +486,149 @@ def identify_matrices_command(cli_args):
         )
 
 
+def bootloader_command(cli_args):
+    """Reboot the selected matrix into its firmware bootloader.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``bootloader`` sub-command.
+    """
+    controllers = execute_get_controllers(cli_args)
+
+    for controller in controllers:
+        print(f'Entering bootloader on {controller!r} …')
+        controller.jump_to_bootloader()
+
+
+def install_presets_command(cli_args):
+    """Download and install preset files, then remove the legacy data directory.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``install-presets`` sub-command.
+    """
+    from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
+    from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS as REQ_HEADERS
+
+    installer = PresetInstaller(
+        url=cli_args.url,
+        headers=REQ_HEADERS,
+        app_dir=cli_args.app_dir,
+        overwrite_existing=cli_args.overwrite,
+        with_progress=getattr(cli_args, 'with_progress', True),
+    )
+    exit_code = installer.run()
+    if isinstance(exit_code, int) and exit_code != 0:
+        raise SystemExit(exit_code)
+
+
+def scroll_until_command(cli_args):
+    """Scroll text on the selected matrix until an external command finishes.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``scroll-until`` sub-command.
+    """
+    import subprocess
+    import shlex
+
+    controllers = execute_get_controllers(cli_args)
+    text = cli_args.input
+    on_complete = getattr(cli_args, 'on_complete', 'clear')
+
+    try:
+        cmd = shlex.split(cli_args.command)
+    except ValueError as exc:
+        raise SystemExit(f'Invalid command string: {exc}') from exc
+
+    # Launch the external process before scrolling starts so its clock
+    # includes any matrix initialisation time.
+    proc = subprocess.Popen(cmd)  # noqa: S603 – user-supplied command is intentional
+
+    stop_event = threading.Event()
+
+    def _watch_process() -> None:
+        proc.wait()
+        stop_event.set()
+
+    watcher = threading.Thread(
+        target=_watch_process,
+        daemon=True,
+        name='scroll-until-watcher',
+    )
+    watcher.start()
+
+    def _scroll_loop(controller) -> None:
+        controller.keep_alive = True
+        while not stop_event.is_set():
+            controller.scroll_text(text)
+
+    scroll_threads = []
+    for controller in controllers:
+        t = threading.Thread(target=_scroll_loop, args=(controller,), daemon=True)
+        t.start()
+        scroll_threads.append((controller, t))
+
+    try:
+        while not stop_event.is_set():
+            stop_event.wait(timeout=0.2)
+    except KeyboardInterrupt:
+        proc.terminate()
+        stop_event.set()
+
+    for _, t in scroll_threads:
+        t.join(timeout=5.0)
+
+    # Disable keep-alive on every controller
+    for controller in controllers:
+        try:
+            controller.keep_alive = False
+        except Exception:
+            pass
+
+    if on_complete == 'clear':
+        for controller in controllers:
+            try:
+                controller.clear()
+            except Exception:
+                pass
+
+    elif on_complete == 'fade':
+        for controller in controllers:
+            try:
+                current_brightness = getattr(controller, 'brightness', 100) or 100
+                steps = 20
+                for step in range(steps, -1, -1):
+                    pct = int(current_brightness * step / steps)
+                    try:
+                        controller.set_brightness(pct)
+                    except Exception:
+                        break
+                    time.sleep(0.05)
+                controller.clear()
+            except Exception:
+                pass
+
+    # 'leave': nothing to do – display stays as-is
+
+
 def main(cli_args=ARGUMENTS):
     """
     Parses and handles command-line arguments, registering specific subcommands
     and executing associated functions.
 
-    This function sets up a command-line interface (CLI) parser, registers a
-    specific subcommand (`scroll-text`), and associates a function (`scroll_text_command`)
-    with this subcommand. After parsing the arguments, it executes the appropriate
-    function based on the parsed subcommand.
-
     Parameters:
         cli_args (Optional[Arguments]):
             An object containing the command-line parser and associated
-            subcommand configurations. It must have attributes `scroll_parser`
-            and a callable `parse` function. (Defaults to `ARGUMENTS`)
+            subcommand configurations. (Defaults to `ARGUMENTS`)
     """
     parser_bindings = (
-        ('scroll_parser', 'Scroll text command parser was not initialized.', scroll_text_command),
-        ('identify_parser', 'Identify matrices command parser was not initialized.', identify_matrices_command),
-        ('display_parser', 'Display text command parser was not initialized.', display_text_command),
+        ('scroll_parser',          'Scroll text command parser was not initialized.',         scroll_text_command),
+        ('identify_parser',        'Identify matrices command parser was not initialized.',   identify_matrices_command),
+        ('display_parser',         'Display text command parser was not initialized.',        display_text_command),
+        ('bootloader_parser',      'Bootloader command parser was not initialized.',          bootloader_command),
+        ('install_presets_parser', 'Install-presets command parser was not initialized.',     install_presets_command),
+        ('scroll_until_parser',    'Scroll-until command parser was not initialized.',        scroll_until_command),
     )
 
     for attr_name, error_message, handler in parser_bindings:

@@ -1,10 +1,12 @@
 from argparse import ArgumentParser
 
+from . import add_matrix_selection_args
+
 
 COMMAND = 'display-text'
 
 
-HELP_TXT = 'Display a static string on the matrix until interrupted. Combine with --only-left/--only-right to focus output.'
+HELP_TXT = 'Display a static string on the matrix until interrupted.'
 
 
 def register_command(parser: ArgumentParser):
@@ -40,5 +42,7 @@ def register_command(parser: ArgumentParser):
         default=False,
         help='When multiple matrices are active, present the text on one matrix at a time.',
     )
+
+    add_matrix_selection_args(display_parser)
 
     return display_parser

@@ -52,8 +52,6 @@ pytest = "^8.4.1"
 [tool.poetry.scripts]
 led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
 python-path = "Scripts.python_path:main"
-led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
-is-matrix-forge-install-presets = "is_matrix_forge.led_matrix.Scripts.install_presets.main:main"
 pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 
 [[tool.poetry.include]]
