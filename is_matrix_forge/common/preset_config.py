@@ -39,7 +39,7 @@ _PRESETS_DIR_KEY   = 'presets_dir'
 # Internal file-move helper
 # ---------------------------------------------------------------------------
 
-def _load_manifest_filenames(src: Path) -> set:
+def _load_manifest_filenames(src: Path) -> set[str]:
     """Return the set of filenames recorded in *src/manifest.json*.
 
     Returns an empty set when the manifest is absent or unreadable so the
@@ -310,7 +310,7 @@ def _run_installer(config: PresetConfig) -> None:
         from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS
 
         installer = PresetInstaller(
-            app_dir=config.presets_dir.parent,
+            presets_dir=config.presets_dir,
             headers=GITHUB_REQ_HEADERS,
             overwrite_existing=False,
             with_progress=True,
@@ -322,6 +322,8 @@ def _run_installer(config: PresetConfig) -> None:
 
 __all__ = [
     'PresetConfig',
+    '_load_manifest_filenames',
+    '_move_preset_files',
     'check_and_prompt_presets',
     'get_preset_config',
     'SETTINGS_FILE_NAME',

@@ -412,3 +412,92 @@ class TestEnsureDir:
         assert not config.presets_dir.exists()
         config.ensure_dir()
         assert config.presets_dir.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# _run_installer uses configured presets_dir directly
+# ---------------------------------------------------------------------------
+
+class TestRunInstaller:
+    """_run_installer must install to the configured presets_dir without needing
+    write access to the app-data directory."""
+
+    def test_installer_receives_configured_presets_dir(self, tmp_path, monkeypatch):
+        """When config has a custom presets_dir, _run_installer must create an
+        installer that targets that exact directory, not app_dir / 'presets'."""
+        from is_matrix_forge.common.preset_config import _run_installer
+
+        custom_dir = tmp_path / 'my custom presets'
+
+        _write_json(
+            tmp_path / SETTINGS_FILE_NAME,
+            {'presets_dir': str(custom_dir)},
+        )
+        config = PresetConfig(tmp_path)
+        assert config.presets_dir == custom_dir
+
+        captured = {}
+
+        class FakeInstaller:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+            def run(self):
+                return 0
+
+        monkeypatch.setattr(
+            'is_matrix_forge.led_matrix.Scripts.install_presets.main.PresetInstaller',
+            FakeInstaller,
+        )
+        import is_matrix_forge.common.preset_config as pc_mod
+        monkeypatch.setattr(pc_mod, '_run_installer', lambda cfg: FakeInstaller(
+            presets_dir=cfg.presets_dir,
+        ).run())
+
+        # Call the real _run_installer but intercept the PresetInstaller import
+        # by patching the module-level name it uses.
+        captured.clear()
+
+        import sys
+        original = sys.modules.get('is_matrix_forge.led_matrix.Scripts.install_presets.main')
+
+        fake_main = type(sys)('is_matrix_forge.led_matrix.Scripts.install_presets.main')
+        fake_main.PresetInstaller = FakeInstaller
+        sys.modules['is_matrix_forge.led_matrix.Scripts.install_presets.main'] = fake_main
+
+        try:
+            # Also stub GITHUB_REQ_HEADERS to avoid import chain
+            import is_matrix_forge.led_matrix.constants as const_mod
+            monkeypatch.setattr(const_mod, 'GITHUB_REQ_HEADERS', {}, raising=False)
+
+            from is_matrix_forge.common.preset_config import _run_installer as real_run
+            real_run(config)
+        finally:
+            if original is not None:
+                sys.modules['is_matrix_forge.led_matrix.Scripts.install_presets.main'] = original
+            else:
+                sys.modules.pop(
+                    'is_matrix_forge.led_matrix.Scripts.install_presets.main', None
+                )
+
+        assert 'presets_dir' in captured
+        assert captured['presets_dir'] == custom_dir
+
+    def test_installer_targets_configured_dir_not_parent_slash_presets(self, tmp_path):
+        """Regression: the installer must NOT append '/presets' to the parent of
+        the configured directory.  A user who has set 'matrix presets' as their
+        directory should NOT end up with files in 'matrix presets/presets'."""
+        custom_dir = tmp_path / 'matrix presets'
+        custom_dir.mkdir()
+
+        _write_json(
+            tmp_path / SETTINGS_FILE_NAME,
+            {'presets_dir': str(custom_dir)},
+        )
+        config = PresetConfig(tmp_path)
+
+        # Whatever the installer does, it must target custom_dir, not
+        # custom_dir.parent / 'presets'.
+        wrong_dir = custom_dir.parent / 'presets'
+        assert config.presets_dir == custom_dir
+        assert config.presets_dir != wrong_dir

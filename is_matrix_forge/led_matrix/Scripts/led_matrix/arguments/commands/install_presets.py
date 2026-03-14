@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 
-from is_matrix_forge.common.dirs import APP_DIRS
 from is_matrix_forge.common.helpers.github_api import REPO_PRESETS_URL
 
 
@@ -26,8 +25,12 @@ def register_command(parser: ArgumentParser):
 
     ip_parser.add_argument(
         '--app-dir',
-        default=str(APP_DIRS.user_data_path),
-        help='Local directory in which presets are saved.',
+        default=None,
+        help=(
+            'Parent directory that will contain the ``presets`` subdirectory '
+            '(i.e. presets land in ``<app-dir>/presets``). '
+            'When omitted the currently-configured preset directory is used.'
+        ),
     )
 
     ip_parser.add_argument(

@@ -67,7 +67,8 @@ class PresetInstaller(Loggable):
             self,
             url: str = REPO_PRESETS_URL,
             headers: Optional[Dict[str, str]] = None,
-            app_dir: Union[str, Path] = APP_DIRS.user_data_path,
+            app_dir: Union[str, Path, None] = None,
+            presets_dir: Union[str, Path, None] = None,
             overwrite_existing: bool = False,
             with_progress: bool = True,
             timeout: float = 15.0,
@@ -75,12 +76,21 @@ class PresetInstaller(Loggable):
         super().__init__(LOGGER)
         self.url = url
         self.headers = headers or REQ_HEADERS
-        self.app_dir = provision_path(app_dir)
         self.overwrite = overwrite_existing
         self.with_progress = with_progress
         self.timeout = timeout
 
-        self.presets_dir = self.app_dir / 'presets'
+        if presets_dir is not None:
+            # Caller supplied a direct target directory – use it without
+            # touching (or even resolving) the app_dir.
+            self.presets_dir = Path(presets_dir)
+            self.app_dir = self.presets_dir.parent
+        else:
+            # Legacy behaviour: derive presets_dir from app_dir.
+            _app_dir = app_dir if app_dir is not None else APP_DIRS.user_data_path
+            self.app_dir = provision_path(_app_dir)
+            self.presets_dir = self.app_dir / 'presets'
+
         self.presets_dir.mkdir(parents=True, exist_ok=True)
         self.log = self.class_logger
 
@@ -159,7 +169,7 @@ class PresetInstaller(Loggable):
                 dest = self.presets_dir / preset_file.name
                 if not dest.exists():
                     try:
-                        shutil.move(str(preset_file), dest)
+                        shutil.move(preset_file, dest)
                         log.debug(f'Migrated preset: {preset_file.name}')
                     except Exception as exc:
                         log.warning(f'Could not migrate {preset_file.name}: {exc}')

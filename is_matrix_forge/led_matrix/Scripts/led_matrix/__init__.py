@@ -503,8 +503,12 @@ def bootloader_command(cli_args):
 def install_presets_command(cli_args):
     """Download and install preset files, then remove the legacy data directory.
 
-    When ``--app-dir`` is provided explicitly the new location is saved to
-    ``settings.json`` so future runs (and the startup check) use it.
+    When ``--app-dir`` is provided explicitly the derived preset directory
+    (``<app-dir>/presets``) is saved to ``settings.json`` so future runs (and
+    the startup check) use it.  When ``--app-dir`` is *not* provided the
+    installer uses the currently-configured ``presets_dir`` directly, so a
+    user who previously ran ``set-presets-dir`` always gets files installed to
+    the right place — even if that place is outside the default app-data tree.
 
     Parameters:
         cli_args: argparse.Namespace
@@ -519,15 +523,15 @@ def install_presets_command(cli_args):
 
     # If the caller supplied an explicit --app-dir, persist it as the new
     # preset location (which may trigger a file-move via the setter).
-    requested_app_dir = Path(cli_args.app_dir)
-    requested_presets_dir = requested_app_dir / 'presets'
-    if requested_presets_dir != config.presets_dir:
-        config.presets_dir = requested_presets_dir
+    if cli_args.app_dir is not None:
+        requested_presets_dir = Path(cli_args.app_dir) / 'presets'
+        if requested_presets_dir != config.presets_dir:
+            config.presets_dir = requested_presets_dir
 
     installer = PresetInstaller(
         url=cli_args.url,
         headers=REQ_HEADERS,
-        app_dir=cli_args.app_dir,
+        presets_dir=config.presets_dir,
         overwrite_existing=cli_args.overwrite,
         with_progress=getattr(cli_args, 'with_progress', True),
     )
