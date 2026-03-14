@@ -503,12 +503,26 @@ def bootloader_command(cli_args):
 def install_presets_command(cli_args):
     """Download and install preset files, then remove the legacy data directory.
 
+    When ``--app-dir`` is provided explicitly the new location is saved to
+    ``settings.json`` so future runs (and the startup check) use it.
+
     Parameters:
         cli_args: argparse.Namespace
             The parsed arguments for the ``install-presets`` sub-command.
     """
     from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
     from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS as REQ_HEADERS
+    from is_matrix_forge.common.preset_config import get_preset_config
+    from pathlib import Path
+
+    config = get_preset_config()
+
+    # If the caller supplied an explicit --app-dir, persist it as the new
+    # preset location (which may trigger a file-move via the setter).
+    requested_app_dir = Path(cli_args.app_dir)
+    requested_presets_dir = requested_app_dir / 'presets'
+    if requested_presets_dir != config.presets_dir:
+        config.presets_dir = requested_presets_dir
 
     installer = PresetInstaller(
         url=cli_args.url,
@@ -562,6 +576,10 @@ def scroll_until_command(cli_args):
         controller.keep_alive = True
         while not stop_event.is_set():
             controller.scroll_text(text)
+            # Safety pause: if scroll_text returns unexpectedly fast (e.g.
+            # due to an error) avoid a tight busy-wait that consumes the CPU.
+            if not stop_event.is_set():
+                stop_event.wait(timeout=0.05)
 
     scroll_threads = []
     for controller in controllers:
@@ -612,6 +630,28 @@ def scroll_until_command(cli_args):
     # 'leave': nothing to do – display stays as-is
 
 
+def set_presets_dir_command(cli_args):
+    """Move presets to a new directory and save the setting.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``set-presets-dir`` sub-command.
+    """
+    from pathlib import Path
+    from is_matrix_forge.common.preset_config import get_preset_config
+
+    new_path = Path(cli_args.path).expanduser().resolve()
+    config = get_preset_config()
+    old_path = config.presets_dir
+
+    if new_path == old_path:
+        print(f'Presets directory is already set to: {new_path}')
+        return
+
+    config.presets_dir = new_path  # moves files and saves setting
+    print(f'Presets directory updated: {old_path} → {new_path}')
+
+
 def main(cli_args=ARGUMENTS):
     """
     Parses and handles command-line arguments, registering specific subcommands
@@ -629,6 +669,7 @@ def main(cli_args=ARGUMENTS):
         ('bootloader_parser',      'Bootloader command parser was not initialized.',          bootloader_command),
         ('install_presets_parser', 'Install-presets command parser was not initialized.',     install_presets_command),
         ('scroll_until_parser',    'Scroll-until command parser was not initialized.',        scroll_until_command),
+        ('set_presets_dir_parser', 'Set-presets-dir command parser was not initialized.',     set_presets_dir_command),
     )
 
     for attr_name, error_message, handler in parser_bindings:

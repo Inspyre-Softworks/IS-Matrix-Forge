@@ -9,7 +9,7 @@ DEBUG_MODE_KEYFILE_NAME = 'marauder.map'
 
 ECH: ExitCallHandler
 
-PLATFORM_DIRS = PlatformDirs('IS-Matrix-Forge', 'Inspyre-Softworks')
+PLATFORM_DIRS = PlatformDirs('IS-Matrix-Forge', 'Inspyre Softworks')
 
 
 def get_debug_mode_keyfile_path():

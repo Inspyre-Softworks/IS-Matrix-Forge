@@ -20,9 +20,10 @@ class Arguments(ArgumentParser):
         self.__identify_parser       = None
         self.__scroll_parser         = None
         self.__display_parser        = None
-        self.__bootloader_parser     = None
+        self.__bootloader_parser      = None
         self.__install_presets_parser = None
-        self.__scroll_until_parser   = None
+        self.__scroll_until_parser    = None
+        self.__set_presets_dir_parser = None
 
         selection_group = self.add_mutually_exclusive_group()
         selection_group.add_argument(
@@ -89,6 +90,10 @@ class Arguments(ArgumentParser):
     def scroll_until_parser(self):
         return self.__scroll_until_parser
 
+    @property
+    def set_presets_dir_parser(self):
+        return self.__set_presets_dir_parser
+
     def __build_identify_matrices(self):
         from .commands.identify_matrices import register_command
         self.__identify_parser = register_command(self)
@@ -113,6 +118,10 @@ class Arguments(ArgumentParser):
         from .commands.scroll_until import register_command
         self.__scroll_until_parser = register_command(self)
 
+    def __build_set_presets_dir(self):
+        from .commands.set_presets_dir import register_command
+        self.__set_presets_dir_parser = register_command(self)
+
     def __build(self):
         self.__building = True
 
@@ -122,6 +131,7 @@ class Arguments(ArgumentParser):
         self.__build_bootloader()
         self.__build_install_presets()
         self.__build_scroll_until()
+        self.__build_set_presets_dir()
 
         self.__building = False
         self.__built    = True

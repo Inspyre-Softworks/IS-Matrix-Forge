@@ -25,6 +25,7 @@ def _install_test_stubs() -> None:
     if "is_matrix_forge.led_matrix.helpers.device" not in sys.modules:
         helpers_module = ModuleType("is_matrix_forge.led_matrix.helpers.device")
         helpers_module.DEVICES = []
+        helpers_module.get_devices = lambda *args, **kwargs: []
         sys.modules["is_matrix_forge.led_matrix.helpers.device"] = helpers_module
 
     if "is_matrix_forge.led_matrix.controller.controller" not in sys.modules:
@@ -39,7 +40,7 @@ def _install_test_stubs() -> None:
 
 _install_test_stubs()
 
-from is_matrix_forge.led_matrix.Scripts.identify_matrices import (
+from is_matrix_forge.led_matrix.Scripts.led_matrix import (
     find_leftmost_matrix,
     find_rightmost_matrix,
 )
@@ -206,10 +207,10 @@ def test_mock_controller_unknown_location() -> None:
         ),
         pytest.param(
             [
-                {"name": "L1", "side": "left", "slot": 2, "location": "1-2.1"},
-                {"name": "R1", "side": "right", "slot": 2, "location": "1-2.2"},
+                MockController("1-3.2", "R1"),  # right, slot 1
+                MockController("1-4.2", "L1"),  # left,  slot 1 – same slot, left wins
             ],
-            {"name": "L1", "side": "left", "slot": 2, "location": "1-2.1"},
+            {"name": "L1", "side": "left", "slot": 1, "location": "1-4.2"},
             id="mixed-sides-identical-slot-left-preferred",
         ),
         pytest.param(
@@ -261,10 +262,10 @@ def test_find_leftmost_matrix_with_duplicate_slots() -> None:
         ),
         pytest.param(
             [
-                MockController(name="L3", side="left", slot=3, location="1-4.4"),
-                MockController(name="R3", side="right", slot=3, location="1-4.5"),
+                MockController("1-4.2", "L1"),
+                MockController("1-3.2", "R1"),
             ],
-            {"name": "R3", "side": "right", "slot": 3, "location": "1-4.5"},
+            {"name": "R1", "side": "right", "slot": 1, "location": "1-3.2"},
             id="rightmost-preferred-when-same-slot",
         ),
         pytest.param(

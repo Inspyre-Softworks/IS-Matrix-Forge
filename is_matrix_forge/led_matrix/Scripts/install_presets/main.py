@@ -147,7 +147,7 @@ class PresetInstaller(Loggable):
                 dest = self.presets_dir / preset_file.name
                 if not dest.exists():
                     try:
-                        shutil.copy2(preset_file, dest)
+                        shutil.move(str(preset_file), dest)
                         log.debug(f'Migrated preset: {preset_file.name}')
                     except Exception as exc:
                         log.warning(f'Could not migrate {preset_file.name}: {exc}')
