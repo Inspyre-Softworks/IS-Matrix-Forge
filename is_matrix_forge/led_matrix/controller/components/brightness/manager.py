@@ -245,7 +245,7 @@ class BrightnessManager:
         """
         self._kill_breather()
         return self._fade(
-            target=Percent.norm(target if target is not None else self._default_brightness),
+            target=Percent.norm(target if target is not None else 100),
             duration=duration,
             clear_when_done=False,
             non_blocking=non_blocking,

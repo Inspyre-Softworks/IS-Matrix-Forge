@@ -118,12 +118,14 @@ class PresetInstaller(Loggable):
         return 0
 
     def _remove_legacy_directory(self) -> None:
-        """Migrate presets from the old LEDMatrixLib data directory then remove it.
+        """Migrate manifest-tracked presets from the old LEDMatrixLib data directory.
 
-        The application was previously stored under the ``LEDMatrixLib``
-        PlatformDirs name.  Any ``.json`` preset files that do not yet exist in
-        the current location are copied across so no user-created presets are
-        lost.  The old directory tree is then deleted.
+        Only preset files that are listed in the legacy ``manifest.json`` are
+        moved to the current preset location.  Any other files the user may
+        have placed in the legacy directory are left exactly where they are.
+
+        After migration each directory in the legacy tree (``presets/`` first,
+        then the root) is removed only when it contains no remaining files.
         """
         import shutil
 
@@ -143,7 +145,17 @@ class PresetInstaller(Loggable):
         legacy_presets = legacy_data_dir / 'presets'
         if legacy_presets.is_dir():
             self.presets_dir.mkdir(parents=True, exist_ok=True)
-            for preset_file in legacy_presets.glob('*.json'):
+
+            # Load the manifest from the legacy location so we only touch files
+            # that were installed by IS-Matrix-Forge itself.
+            from is_matrix_forge.common.preset_config import _load_manifest_filenames
+            manifest_names = _load_manifest_filenames(legacy_presets)
+
+            for preset_file in list(legacy_presets.glob('*.json')):
+                # Always migrate manifest.json itself; skip any file not in the manifest.
+                if preset_file.name != 'manifest.json' and preset_file.name not in manifest_names:
+                    log.debug(f'Skipping user file not in manifest: {preset_file.name}')
+                    continue
                 dest = self.presets_dir / preset_file.name
                 if not dest.exists():
                     try:
@@ -152,11 +164,32 @@ class PresetInstaller(Loggable):
                     except Exception as exc:
                         log.warning(f'Could not migrate {preset_file.name}: {exc}')
 
+            # Remove the presets sub-directory only when it is now empty.
+            try:
+                remaining = list(legacy_presets.iterdir())
+                if not remaining:
+                    legacy_presets.rmdir()
+                    log.debug('Removed empty legacy presets sub-directory.')
+                else:
+                    log.info(
+                        f'Legacy presets directory not empty – {len(remaining)} user '
+                        f'file(s) remain in {legacy_presets} and were left untouched.'
+                    )
+            except Exception as exc:
+                log.warning(f'Could not inspect legacy presets directory: {exc}')
+
+        # Remove the root legacy data directory only when it is completely empty.
         try:
-            shutil.rmtree(legacy_data_dir)
-            log.info(f'Removed legacy data directory: {legacy_data_dir}')
+            remaining = list(legacy_data_dir.iterdir())
+            if not remaining:
+                legacy_data_dir.rmdir()
+                log.info(f'Removed empty legacy data directory: {legacy_data_dir}')
+            else:
+                log.info(
+                    f'Legacy data directory not empty – leaving {legacy_data_dir} in place.'
+                )
         except Exception as exc:
-            log.warning(f'Could not remove legacy data directory {legacy_data_dir}: {exc}')
+            log.warning(f'Could not inspect legacy data directory {legacy_data_dir}: {exc}')
 
     def get_file_list(self) -> List[Dict]:
         files: List[Dict] = []

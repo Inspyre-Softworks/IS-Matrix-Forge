@@ -39,14 +39,51 @@ _PRESETS_DIR_KEY   = 'presets_dir'
 # Internal file-move helper
 # ---------------------------------------------------------------------------
 
-def _move_preset_files(src: Path, dst: Path) -> None:
-    """Move all ``*.json`` preset files from *src* to *dst*.
+def _load_manifest_filenames(src: Path) -> set:
+    """Return the set of filenames recorded in *src/manifest.json*.
 
-    Logs a warning for each file that cannot be moved (e.g. permission errors)
-    so users are informed if the migration is only partial.
+    Returns an empty set when the manifest is absent or unreadable so the
+    caller can fall back to moving nothing (safe default).
+    """
+    manifest_path = src / 'manifest.json'
+    if not manifest_path.exists():
+        return set()
+    try:
+        import json as _json
+        with open(manifest_path, 'r', encoding='utf-8') as fh:
+            data = _json.load(fh)
+        if isinstance(data, dict):
+            entries = data.get('manifest', [])
+            return {list(e.keys())[0] for e in entries if isinstance(e, dict) and e}
+    except Exception:
+        pass
+    return set()
+
+
+def _move_preset_files(src: Path, dst: Path) -> bool:
+    """Move only the manifest-tracked ``*.json`` preset files from *src* to *dst*.
+
+    Files that exist in *src* but are **not** listed in the manifest are left
+    untouched — they belong to the user and must never be deleted or moved
+    without explicit consent.
+
+    The ``manifest.json`` itself is also moved so the destination is fully
+    self-contained.
+
+    Returns:
+        ``True`` if *src* is empty (or no longer exists) after the operation —
+        i.e. it is safe for the caller to remove *src*.  ``False`` if files
+        remain (user files were skipped).
     """
     dst.mkdir(parents=True, exist_ok=True)
+
+    manifest_names = _load_manifest_filenames(src)
+
     for preset_file in src.glob('*.json'):
+        # Only migrate files that are explicitly listed in the manifest.
+        # manifest.json itself is always eligible.
+        if preset_file.name != 'manifest.json' and preset_file.name not in manifest_names:
+            continue
         try:
             shutil.move(str(preset_file), dst / preset_file.name)
         except Exception as exc:
@@ -55,6 +92,13 @@ def _move_preset_files(src: Path, dst: Path) -> None:
                 RuntimeWarning,
                 stacklevel=2,
             )
+
+    # Report whether the source directory is now empty.
+    try:
+        remaining = list(src.iterdir())
+        return len(remaining) == 0
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +165,12 @@ class PresetConfig:
 
     @presets_dir.setter
     def presets_dir(self, new_path: Union[str, Path]) -> None:
-        """Change the presets directory and move any existing files there.
+        """Change the presets directory and move manifest-tracked files there.
+
+        Only files listed in the source manifest are moved.  Any other files
+        the user may have placed in the old directory are left untouched.  The
+        old directory is removed only when it is completely empty after the
+        migration.
 
         Parameters:
             new_path:
@@ -134,7 +183,12 @@ class PresetConfig:
             return
 
         if old_path.is_dir() and any(old_path.glob('*.json')):
-            _move_preset_files(old_path, new_path)
+            src_empty = _move_preset_files(old_path, new_path)
+            if src_empty:
+                try:
+                    old_path.rmdir()
+                except Exception:
+                    pass
 
         self._settings[_PRESETS_DIR_KEY] = str(new_path)
         self._save()
@@ -150,6 +204,10 @@ class PresetConfig:
         to point ``presets_dir`` at a new path: the files still live at the
         default location, so this method moves them across automatically.
 
+        Only files listed in the source manifest are moved.  User files not
+        tracked by the manifest are left in place.  The source directory is
+        removed only when it is empty after the migration.
+
         The reconciliation only happens when:
 
         * The configured path does **not** already contain preset files, *and*
@@ -163,9 +221,14 @@ class PresetConfig:
         if desired.is_dir() and any(desired.glob('*.json')):
             return
 
-        # Move from default to desired if the default has files.
+        # Move manifest-tracked files from default to desired.
         if desired != default and default.is_dir() and any(default.glob('*.json')):
-            _move_preset_files(default, desired)
+            src_empty = _move_preset_files(default, desired)
+            if src_empty:
+                try:
+                    default.rmdir()
+                except Exception:
+                    pass
             self._settings[_PRESETS_DIR_KEY] = str(desired)
             self._save()
 

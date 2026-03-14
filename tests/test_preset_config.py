@@ -45,6 +45,7 @@ _install_test_stubs()
 from is_matrix_forge.common.preset_config import (  # noqa: E402
     PresetConfig,
     _move_preset_files,
+    _load_manifest_filenames,
     SETTINGS_FILE_NAME,
 )
 
@@ -63,6 +64,18 @@ def _touch_preset(directory: Path, name: str = 'test.json') -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     p = directory / name
     p.write_text(json.dumps({'test': True}))
+    return p
+
+
+def _create_manifest(directory: Path, *filenames: str) -> Path:
+    """Write a ``manifest.json`` that lists *filenames* as tracked presets."""
+    directory.mkdir(parents=True, exist_ok=True)
+    manifest_data = {
+        'meta': {'version': 'dev', 'date': '2024-01-01T00:00:00'},
+        'manifest': [{name: 'test_checksum'} for name in filenames],
+    }
+    p = directory / 'manifest.json'
+    p.write_text(json.dumps(manifest_data))
     return p
 
 
@@ -137,6 +150,7 @@ class TestPresetConfigSetter:
         old_dir = config.presets_dir
         _touch_preset(old_dir, 'a.json')
         _touch_preset(old_dir, 'b.json')
+        _create_manifest(old_dir, 'a.json', 'b.json')
 
         new_dir = tmp_path / 'new_presets'
         config.presets_dir = new_dir
@@ -146,6 +160,38 @@ class TestPresetConfigSetter:
         # originals are gone
         assert not (old_dir / 'a.json').exists()
         assert not (old_dir / 'b.json').exists()
+
+    def test_setter_removes_old_dir_when_empty(self, tmp_path):
+        """Old directory is removed once all manifest-tracked files are moved."""
+        config = PresetConfig(tmp_path)
+        old_dir = config.presets_dir
+        _touch_preset(old_dir, 'c.json')
+        _create_manifest(old_dir, 'c.json')
+
+        new_dir = tmp_path / 'new_presets'
+        config.presets_dir = new_dir
+
+        assert not old_dir.exists()
+
+    def test_setter_keeps_old_dir_when_user_files_remain(self, tmp_path):
+        """Old directory is kept when the user has files not in the manifest."""
+        config = PresetConfig(tmp_path)
+        old_dir = config.presets_dir
+        _touch_preset(old_dir, 'managed.json')
+        _create_manifest(old_dir, 'managed.json')
+        # user file NOT in manifest
+        user_file = old_dir / 'my_custom.json'
+        user_file.write_text(json.dumps({'custom': True}))
+
+        new_dir = tmp_path / 'new_presets'
+        config.presets_dir = new_dir
+
+        # managed preset was moved
+        assert (new_dir / 'managed.json').exists()
+        # user file was left untouched
+        assert user_file.exists()
+        # source directory still present because user file remains
+        assert old_dir.is_dir()
 
     def test_setter_noop_when_path_unchanged(self, tmp_path):
         config = PresetConfig(tmp_path)
@@ -171,6 +217,7 @@ class TestPresetConfigReconcile:
         """If settings point at a custom dir but files live at default, move them."""
         default_presets = tmp_path / 'presets'
         _touch_preset(default_presets, 'c.json')
+        _create_manifest(default_presets, 'c.json')
 
         custom_presets = tmp_path / 'custom_presets'
         _write_json(
@@ -183,6 +230,48 @@ class TestPresetConfigReconcile:
 
         assert (custom_presets / 'c.json').exists()
         assert not (default_presets / 'c.json').exists()
+
+    def test_reconcile_removes_default_dir_when_empty(self, tmp_path):
+        """Default directory is removed after reconcile when no user files remain."""
+        default_presets = tmp_path / 'presets'
+        _touch_preset(default_presets, 'c.json')
+        _create_manifest(default_presets, 'c.json')
+
+        custom_presets = tmp_path / 'custom_presets'
+        _write_json(
+            tmp_path / SETTINGS_FILE_NAME,
+            {'presets_dir': str(custom_presets)},
+        )
+
+        config = PresetConfig(tmp_path)
+        config.reconcile()
+
+        assert not default_presets.exists()
+
+    def test_reconcile_keeps_default_dir_when_user_files_remain(self, tmp_path):
+        """Default directory is kept when user files not in the manifest exist there."""
+        default_presets = tmp_path / 'presets'
+        _touch_preset(default_presets, 'c.json')
+        _create_manifest(default_presets, 'c.json')
+        # user file NOT in manifest
+        user_file = default_presets / 'my_preset.json'
+        user_file.write_text(json.dumps({'user': True}))
+
+        custom_presets = tmp_path / 'custom_presets'
+        _write_json(
+            tmp_path / SETTINGS_FILE_NAME,
+            {'presets_dir': str(custom_presets)},
+        )
+
+        config = PresetConfig(tmp_path)
+        config.reconcile()
+
+        # managed file was moved
+        assert (custom_presets / 'c.json').exists()
+        # user file was not moved or deleted
+        assert user_file.exists()
+        # default dir still exists because user file remains
+        assert default_presets.is_dir()
 
     def test_reconcile_noop_when_desired_already_has_files(self, tmp_path):
         """No move should happen when the configured directory already has presets."""
@@ -218,19 +307,70 @@ class TestPresetConfigReconcile:
 # ---------------------------------------------------------------------------
 
 class TestMovePresetFiles:
-    def test_moves_json_files(self, tmp_path):
+    def test_moves_manifest_tracked_files(self, tmp_path):
         src = tmp_path / 'src'
         dst = tmp_path / 'dst'
         _touch_preset(src, 'x.json')
         _touch_preset(src, 'y.json')
+        _create_manifest(src, 'x.json', 'y.json')
         _move_preset_files(src, dst)
         assert (dst / 'x.json').exists()
         assert (dst / 'y.json').exists()
+        # manifest.json itself must also travel to the destination
+        assert (dst / 'manifest.json').exists()
+
+    def test_does_not_move_files_not_in_manifest(self, tmp_path):
+        src = tmp_path / 'src'
+        dst = tmp_path / 'dst'
+        _touch_preset(src, 'tracked.json')
+        _create_manifest(src, 'tracked.json')
+        # user file — NOT in manifest
+        user_file = src / 'user_custom.json'
+        user_file.write_text('{}')
+
+        _move_preset_files(src, dst)
+
+        assert (dst / 'tracked.json').exists()
+        assert not (dst / 'user_custom.json').exists()
+        assert user_file.exists(), 'user file must be left untouched'
+
+    def test_returns_true_when_src_empty_after_move(self, tmp_path):
+        src = tmp_path / 'src'
+        dst = tmp_path / 'dst'
+        _touch_preset(src, 'only.json')
+        _create_manifest(src, 'only.json')
+
+        src_empty = _move_preset_files(src, dst)
+
+        assert src_empty is True
+
+    def test_returns_false_when_user_files_remain(self, tmp_path):
+        src = tmp_path / 'src'
+        dst = tmp_path / 'dst'
+        _touch_preset(src, 'managed.json')
+        _create_manifest(src, 'managed.json')
+        (src / 'user.json').write_text('{}')
+
+        src_empty = _move_preset_files(src, dst)
+
+        assert src_empty is False
+
+    def test_no_manifest_moves_nothing(self, tmp_path):
+        """When no manifest exists, _move_preset_files must not touch any file."""
+        src = tmp_path / 'src'
+        dst = tmp_path / 'dst'
+        _touch_preset(src, 'mystery.json')
+
+        _move_preset_files(src, dst)
+
+        assert not (dst / 'mystery.json').exists()
+        assert (src / 'mystery.json').exists()
 
     def test_creates_destination_if_missing(self, tmp_path):
         src = tmp_path / 'src'
         dst = tmp_path / 'deep' / 'nested' / 'dst'
         _touch_preset(src, 'z.json')
+        _create_manifest(src, 'z.json')
         _move_preset_files(src, dst)
         assert (dst / 'z.json').exists()
 
@@ -241,6 +381,25 @@ class TestMovePresetFiles:
         (src / 'readme.txt').write_text('hi')
         _move_preset_files(src, dst)
         assert not (dst / 'readme.txt').exists()
+
+
+class TestLoadManifestFilenames:
+    def test_reads_filenames_from_valid_manifest(self, tmp_path):
+        src = tmp_path / 'src'
+        _create_manifest(src, 'alpha.json', 'beta.json')
+        names = _load_manifest_filenames(src)
+        assert names == {'alpha.json', 'beta.json'}
+
+    def test_returns_empty_set_when_no_manifest(self, tmp_path):
+        src = tmp_path / 'src'
+        src.mkdir()
+        assert _load_manifest_filenames(src) == set()
+
+    def test_returns_empty_set_on_corrupt_manifest(self, tmp_path):
+        src = tmp_path / 'src'
+        src.mkdir()
+        (src / 'manifest.json').write_text('NOT JSON }{')
+        assert _load_manifest_filenames(src) == set()
 
 
 # ---------------------------------------------------------------------------
