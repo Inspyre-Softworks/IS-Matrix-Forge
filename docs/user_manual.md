@@ -94,7 +94,7 @@ directory. Each preset is a JSON file that defines animation frames and timing.
 
 To install sample presets:
 ```bash
-install-presets
+is-matrix-forge-install-presets
 ```
 
 ## Troubleshooting

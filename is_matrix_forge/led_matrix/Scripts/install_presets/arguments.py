@@ -22,7 +22,7 @@ class Arguments(ArgumentParser):
 
     def __init__(self, *args, **kwargs):
         super().__init__(
-            'LEDMatrixLib:install_presets',
+            'IS-Matrix-Forge:install_presets',
             description='Download and install premade LED matrix grid design patterns from GitHub.',
         )
         self.__parsed = None

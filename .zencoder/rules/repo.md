@@ -80,7 +80,7 @@ poetry run pytest
 ## Main Entry Points
 **Scripts**:
 - led-matrix-identify: Identify connected LED matrices
-- install-presets: Install predefined matrix patterns
+- is-matrix-forge-install-presets: Install predefined matrix patterns
 - pixel-grid: Display pixel grid utility
 
 **Core Components**:
