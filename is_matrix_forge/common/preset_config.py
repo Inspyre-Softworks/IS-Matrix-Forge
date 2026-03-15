@@ -284,18 +284,16 @@ def check_and_prompt_presets() -> None:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             return
 
-        print(
-            '\n[IS-Matrix-Forge] No preset files were found in:\n'
-            f'  {config.presets_dir}\n'
-            'Run  led-matrix install-presets  to download them.'
-        )
+        from is_matrix_forge.led_matrix.console import no_presets_panel
+        from rich.prompt import Confirm
+        no_presets_panel(str(config.presets_dir))
         try:
-            answer = input('Download presets now? [y/N] ').strip().lower()
+            answer = Confirm.ask('[bold]Download presets now?[/bold]', default=False)
         except (EOFError, KeyboardInterrupt):
             print()
             return
 
-        if answer in ('y', 'yes'):
+        if answer:
             _run_installer(config)
 
     except Exception:
@@ -308,6 +306,7 @@ def _run_installer(config: PresetConfig) -> None:
     try:
         from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
         from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS
+        from is_matrix_forge.led_matrix.console import success
 
         installer = PresetInstaller(
             presets_dir=config.presets_dir,
@@ -316,8 +315,10 @@ def _run_installer(config: PresetConfig) -> None:
             with_progress=True,
         )
         installer.run()
+        success('Presets installed successfully.')
     except Exception as exc:
-        print(f'[IS-Matrix-Forge] Preset installation failed: {exc}')
+        from is_matrix_forge.led_matrix.console import error
+        error(f'Preset installation failed: {exc}')
 
 
 __all__ = [

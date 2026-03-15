@@ -83,7 +83,8 @@ class GridPresetManifest:
                     }
 
             except Exception as e:
-                print(f"[GridPresetManifest] Failed to load manifest: {e}")
+                from is_matrix_forge.led_matrix.console import warning
+                warning(f"[GridPresetManifest] Failed to load manifest: {e}")
         else:
             self._manifest_dict = {}
 
@@ -101,7 +102,8 @@ class GridPresetManifest:
             with open(self.manifest_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
-            print(f"[GridPresetManifest] Failed to save manifest: {e}")
+            from is_matrix_forge.led_matrix.console import warning
+            warning(f"[GridPresetManifest] Failed to save manifest: {e}")
 
     def get_checksum(self, filename: str) -> Optional[str]:
         """

@@ -496,7 +496,8 @@ def bootloader_command(cli_args):
     controllers = execute_get_controllers(cli_args)
 
     for controller in controllers:
-        print(f'Entering bootloader on {controller!r} …')
+        from is_matrix_forge.led_matrix.console import info
+        info(f'Entering bootloader on [bold]{controller!r}[/bold] …')
         controller.jump_to_bootloader()
 
 
@@ -557,7 +558,9 @@ def scroll_until_command(cli_args):
     try:
         cmd = shlex.split(cli_args.command)
     except ValueError as exc:
-        raise SystemExit(f'Invalid command string: {exc}') from exc
+        from is_matrix_forge.led_matrix.console import error
+        error(f'Invalid command string: {exc}')
+        raise SystemExit(1) from exc
 
     # Launch the external process before scrolling starts so its clock
     # includes any matrix initialisation time.
@@ -649,11 +652,13 @@ def set_presets_dir_command(cli_args):
     old_path = config.presets_dir
 
     if new_path == old_path:
-        print(f'Presets directory is already set to: {new_path}')
+        from is_matrix_forge.led_matrix.console import info
+        info(f'Presets directory is already set to: [bold]{new_path}[/bold]')
         return
 
     config.presets_dir = new_path  # moves files and saves setting
-    print(f'Presets directory updated: {old_path} → {new_path}')
+    from is_matrix_forge.led_matrix.console import success
+    success(f'Presets directory updated: [dim]{old_path}[/dim] → [bold]{new_path}[/bold]')
 
 
 def main(cli_args=ARGUMENTS):
