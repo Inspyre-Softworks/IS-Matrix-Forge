@@ -13,7 +13,7 @@ PLATFORM_DIRS = PlatformDirs('IS-Matrix-Forge', 'Inspyre Softworks')
 
 
 def get_debug_mode_keyfile_path():
-    return PLATFORM_DIRS.user_data_path
+    return PLATFORM_DIRS.user_data_path / DEBUG_MODE_KEYFILE_NAME
 
 
 MARAUDER_FILE_PATH = get_debug_mode_keyfile_path()
@@ -78,5 +78,5 @@ def is_debug_mode(portkey_file_path=MARAUDER_FILE_PATH):
             # Check if the file contains the correct content
             content = f.read()
             return content.strip() == 'I solemnly swear that I am up to no good.'
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError, IsADirectoryError, OSError):
         return False
