@@ -49,7 +49,8 @@ class ThreadedLEDMatrixController:
                 getattr(self._controller, method_name)(*args, **kwargs)
             except Exception as e:
                 # feel free to hook up your own logger here
-                print(f"[ThreadedLEDMatrixController] Error in {method_name}: {e}")
+                from is_matrix_forge.led_matrix.console import error
+                error(f"[ThreadedLEDMatrixController] Error in {method_name}: {e}")
             finally:
                 self._queue.task_done()
 

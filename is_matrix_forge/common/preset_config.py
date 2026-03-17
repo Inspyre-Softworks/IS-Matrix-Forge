@@ -290,7 +290,8 @@ def check_and_prompt_presets() -> None:
         try:
             answer = Confirm.ask('[bold]Download presets now?[/bold]', default=False)
         except (EOFError, KeyboardInterrupt):
-            print()
+            from is_matrix_forge.led_matrix.console import CONSOLE
+            CONSOLE.print()
             return
 
         if answer:

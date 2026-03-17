@@ -661,6 +661,42 @@ def set_presets_dir_command(cli_args):
     success(f'Presets directory updated: [dim]{old_path}[/dim] → [bold]{new_path}[/bold]')
 
 
+def show_presets_dir_command(cli_args):
+    """Print the currently configured preset directory.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``show-presets-dir`` sub-command.
+    """
+    from is_matrix_forge.common.preset_config import get_preset_config
+    from is_matrix_forge.led_matrix.console import CONSOLE
+    from rich.panel import Panel
+    from rich import box
+
+    config = get_preset_config()
+    presets_dir = config.presets_dir
+    has_presets = config.has_presets()
+
+    status = (
+        '[bold green]✔ Presets present[/bold green]'
+        if has_presets
+        else '[bold yellow]⚠ No preset files found[/bold yellow]'
+    )
+    body = (
+        f'[bold white]{presets_dir}[/bold white]\n'
+        f'{status}'
+    )
+    CONSOLE.print(
+        Panel(
+            body,
+            title='[bold cyan]\\[IS-Matrix-Forge] Presets Directory[/bold cyan]',
+            border_style='cyan',
+            box=box.ROUNDED,
+            padding=(0, 1),
+        )
+    )
+
+
 def main(cli_args=ARGUMENTS):
     """
     Parses and handles command-line arguments, registering specific subcommands
@@ -672,13 +708,14 @@ def main(cli_args=ARGUMENTS):
             subcommand configurations. (Defaults to `ARGUMENTS`)
     """
     parser_bindings = (
-        ('scroll_parser',          'Scroll text command parser was not initialized.',         scroll_text_command),
-        ('identify_parser',        'Identify matrices command parser was not initialized.',   identify_matrices_command),
-        ('display_parser',         'Display text command parser was not initialized.',        display_text_command),
-        ('bootloader_parser',      'Bootloader command parser was not initialized.',          bootloader_command),
-        ('install_presets_parser', 'Install-presets command parser was not initialized.',     install_presets_command),
-        ('scroll_until_parser',    'Scroll-until command parser was not initialized.',        scroll_until_command),
-        ('set_presets_dir_parser', 'Set-presets-dir command parser was not initialized.',     set_presets_dir_command),
+        ('scroll_parser',             'Scroll text command parser was not initialized.',          scroll_text_command),
+        ('identify_parser',           'Identify matrices command parser was not initialized.',    identify_matrices_command),
+        ('display_parser',            'Display text command parser was not initialized.',         display_text_command),
+        ('bootloader_parser',         'Bootloader command parser was not initialized.',           bootloader_command),
+        ('install_presets_parser',    'Install-presets command parser was not initialized.',      install_presets_command),
+        ('scroll_until_parser',       'Scroll-until command parser was not initialized.',         scroll_until_command),
+        ('set_presets_dir_parser',    'Set-presets-dir command parser was not initialized.',      set_presets_dir_command),
+        ('show_presets_dir_parser',   'Show-presets-dir command parser was not initialized.',     show_presets_dir_command),
     )
 
     for attr_name, error_message, handler in parser_bindings:
