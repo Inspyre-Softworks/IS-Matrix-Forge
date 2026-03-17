@@ -682,8 +682,11 @@ def show_presets_dir_command(cli_args):
         if has_presets
         else '[bold yellow]⚠ No preset files found[/bold yellow]'
     )
+    # Wrap the path in an OSC-8 hyperlink so terminals that support it
+    # (e.g. iTerm2, Windows Terminal, GNOME Terminal) open the folder on click.
+    file_url = presets_dir.as_uri()  # produces "file:///..."
     body = (
-        f'[bold white]{presets_dir}[/bold white]\n'
+        f'[bold white][link={file_url}]{presets_dir}[/link][/bold white]\n'
         f'{status}'
     )
     CONSOLE.print(
