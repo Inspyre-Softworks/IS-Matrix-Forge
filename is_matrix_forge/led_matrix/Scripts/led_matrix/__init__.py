@@ -155,17 +155,28 @@ def find_rightmost_matrix(controllers: Iterable):
 
 
 def _filter_controllers_by_side(controllers, cli_args):
-    """Return the controllers that match the requested keyboard side."""
+    """Return the controllers that match the requested keyboard side.
+
+    When ``--only-right`` is requested, returns only the single rightmost
+    matrix (via :func:`find_rightmost_matrix`) so that exactly one device is
+    targeted even when multiple matrices share the same side.  Likewise for
+    ``--only-left``.
+    """
 
     desired = _desired_side(cli_args)
 
     if desired is None:
         return list(controllers)
 
-    return [
-        controller for controller in controllers
-        if _controller_side(controller) == desired
-    ]
+    if desired == 'right':
+        result = find_rightmost_matrix(controllers)
+        return [result] if result is not None else []
+
+    if desired == 'left':
+        result = find_leftmost_matrix(controllers)
+        return [result] if result is not None else []
+
+    return list(controllers)
 
 
 def _describe_selection(cli_args):
