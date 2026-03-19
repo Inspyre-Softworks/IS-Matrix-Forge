@@ -197,13 +197,8 @@ def _order_controllers_for_span(controllers: Iterable):
     if len(controllers) <= 1:
         return controllers
 
-    origin = find_rightmost_matrix(controllers)
-
-    if origin is None:
-        return controllers
-
-    ordered = [origin]
-    remaining = [controller for controller in controllers if controller is not origin]
+    ordered = []
+    remaining = list(controllers)
 
     while remaining:
         next_controller = find_leftmost_matrix(remaining)
@@ -402,13 +397,15 @@ def scroll_text_command(cli_args=ARGUMENTS):
 
     direction_key = cli_args.direction.strip().lower()
 
+    # All cases run all controllers concurrently; the only variation is whether
+    # spanning animations are pre-built (horizontal span/sequential) or each
+    # controller scrolls independently.
     if span_requested:
         if direction_key != 'h':
             raise SystemExit('--span-matrices requires --direction h.')
 
         controllers = _order_controllers_for_span(controllers)
         span_animations = _build_horizontal_span_animations(text, controllers)
-        concurrent = True
 
     elif sequential_requested:
         # Treat all matrices as a single unified screen.
@@ -419,10 +416,6 @@ def scroll_text_command(cli_args=ARGUMENTS):
         if direction_key == 'h':
             controllers = _order_controllers_for_span(controllers)
             span_animations = _build_horizontal_span_animations(text, controllers)
-        concurrent = True
-
-    else:
-        concurrent = True
 
     def activator(devices, _stop_event):
         def operation(controller):
@@ -435,7 +428,7 @@ def scroll_text_command(cli_args=ARGUMENTS):
             else:
                 controller.scroll_text(text, direction=direction)
 
-        _run_operation(devices, operation, concurrent=concurrent)
+        _run_operation(devices, operation, concurrent=True)
 
     def invoke(targets, index=None):
         run_with_guard(

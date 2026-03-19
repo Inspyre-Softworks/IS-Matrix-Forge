@@ -44,6 +44,7 @@ from is_matrix_forge.led_matrix.Scripts.led_matrix import (
     find_leftmost_matrix,
     find_rightmost_matrix,
     _filter_controllers_by_side,
+    _order_controllers_for_span,
 )
 from is_matrix_forge.led_matrix.constants import SLOT_MAP
 
@@ -378,6 +379,60 @@ class TestFilterControllersBySide:
 
 
 # ---------------------------------------------------------------------------
+# _order_controllers_for_span
+# ---------------------------------------------------------------------------
+
+class TestOrderControllersForSpan:
+    """_order_controllers_for_span must return controllers ordered left-to-right.
+
+    The first controller in the result must be the physically leftmost matrix and
+    the last must be the physically rightmost, so that the canvas slice at index 0
+    (the leftmost portion of the combined display) is assigned to the leftmost
+    physical matrix and the text flows correctly left-to-right.
+    """
+
+    def _lr_pair(self):
+        """Return one left and one right controller."""
+        return [
+            MockController("1-4.2", "L1"),
+            MockController("1-3.2", "R1"),
+        ]
+
+    def test_leftmost_is_first(self) -> None:
+        """The first entry in the ordered list must be the leftmost matrix."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert result[0].side_of_keyboard == "left"
+
+    def test_rightmost_is_last(self) -> None:
+        """The last entry in the ordered list must be the rightmost matrix."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert result[-1].side_of_keyboard == "right"
+
+    def test_length_preserved(self) -> None:
+        """All controllers must be present in the result."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert len(result) == len(controllers)
+
+    def test_single_controller_returned_as_is(self) -> None:
+        """A single controller needs no reordering."""
+        ctrl = MockController("1-3.2", "only")
+        result = _order_controllers_for_span([ctrl])
+        assert result == [ctrl]
+
+    def test_order_regardless_of_input_order(self) -> None:
+        """Input order must not affect the output: rightmost should still end up last."""
+        left = MockController("1-4.2", "L")
+        right = MockController("1-3.2", "R")
+        # Supply controllers right-first
+        result = _order_controllers_for_span([right, left])
+        assert result[0].side_of_keyboard == "left"
+        assert result[-1].side_of_keyboard == "right"
+
+
+# ---------------------------------------------------------------------------
 # DIRECTION_MAP correctness
 # ---------------------------------------------------------------------------
 
@@ -389,13 +444,23 @@ class TestDirectionMap:
         from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.commands.scroll_text import DIRECTION_MAP
         return DIRECTION_MAP
 
-    def test_up_maps_to_vertical_up(self) -> None:
-        """``-d up`` must scroll text upward (vertical_up animation direction)."""
-        assert self._get_direction_map()["up"] == "vertical_up"
+    def test_up_maps_to_vertical_down(self) -> None:
+        """``-d up`` must use the vertical_down animation direction.
 
-    def test_down_maps_to_vertical_down(self) -> None:
-        """``-d down`` must scroll text downward (vertical_down animation direction)."""
-        assert self._get_direction_map()["down"] == "vertical_down"
+        On the physical LED matrix the row coordinate is bottom-to-top, so
+        the ``vertical_down`` animation (which slides the canvas window upward
+        in software coordinate space) produces upward visual motion on the
+        hardware display.
+        """
+        assert self._get_direction_map()["up"] == "vertical_down"
+
+    def test_down_maps_to_vertical_up(self) -> None:
+        """``-d down`` must use the vertical_up animation direction.
+
+        Counterpart to ``test_up_maps_to_vertical_down``: ``vertical_up``
+        produces downward visual motion on the physical hardware.
+        """
+        assert self._get_direction_map()["down"] == "vertical_up"
 
     def test_h_maps_to_horizontal(self) -> None:
         """``-d h`` must produce a horizontal scroll."""
