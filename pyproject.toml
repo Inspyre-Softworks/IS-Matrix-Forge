@@ -38,6 +38,7 @@ ipywidgets = "==8.1.7"
 wmi = { version="^1.5.1", markers = "sys_platform == 'win32'" }
 platformdirs = "^4.5.0"
 pillow = "^12.0.0"
+rich = ">=13.9.4,<15"
 
 [tool.poetry.extras]
 clipboard_support = ["clipboard"]
@@ -52,8 +53,6 @@ pytest = "^8.4.1"
 [tool.poetry.scripts]
 led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
 python-path = "Scripts.python_path:main"
-led-matrix-identify = "is_matrix_forge.led_matrix.Scripts.identify_matrices:main"
-install-presets = "is_matrix_forge.led_matrix.Scripts.install_presets.main:main"
 pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 
 [[tool.poetry.include]]

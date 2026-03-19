@@ -62,10 +62,14 @@ class Grid:
 
     Parameters
     ----------
-    width : int
-        Target canvas width (columns).
-    height : int
-        Target canvas height (rows).
+    width : int | None
+        Target canvas width (columns).  When *None* and ``init_grid`` is a
+        flat 1-D list the width is inferred from the glyph data; otherwise
+        defaults to :data:`MATRIX_WIDTH`.
+    height : int | None
+        Target canvas height (rows).  When *None* and ``init_grid`` is a
+        flat 1-D list the height is inferred from the glyph data; otherwise
+        defaults to :data:`MATRIX_HEIGHT`.
     fill_value : int
         Default pixel value for blank/padded areas (0 or 1).
     init_grid : List[List[int]] | List[int] | None
@@ -83,8 +87,8 @@ class Grid:
 
     def __init__(
         self,
-        width: int = MATRIX_WIDTH,
-        height: int = MATRIX_HEIGHT,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
         fill_value: int = 0,
         init_grid: List[List[int]] | List[int] | None = None,
         align_x: str = 'center',
@@ -93,48 +97,73 @@ class Grid:
         if fill_value not in (0, 1):
             raise ValueError('fill_value must be 0 or 1')
 
-        self._width = width
-        self._height = height
         self._fill_value = fill_value
 
-        # Start with a clean canvas
-        canvas = generate_blank_grid(width=width, height=height, fill_value=fill_value)
+        # When neither dimension is explicit and there is no init_grid,
+        # fall back to the physical matrix dimensions.
+        _explicit_w = width is not None
+        _explicit_h = height is not None
 
         if init_grid is None:
-            self._grid = canvas
+            # No data: blank canvas at explicit or default dimensions.
+            self._width  = width  if _explicit_w else MATRIX_WIDTH
+            self._height = height if _explicit_h else MATRIX_HEIGHT
+            self._grid   = generate_blank_grid(
+                width=self._width, height=self._height, fill_value=fill_value
+            )
             return
 
+        # Resolve the *candidate* canvas size for normalisation helpers.
+        # When dimensions are not explicitly given we temporarily use the
+        # matrix defaults so that glyph-dimension inference has a sensible
+        # upper bound for the factor search.
+        _canvas_w = width  if _explicit_w else MATRIX_WIDTH
+        _canvas_h = height if _explicit_h else MATRIX_HEIGHT
+
         # Normalize init_grid to column-major 2D with its *own* intrinsic w×h
-        src = self._normalize_to_col_major(init_grid, width, height)
+        src = self._normalize_to_col_major(init_grid, _canvas_w, _canvas_h)
 
         src_w = len(src)
         src_h = len(src[0]) if src else 0
 
-        if src_w == width and src_h == height:
+        if not _explicit_w and not _explicit_h:
+            # Auto-size: use the inferred source dimensions as the canvas.
+            if not is_valid_grid(src, src_w, src_h):
+                raise ValueError(f'init_grid must be {src_w}×{src_h} column-major 0/1 list')
+            self._width  = src_w
+            self._height = src_h
+            self._grid   = [col[:] for col in src]
+            return
+
+        if src_w == _canvas_w and src_h == _canvas_h:
             # Perfect fit: use as-is (defensive copy)
-            if not is_valid_grid(src, width, height):
-                raise ValueError(f'init_grid must be {width}×{height} column-major 0/1 list')
-            self._grid = [col[:] for col in src]
+            if not is_valid_grid(src, _canvas_w, _canvas_h):
+                raise ValueError(f'init_grid must be {_canvas_w}×{_canvas_h} column-major 0/1 list')
+            self._width  = _canvas_w
+            self._height = _canvas_h
+            self._grid   = [col[:] for col in src]
             return
 
         # Smaller-than-canvas → center (or place per align_x/align_y)
-        if src_w <= width and src_h <= height:
+        if src_w <= _canvas_w and src_h <= _canvas_h:
             placed = self._place_into_canvas(
                 src=src,
-                dst_w=width,
-                dst_h=height,
+                dst_w=_canvas_w,
+                dst_h=_canvas_h,
                 pad_value=fill_value,
                 align_x=align_x,
                 align_y=align_y,
             )
-            if not is_valid_grid(placed, width, height):
-                raise ValueError(f'Final grid must be {width}×{height} column-major 0/1 list')
-            self._grid = placed
+            if not is_valid_grid(placed, _canvas_w, _canvas_h):
+                raise ValueError(f'Final grid must be {_canvas_w}×{_canvas_h} column-major 0/1 list')
+            self._width  = _canvas_w
+            self._height = _canvas_h
+            self._grid   = placed
             return
 
         # Bigger-than-canvas → loud, fast failure (no silent cropping)
         raise ValueError(
-            f'init_grid size {src_w}×{src_h} exceeds canvas {width}×{height}. '
+            f'init_grid size {src_w}×{src_h} exceeds canvas {_canvas_w}×{_canvas_h}. '
             'Resize or supply a proper target width/height.'
         )
 
@@ -245,7 +274,7 @@ class Grid:
                 if is_valid_grid(maybe_col, w2, h2):
                     return maybe_col
 
-        raise ValueError('Unsupported init_grid structure; expected 1D flat or 2D list.')
+        raise ValueError(f'init_grid must be {default_w}×{default_h} column-major 0/1 list')
 
     @property
     def grid(self) -> List[List[int]]:

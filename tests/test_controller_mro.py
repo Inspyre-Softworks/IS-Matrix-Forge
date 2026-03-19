@@ -6,11 +6,13 @@ import pytest
 def test_controller_init_order(monkeypatch):
     """
     Verify that LEDMatrixController invokes mixin __init__ in cooperative MRO order.
-    Order should be: DeviceBase → KeepAliveManager → AnimationManager →
-    DrawingManager → BrightnessManager → BreatherManager → IdentifyManager → Loggable.
+    Order should be: DeviceBase → DisplayHistoryManager → KeepAliveManager →
+    AnimationManager → DrawingManager → BrightnessManager → BreatherManager →
+    IdentifyManager → Loggable.
     """
     from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
     from is_matrix_forge.led_matrix.controller.components import keep_alive, animation, drawing, identify, brightness, breather
+    from is_matrix_forge.led_matrix.controller.components import history as history_mod
     from is_matrix_forge.led_matrix.controller import base as base_mod
     from is_matrix_forge import log_engine
 
@@ -20,7 +22,11 @@ def test_controller_init_order(monkeypatch):
         orig = cls.__init__
 
         def wrapped(self, *args, **kwargs):
-            order.append(name)
+            # Only track calls on the LEDMatrixController instance itself, not
+            # on helper objects (e.g. Breather) that are created during init and
+            # happen to inherit from some of the same mixins.
+            if isinstance(self, LEDMatrixController):
+                order.append(name)
             return orig(self, *args, **kwargs)
 
         return orig, wrapped
@@ -28,6 +34,7 @@ def test_controller_init_order(monkeypatch):
     patches = []
     for mod, cls_name in [
         (base_mod, 'DeviceBase'),
+        (history_mod, 'DisplayHistoryManager'),
         (keep_alive, 'KeepAliveManager'),
         (animation, 'AnimationManager'),
         (drawing, 'DrawingManager'),
@@ -61,6 +68,7 @@ def test_controller_init_order(monkeypatch):
 
     assert order == [
         'DeviceBase',
+        'DisplayHistoryManager',
         'KeepAliveManager',
         'AnimationManager',
         'DrawingManager',

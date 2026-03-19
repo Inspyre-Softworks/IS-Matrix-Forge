@@ -54,7 +54,7 @@ from inspy_logger import InspyLogger, Loggable
 from inspyre_toolbox.path_man import provision_path
 from is_matrix_forge.common.helpers.github_api import assemble_github_content_path_url as assemble_url, REPO_PRESETS_URL
 
-LOGGER = InspyLogger('LEDMatrixLib:PresetInstaller', console_level='info', no_file_logging=True)
+LOGGER = InspyLogger('IS-Matrix-Forge:PresetInstaller', console_level='info', no_file_logging=True)
 
 
 def github_blob_sha(content: bytes) -> str:
@@ -67,7 +67,8 @@ class PresetInstaller(Loggable):
             self,
             url: str = REPO_PRESETS_URL,
             headers: Optional[Dict[str, str]] = None,
-            app_dir: Union[str, Path] = APP_DIRS.user_data_path,
+            app_dir: Union[str, Path, None] = None,
+            presets_dir: Union[str, Path, None] = None,
             overwrite_existing: bool = False,
             with_progress: bool = True,
             timeout: float = 15.0,
@@ -75,12 +76,21 @@ class PresetInstaller(Loggable):
         super().__init__(LOGGER)
         self.url = url
         self.headers = headers or REQ_HEADERS
-        self.app_dir = provision_path(app_dir)
         self.overwrite = overwrite_existing
         self.with_progress = with_progress
         self.timeout = timeout
 
-        self.presets_dir = self.app_dir / 'presets'
+        if presets_dir is not None:
+            # Caller supplied a direct target directory – use it without
+            # touching (or even resolving) the app_dir.
+            self.presets_dir = Path(presets_dir)
+            self.app_dir = self.presets_dir.parent
+        else:
+            # Legacy behaviour: derive presets_dir from app_dir.
+            _app_dir = app_dir if app_dir is not None else APP_DIRS.user_data_path
+            self.app_dir = provision_path(_app_dir)
+            self.presets_dir = self.app_dir / 'presets'
+
         self.presets_dir.mkdir(parents=True, exist_ok=True)
         self.log = self.class_logger
 
@@ -91,6 +101,9 @@ class PresetInstaller(Loggable):
     def run(self):
         log = self.method_logger
         log.debug(f"Fetching file list from {self.url}")
+
+        self._remove_legacy_directory()
+
         try:
             files = self.get_file_list()
         except requests.RequestException as e:
@@ -113,6 +126,80 @@ class PresetInstaller(Loggable):
         manifest = GridPresetManifest(manifest_path)
         manifest.scan(self.presets_dir)
         return 0
+
+    def _remove_legacy_directory(self) -> None:
+        """Migrate manifest-tracked presets from the old LEDMatrixLib data directory.
+
+        Only preset files that are listed in the legacy ``manifest.json`` are
+        moved to the current preset location.  Any other files the user may
+        have placed in the legacy directory are left exactly where they are.
+
+        After migration each directory in the legacy tree (``presets/`` first,
+        then the root) is removed only when it contains no remaining files.
+        """
+        import shutil
+
+        log = self.method_logger
+
+        try:
+            from platformdirs import PlatformDirs as _PD
+            legacy_data_dir = _PD('LEDMatrixLib', appauthor='Inspyre Softworks').user_data_path
+        except Exception:
+            return
+
+        if not legacy_data_dir.exists():
+            return
+
+        log.info(f'Migrating legacy data directory: {legacy_data_dir}')
+
+        legacy_presets = legacy_data_dir / 'presets'
+        if legacy_presets.is_dir():
+            self.presets_dir.mkdir(parents=True, exist_ok=True)
+
+            # Load the manifest from the legacy location so we only touch files
+            # that were installed by IS-Matrix-Forge itself.
+            from is_matrix_forge.common.preset_config import _load_manifest_filenames
+            manifest_names = _load_manifest_filenames(legacy_presets)
+
+            for preset_file in list(legacy_presets.glob('*.json')):
+                # Always migrate manifest.json itself; skip any file not in the manifest.
+                if preset_file.name != 'manifest.json' and preset_file.name not in manifest_names:
+                    log.debug(f'Skipping user file not in manifest: {preset_file.name}')
+                    continue
+                dest = self.presets_dir / preset_file.name
+                if not dest.exists():
+                    try:
+                        shutil.move(preset_file, dest)
+                        log.debug(f'Migrated preset: {preset_file.name}')
+                    except Exception as exc:
+                        log.warning(f'Could not migrate {preset_file.name}: {exc}')
+
+            # Remove the presets sub-directory only when it is now empty.
+            try:
+                remaining = list(legacy_presets.iterdir())
+                if not remaining:
+                    legacy_presets.rmdir()
+                    log.debug('Removed empty legacy presets sub-directory.')
+                else:
+                    log.info(
+                        f'Legacy presets directory not empty – {len(remaining)} user '
+                        f'file(s) remain in {legacy_presets} and were left untouched.'
+                    )
+            except Exception as exc:
+                log.warning(f'Could not inspect legacy presets directory: {exc}')
+
+        # Remove the root legacy data directory only when it is completely empty.
+        try:
+            remaining = list(legacy_data_dir.iterdir())
+            if not remaining:
+                legacy_data_dir.rmdir()
+                log.info(f'Removed empty legacy data directory: {legacy_data_dir}')
+            else:
+                log.info(
+                    f'Legacy data directory not empty – leaving {legacy_data_dir} in place.'
+                )
+        except Exception as exc:
+            log.warning(f'Could not inspect legacy data directory {legacy_data_dir}: {exc}')
 
     def get_file_list(self) -> List[Dict]:
         files: List[Dict] = []

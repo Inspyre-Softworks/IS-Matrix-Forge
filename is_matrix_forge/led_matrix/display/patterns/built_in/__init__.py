@@ -43,16 +43,17 @@ class BuiltInPatterns:
         if action:
             action(self.dev)
         else:
-            print(f"❌ Invalid pattern: '{pattern_name}'")
+            from is_matrix_forge.led_matrix.console import CONSOLE, error
+            error(f"Invalid pattern: [bold]'{pattern_name}'[/bold]")
             suggestions = self.suggest(pattern_name)
             if suggestions:
-                print("💡 Did you mean:")
+                CONSOLE.print("[bold yellow]💡 Did you mean:[/bold yellow]")
                 for s in suggestions:
-                    print(f"  - {s}")
+                    CONSOLE.print(f"  [cyan]- {s}[/cyan]")
             else:
-                print("ℹ️ Available patterns:")
+                CONSOLE.print("[bold]ℹ️  Available patterns:[/bold]")
                 for key in self.list():
-                    print(f"  - {key}")
+                    CONSOLE.print(f"  [dim]- {key}[/dim]")
 
     def suggest(self, pattern_name: str, n: int = 3) -> list[str]:
         """

@@ -14,12 +14,17 @@ class Arguments(ArgumentParser):
             *args,
             **kwargs
         )
-        self.__building        = False
-        self.__built           = False
-        self.__parsed          = None
-        self.__identify_parser = None
-        self.__scroll_parser   = None
-        self.__display_parser  = None
+        self.__building              = False
+        self.__built                 = False
+        self.__parsed                = None
+        self.__identify_parser       = None
+        self.__scroll_parser         = None
+        self.__display_parser        = None
+        self.__bootloader_parser      = None
+        self.__install_presets_parser = None
+        self.__scroll_until_parser    = None
+        self.__set_presets_dir_parser = None
+        self.__show_presets_dir_parser = None
 
         selection_group = self.add_mutually_exclusive_group()
         selection_group.add_argument(
@@ -74,6 +79,26 @@ class Arguments(ArgumentParser):
     def display_parser(self):
         return self.__display_parser
 
+    @property
+    def bootloader_parser(self):
+        return self.__bootloader_parser
+
+    @property
+    def install_presets_parser(self):
+        return self.__install_presets_parser
+
+    @property
+    def scroll_until_parser(self):
+        return self.__scroll_until_parser
+
+    @property
+    def set_presets_dir_parser(self):
+        return self.__set_presets_dir_parser
+
+    @property
+    def show_presets_dir_parser(self):
+        return self.__show_presets_dir_parser
+
     def __build_identify_matrices(self):
         from .commands.identify_matrices import register_command
         self.__identify_parser = register_command(self)
@@ -86,14 +111,37 @@ class Arguments(ArgumentParser):
         from .commands.display_text import register_command
         self.__display_parser = register_command(self)
 
+    def __build_bootloader(self):
+        from .commands.bootloader import register_command
+        self.__bootloader_parser = register_command(self)
+
+    def __build_install_presets(self):
+        from .commands.install_presets import register_command
+        self.__install_presets_parser = register_command(self)
+
+    def __build_scroll_until(self):
+        from .commands.scroll_until import register_command
+        self.__scroll_until_parser = register_command(self)
+
+    def __build_set_presets_dir(self):
+        from .commands.set_presets_dir import register_command
+        self.__set_presets_dir_parser = register_command(self)
+
+    def __build_show_presets_dir(self):
+        from .commands.show_presets_dir import register_command
+        self.__show_presets_dir_parser = register_command(self)
+
     def __build(self):
         self.__building = True
 
         self.__build_identify_matrices()
-
         self.__build_scroll_text()
-
         self.__build_display_text()
+        self.__build_bootloader()
+        self.__build_install_presets()
+        self.__build_scroll_until()
+        self.__build_set_presets_dir()
+        self.__build_show_presets_dir()
 
         self.__building = False
         self.__built    = True

@@ -1,16 +1,23 @@
 """
-Directory configuration for the LED Matrix Battery application.
+Directory configuration for the IS-Matrix-Forge application.
 
 This module provides platform-specific directory paths for storing application
 data, configuration files, and other resources using the platformdirs library.
+
+``PRESETS_DIR`` is derived from :class:`~is_matrix_forge.common.preset_config.PresetConfig`
+so that any user-configured preset location is always honoured.
 """
 
 from platformdirs import PlatformDirs
 
+from is_matrix_forge.common.preset_config import get_preset_config
 
-APP_DIRS    = PlatformDirs('LEDMatrixLib', appauthor='Inspyre Softworks')
-APP_DIR     = APP_DIRS.user_data_path
-PRESETS_DIR = APP_DIR.joinpath('presets')
+
+APP_DIRS = PlatformDirs('IS-Matrix-Forge', appauthor='Inspyre Softworks')
+APP_DIR  = APP_DIRS.user_data_path
+
+# Read the user-configured preset directory; falls back to APP_DIR/presets.
+PRESETS_DIR = get_preset_config().presets_dir
 
 
 __all__ = [

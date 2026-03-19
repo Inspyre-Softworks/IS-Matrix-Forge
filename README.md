@@ -6,22 +6,20 @@
 
 **IS Matrix Forge** is a Python framework for creating applications that drive
 9×34 LED matrix displays.  It provides high level helpers for talking to the
-hardware, tools for building animations, and utilities such as progress bars and
-a battery monitor.
+hardware, tools for building animations, and utilities such as progress bars.
 
 ## Project Overview
 
-Matrix Forge grew out of the LED Matrix Battery Monitor project.  The goal is to
-make it easy to create rich LED matrix experiences from Python.  In addition to
-monitoring the battery, you can design custom frames, display scrolling text,
-run animations, and integrate the LED matrix with your own applications.
+Matrix Forge grew out of the LED Matrix project.  The goal is to
+make it easy to create rich LED matrix experiences from Python.  You can design
+custom frames, display scrolling text, run animations, and integrate the LED
+matrix with your own applications.
 
 Highlighted features include:
 - Device discovery and control via `pyserial`
 - Drawing grids and patterns with the `Grid` class
 - Built-in and custom animations
 - Progress bars that render on the matrix
-- A battery monitor example using these building blocks
 
 ## Hardware Requirements
 
@@ -42,10 +40,6 @@ This project requires Python 3.12 or newer and the following dependencies:
 - inspyre-toolbox (>=1.6.0) - Utility functions
 - pillow (>=11.2.1,<12.0.0) - Image processing
 - opencv-python (>=4.11.0.86,<5.0.0.0) - Image processing
-- pysimplegui-4-foss (>=4.60.4.1,<5.0.0.0) - GUI components
-- tk (>=0.1.0,<0.2.0) - GUI toolkit
-- easy-exit-calls (>=1.0.0.dev1,<2.0.0) - Exit handling
-- psutil - For battery status monitoring
 
 ## Installation Instructions
 
@@ -131,16 +125,6 @@ for _ in tqdm(range(100)):
     time.sleep(0.05)
 ```
 
-### Battery Monitor Example
-
-```python
-from is_matrix_forge.monitor import run_power_monitor
-from is_matrix_forge.led_matrix.helpers.device import DEVICES
-
-device = DEVICES[0]
-run_power_monitor(device)
-```
-
 ## Troubleshooting
 
 ### LED Matrix Not Detected
@@ -155,12 +139,6 @@ run_power_monitor(device)
 1. Ensure your system's audio is working correctly.
 2. Check that the WAV files for notifications exist in the expected locations.
 3. Verify that the chime library is properly installed.
-
-### Battery Status Not Updating
-
-1. Make sure psutil is properly installed.
-2. Check that your system supports battery status monitoring through psutil.
-3. Try increasing the battery_check_interval to reduce CPU usage.
 
 ### Animation Issues
 

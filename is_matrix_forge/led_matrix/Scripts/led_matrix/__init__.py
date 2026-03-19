@@ -2,11 +2,11 @@
 from typing import Iterable, Optional, Tuple
 
 import threading
+import time
 from collections.abc import Callable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
-# from is_matrix_forge.led_matrix.Scripts.identify_matrices import
 
 ARGUMENTS = Arguments()
 
@@ -119,9 +119,7 @@ def find_leftmost_matrix(controllers: Iterable):
             side_rank = 1  # unknowns in the middle
 
         rank_tuple = (side_rank, _slot_rank(controller), index)
-        print(f'Ranks: {rank_tuple[0]}, {rank_tuple[1]}, {rank_tuple[2]}')
         ranked.append((rank_tuple, controller))
-        print(ranked)
 
     if not ranked:
         return None
@@ -148,9 +146,7 @@ def find_rightmost_matrix(controllers: Iterable):
 
         # negate slot so larger slot numbers sort earlier for "rightmost"
         rank_tuple = (side_rank, -_slot_rank(controller), index)
-        print(f'Ranks: {rank_tuple[0]}, {-rank_tuple[1]}, {rank_tuple[2]}')
         ranked.append((rank_tuple, controller))
-        print(ranked)
 
     if not ranked:
         return None
@@ -490,26 +486,239 @@ def identify_matrices_command(cli_args):
         )
 
 
+def bootloader_command(cli_args):
+    """Reboot the selected matrix into its firmware bootloader.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``bootloader`` sub-command.
+    """
+    controllers = execute_get_controllers(cli_args)
+
+    for controller in controllers:
+        from is_matrix_forge.led_matrix.console import info
+        info(f'Entering bootloader on [bold]{controller!r}[/bold] …')
+        controller.jump_to_bootloader()
+
+
+def install_presets_command(cli_args):
+    """Download and install preset files, then remove the legacy data directory.
+
+    When ``--app-dir`` is provided explicitly the derived preset directory
+    (``<app-dir>/presets``) is saved to ``settings.json`` so future runs (and
+    the startup check) use it.  When ``--app-dir`` is *not* provided the
+    installer uses the currently-configured ``presets_dir`` directly, so a
+    user who previously ran ``set-presets-dir`` always gets files installed to
+    the right place — even if that place is outside the default app-data tree.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``install-presets`` sub-command.
+    """
+    from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
+    from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS as REQ_HEADERS
+    from is_matrix_forge.common.preset_config import get_preset_config
+    from pathlib import Path
+
+    config = get_preset_config()
+
+    # If the caller supplied an explicit --app-dir, persist it as the new
+    # preset location (which may trigger a file-move via the setter).
+    if cli_args.app_dir is not None:
+        requested_presets_dir = Path(cli_args.app_dir) / 'presets'
+        if requested_presets_dir != config.presets_dir:
+            config.presets_dir = requested_presets_dir
+
+    installer = PresetInstaller(
+        url=cli_args.url,
+        headers=REQ_HEADERS,
+        presets_dir=config.presets_dir,
+        overwrite_existing=cli_args.overwrite,
+        with_progress=getattr(cli_args, 'with_progress', True),
+    )
+    exit_code = installer.run()
+    if isinstance(exit_code, int) and exit_code != 0:
+        raise SystemExit(exit_code)
+
+
+def scroll_until_command(cli_args):
+    """Scroll text on the selected matrix until an external command finishes.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``scroll-until`` sub-command.
+    """
+    import subprocess
+    import shlex
+
+    controllers = execute_get_controllers(cli_args)
+    text = cli_args.input
+    on_complete = getattr(cli_args, 'on_complete', 'clear')
+
+    try:
+        cmd = shlex.split(cli_args.command)
+    except ValueError as exc:
+        from is_matrix_forge.led_matrix.console import error
+        error(f'Invalid command string: {exc}')
+        raise SystemExit(1) from exc
+
+    # Launch the external process before scrolling starts so its clock
+    # includes any matrix initialisation time.
+    proc = subprocess.Popen(cmd)  # noqa: S603 – user-supplied command is intentional
+
+    stop_event = threading.Event()
+
+    def _watch_process() -> None:
+        proc.wait()
+        stop_event.set()
+
+    watcher = threading.Thread(
+        target=_watch_process,
+        daemon=True,
+        name='scroll-until-watcher',
+    )
+    watcher.start()
+
+    def _scroll_loop(controller) -> None:
+        controller.keep_alive = True
+        while not stop_event.is_set():
+            controller.scroll_text(text)
+            # Safety pause: if scroll_text returns unexpectedly fast (e.g.
+            # due to an error) avoid a tight busy-wait that consumes the CPU.
+            if not stop_event.is_set():
+                stop_event.wait(timeout=0.05)
+
+    scroll_threads = []
+    for controller in controllers:
+        t = threading.Thread(target=_scroll_loop, args=(controller,), daemon=True)
+        t.start()
+        scroll_threads.append((controller, t))
+
+    try:
+        while not stop_event.is_set():
+            stop_event.wait(timeout=0.2)
+    except KeyboardInterrupt:
+        proc.terminate()
+        stop_event.set()
+
+    for _, t in scroll_threads:
+        t.join(timeout=5.0)
+
+    # Disable keep-alive on every controller
+    for controller in controllers:
+        try:
+            controller.keep_alive = False
+        except Exception:
+            pass
+
+    if on_complete == 'clear':
+        for controller in controllers:
+            try:
+                controller.clear()
+            except Exception:
+                pass
+
+    elif on_complete == 'fade':
+        for controller in controllers:
+            try:
+                current_brightness = getattr(controller, 'brightness', 100) or 100
+                steps = 20
+                for step in range(steps, -1, -1):
+                    pct = int(current_brightness * step / steps)
+                    try:
+                        controller.set_brightness(pct)
+                    except Exception:
+                        break
+                    time.sleep(0.05)
+                controller.clear()
+            except Exception:
+                pass
+
+    # 'leave': nothing to do – display stays as-is
+
+
+def set_presets_dir_command(cli_args):
+    """Move presets to a new directory and save the setting.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``set-presets-dir`` sub-command.
+    """
+    from pathlib import Path
+    from is_matrix_forge.common.preset_config import get_preset_config
+
+    new_path = Path(cli_args.path).expanduser().resolve()
+    config = get_preset_config()
+    old_path = config.presets_dir
+
+    if new_path == old_path:
+        from is_matrix_forge.led_matrix.console import info
+        info(f'Presets directory is already set to: [bold]{new_path}[/bold]')
+        return
+
+    config.presets_dir = new_path  # moves files and saves setting
+    from is_matrix_forge.led_matrix.console import success
+    success(f'Presets directory updated: [dim]{old_path}[/dim] → [bold]{new_path}[/bold]')
+
+
+def show_presets_dir_command(cli_args):
+    """Print the currently configured preset directory.
+
+    Parameters:
+        cli_args: argparse.Namespace
+            The parsed arguments for the ``show-presets-dir`` sub-command.
+    """
+    from is_matrix_forge.common.preset_config import get_preset_config
+    from is_matrix_forge.led_matrix.console import CONSOLE
+    from rich.panel import Panel
+    from rich import box
+
+    config = get_preset_config()
+    presets_dir = config.presets_dir
+    has_presets = config.has_presets()
+
+    status = (
+        '[bold green]✔ Presets present[/bold green]'
+        if has_presets
+        else '[bold yellow]⚠ No preset files found[/bold yellow]'
+    )
+    # Wrap the path in an OSC-8 hyperlink so terminals that support it
+    # (e.g. iTerm2, Windows Terminal, GNOME Terminal) open the folder on click.
+    file_url = presets_dir.as_uri()  # produces "file:///..."
+    body = (
+        f'[bold white][link={file_url}]{presets_dir}[/link][/bold white]\n'
+        f'{status}'
+    )
+    CONSOLE.print(
+        Panel(
+            body,
+            title='[bold cyan]\\[IS-Matrix-Forge] Presets Directory[/bold cyan]',
+            border_style='cyan',
+            box=box.ROUNDED,
+            padding=(0, 1),
+        )
+    )
+
+
 def main(cli_args=ARGUMENTS):
     """
     Parses and handles command-line arguments, registering specific subcommands
     and executing associated functions.
 
-    This function sets up a command-line interface (CLI) parser, registers a
-    specific subcommand (`scroll-text`), and associates a function (`scroll_text_command`)
-    with this subcommand. After parsing the arguments, it executes the appropriate
-    function based on the parsed subcommand.
-
     Parameters:
         cli_args (Optional[Arguments]):
             An object containing the command-line parser and associated
-            subcommand configurations. It must have attributes `scroll_parser`
-            and a callable `parse` function. (Defaults to `ARGUMENTS`)
+            subcommand configurations. (Defaults to `ARGUMENTS`)
     """
     parser_bindings = (
-        ('scroll_parser', 'Scroll text command parser was not initialized.', scroll_text_command),
-        ('identify_parser', 'Identify matrices command parser was not initialized.', identify_matrices_command),
-        ('display_parser', 'Display text command parser was not initialized.', display_text_command),
+        ('scroll_parser',             'Scroll text command parser was not initialized.',          scroll_text_command),
+        ('identify_parser',           'Identify matrices command parser was not initialized.',    identify_matrices_command),
+        ('display_parser',            'Display text command parser was not initialized.',         display_text_command),
+        ('bootloader_parser',         'Bootloader command parser was not initialized.',           bootloader_command),
+        ('install_presets_parser',    'Install-presets command parser was not initialized.',      install_presets_command),
+        ('scroll_until_parser',       'Scroll-until command parser was not initialized.',         scroll_until_command),
+        ('set_presets_dir_parser',    'Set-presets-dir command parser was not initialized.',      set_presets_dir_command),
+        ('show_presets_dir_parser',   'Show-presets-dir command parser was not initialized.',     show_presets_dir_command),
     )
 
     for attr_name, error_message, handler in parser_bindings:

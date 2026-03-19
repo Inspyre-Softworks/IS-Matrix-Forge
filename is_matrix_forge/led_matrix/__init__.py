@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 from platformdirs import PlatformDirs
 
+from is_matrix_forge.common.preset_config import check_and_prompt_presets  # noqa: F401
+
 try:  # pragma: no cover - optional dependency
     from .controller import LEDMatrixController, get_controllers  # noqa: F401
 except ImportError:  # pragma: no cover
@@ -79,9 +81,10 @@ def process_first_run() -> None:
 
 
 def initialize() -> None:
-    """Run startup routines such as displaying the first-run welcome."""
+    """Run startup routines such as displaying the first-run welcome and checking presets."""
 
     process_first_run()
+    check_and_prompt_presets()
 
 
 __all__ = [
@@ -92,5 +95,14 @@ __all__ = [
     "set_first_run",
     "process_first_run",
     "initialize",
+    "check_and_prompt_presets",
 ]
+
+
+# Run the preset check automatically when this package is imported so users
+# are notified in any interactive session, not only when initialize() is called.
+try:  # pragma: no cover - guarded by TTY check inside the function
+    check_and_prompt_presets()
+except Exception:
+    pass
 
