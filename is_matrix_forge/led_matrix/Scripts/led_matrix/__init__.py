@@ -397,20 +397,32 @@ def scroll_text_command(cli_args=ARGUMENTS):
 
     span_animations = None
 
-    if span_requested:
-        if cli_args.direction.strip().lower() != 'h':
-            raise SystemExit('--span-matrices requires --direction h.')
+    if span_requested and sequential_requested:
+        raise SystemExit('--span-matrices cannot be combined with --sequential.')
 
-        if sequential_requested:
-            raise SystemExit('--span-matrices cannot be combined with --sequential.')
+    direction_key = cli_args.direction.strip().lower()
+
+    if span_requested:
+        if direction_key != 'h':
+            raise SystemExit('--span-matrices requires --direction h.')
 
         controllers = _order_controllers_for_span(controllers)
         span_animations = _build_horizontal_span_animations(text, controllers)
-        sequential = False
         concurrent = True
+
+    elif sequential_requested:
+        # Treat all matrices as a single unified screen.
+        # For horizontal: build spanning animations so the text flows across all
+        # matrices as one wide canvas (text appears once, traversing all panels).
+        # For vertical: play the same animation on all matrices concurrently so
+        # that the panels act as a single combined display.
+        if direction_key == 'h':
+            controllers = _order_controllers_for_span(controllers)
+            span_animations = _build_horizontal_span_animations(text, controllers)
+        concurrent = True
+
     else:
-        sequential = sequential_requested
-        concurrent = not sequential
+        concurrent = True
 
     def activator(devices, _stop_event):
         def operation(controller):
@@ -434,11 +446,7 @@ def scroll_text_command(cli_args=ARGUMENTS):
             thread_name='scroll-text-guard' if index is None else f'scroll-text-guard-{index}',
         )
 
-    if sequential:
-        for index, controller in enumerate(controllers, start=1):
-            invoke([controller], index)
-    else:
-        invoke(controllers)
+    invoke(controllers)
 
 
 def display_text_command(cli_args):

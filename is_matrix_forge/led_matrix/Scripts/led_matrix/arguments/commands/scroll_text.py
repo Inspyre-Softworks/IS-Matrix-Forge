@@ -38,7 +38,12 @@ def register_command(parser: ArgumentParser):
         '--sequential',
         action='store_true',
         default=False,
-        help='Scroll across one matrix at a time when multiple are selected. Cannot be used with --span-matrices.',
+        help=(
+            'Treat multiple matrices as a single unified screen. '
+            'For horizontal scrolling, the text spans all matrices as one wide canvas. '
+            'For vertical scrolling, all matrices display the same animation simultaneously. '
+            'Cannot be used with --span-matrices.'
+        ),
     )
 
     scroll_parser.add_argument(
