@@ -4,8 +4,8 @@ from . import add_matrix_selection_args
 
 
 DIRECTION_MAP = {
-    'up': 'vertical_down',
-    'down': 'vertical_up',
+    'up': 'vertical_up',
+    'down': 'vertical_down',
     'h': 'horizontal'
 }
 

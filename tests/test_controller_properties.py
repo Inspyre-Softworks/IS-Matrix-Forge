@@ -444,23 +444,23 @@ class TestDirectionMap:
         from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.commands.scroll_text import DIRECTION_MAP
         return DIRECTION_MAP
 
-    def test_up_maps_to_vertical_down(self) -> None:
-        """``-d up`` must use the vertical_down animation direction.
+    def test_up_maps_to_vertical_up(self) -> None:
+        """``-d up`` must use the vertical_up animation direction.
 
-        On the physical LED matrix the row coordinate is bottom-to-top, so
-        the ``vertical_down`` animation (which slides the canvas window upward
-        in software coordinate space) produces upward visual motion on the
-        hardware display.
+        ``vertical_up`` uses increasing canvas offsets: the window slides downward
+        through the canvas, so content enters from the bottom of the display and
+        exits at the top — producing genuine upward visual motion.
         """
-        assert self._get_direction_map()["up"] == "vertical_down"
+        assert self._get_direction_map()["up"] == "vertical_up"
 
-    def test_down_maps_to_vertical_up(self) -> None:
-        """``-d down`` must use the vertical_up animation direction.
+    def test_down_maps_to_vertical_down(self) -> None:
+        """``-d down`` must use the vertical_down animation direction.
 
-        Counterpart to ``test_up_maps_to_vertical_down``: ``vertical_up``
-        produces downward visual motion on the physical hardware.
+        ``vertical_down`` uses decreasing canvas offsets: the window slides upward
+        through the canvas, so content enters from the top of the display and
+        exits at the bottom — producing genuine downward visual motion.
         """
-        assert self._get_direction_map()["down"] == "vertical_up"
+        assert self._get_direction_map()["down"] == "vertical_down"
 
     def test_h_maps_to_horizontal(self) -> None:
         """``-d h`` must produce a horizontal scroll."""
