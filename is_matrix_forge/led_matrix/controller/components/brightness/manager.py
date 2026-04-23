@@ -8,7 +8,8 @@
 #     This version makes I/O contracts explicit:
 #       - _read_brightness_raw(): returns 0..255 from hardware (with a tiny retry)
 #       - _read_brightness_pct(): returns 0..100 as an int
-#     Caching is disabled by default to avoid stale readings and race headaches.
+#     Caching is enabled by default so repeated reads do not hammer hardware
+#     on devices that can hang under frequent probes.
 #
 # Functions:
 #     (None — class-based by design)
@@ -99,8 +100,9 @@ class BrightnessManager(Aliases):
             : If True, do not issue a hardware brightness call on init.
 
         use_cache (bool):
-            : If True, cache the last-read percent value; if False (default),
-              read from hardware on every access to `brightness`.
+            : If True (default), cache the last-read percent value and lazily
+              refresh it from hardware. If False, read from hardware on every
+              access to `brightness`.
 
         **kwargs:
             : Passed to cooperative super().__init__ for mixins.
@@ -150,8 +152,8 @@ class BrightnessManager(Aliases):
     BREATHER_FLAGS_OFF = ('enabled', 'running', 'active')
     BREATHER_THREADS = ('thread', 'worker', '_thread', '_worker')
 
-    # Caching policy — default OFF
-    USE_CACHE: bool = False
+    # Caching policy — default ON to avoid repeated hardware probes
+    USE_CACHE: bool = True
 
     def __init__(
             self,
@@ -235,14 +237,12 @@ class BrightnessManager(Aliases):
             int: Current brightness percent [0..100].
 
         Notes:
-            - If USE_CACHE=False (default), always reads from hardware.
+            - If USE_CACHE=False, always reads from hardware.
             - If USE_CACHE=True, lazily fills cache and returns cached value.
         """
         if not self.USE_CACHE:
             return self._read_brightness_pct()
-        if self._brightness_cache is None:
-            self._brightness_cache = self._read_brightness_pct()
-        return self._brightness_cache
+        return self._ensure_cached_brightness()
 
     @brightness.setter
     def brightness(self, value) -> None:
@@ -261,11 +261,10 @@ class BrightnessManager(Aliases):
             int: Raw device brightness [0..255].
 
         Notes:
-            Also refreshes percent cache if USE_CACHE=True.
+            Refreshes the cached percent value from the device-reported value.
         """
         raw = self._read_brightness_raw()
-        if self.USE_CACHE:
-            self._brightness_cache = Percent.from_ratio(raw, 255)
+        self._brightness_cache = Percent.from_ratio(raw, 255)
         return raw
 
     @actual_brightness.setter
@@ -286,18 +285,7 @@ class BrightnessManager(Aliases):
             _set_brightness_raw(self.device, value)
         finally:
             # keep cache honest even if hardware layer raises after write attempt
-            if self.USE_CACHE:
-                self._brightness_cache = Percent.from_ratio(max(0, min(255, value)), 255)
-
-    # Back-compat shim (some older call sites may still call this)
-    @synchronized
-    def _get_brightness(self) -> int:
-        """
-        DEPRECATED:
-            Returns percent [0..100]. Prefer `brightness` (percent) or
-            `actual_brightness` (raw) or the explicit `_read_brightness_*` helpers.
-        """
-        return self._read_brightness_pct()
+            self._brightness_cache = Percent.from_ratio(max(0, min(255, value)), 255)
 
     # ----------------------------------------------------------------------------------
     # Public API
@@ -306,6 +294,11 @@ class BrightnessManager(Aliases):
     def clear_cached_brightness(self) -> None:
         """Forget the cached percent value (only relevant if USE_CACHE=True)."""
         self._brightness_cache = None
+
+    def _ensure_cached_brightness(self) -> int:
+        if self._brightness_cache is None:
+            self._brightness_cache = self._read_brightness_pct()
+        return self._brightness_cache
 
     def set_brightness(self, brightness: Union[int, float, str]) -> None:
         """
@@ -323,8 +316,7 @@ class BrightnessManager(Aliases):
             _set_brightness_raw(self.device, raw)
         except ValueError as e:
             raise InvalidBrightnessError(raw) from e
-        if self.USE_CACHE:
-            self._brightness_cache = pct
+        self._brightness_cache = pct
 
     @synchronized(pause_breather=False)
     def get_brightness_grid(self) -> list[list[int]]:
