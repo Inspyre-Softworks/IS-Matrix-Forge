@@ -1,8 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
+
 from collections import deque
 from time import time
-from typing import Any, Deque, Literal, Optional
+from typing import Any, Deque, Optional
 
 from .event import DisplayEvent
 
@@ -16,7 +16,7 @@ class DisplayHistoryManager:
     def __init__(self, *, history_maxlen: int = 256, **kwargs):
         # History fields must exist before any parent init triggers draws.
         self._display_history: Deque[DisplayEvent] = deque(maxlen=history_maxlen)
-        self._current_event: Optional[DisplayEvent] = None
+        self._maxlen = history_maxlen
 
         # Brightness tracking
         self._current_brightness: Optional[int] = self._get_brightness()
@@ -38,6 +38,27 @@ class DisplayHistoryManager:
     def display_history(self) -> tuple[DisplayEvent, ...]:
         return tuple(self._display_history)
 
+    @property
+    def max_history_len(self):
+        """
+        Get the maximum length of the history.
+        """
+        return self._maxlen
+
+    @max_history_len.setter
+    def max_history_len(self, new: int):
+        """
+        Set the maximum length of the history.
+        
+        Parameters:
+            new (int):
+                The new maximum length of the history.
+        """
+        log = self.method_logger
+        log.debug(f"Setting history max length to {new} from {self._maxlen}")
+        self._maxlen = new
+        self._display_history = deque(maxlen=new)
+
     def restore_last_brightness(self) -> Optional[int]:
         """
         Revert brightness to the most recent previous value (if known).
@@ -53,11 +74,11 @@ class DisplayHistoryManager:
     # --- Internals ----------------------------------------------------------------
 
     def _record_event(
-        self,
-        kind: DisplayEvent.__annotations__['kind'],
-        *,
-        meta: Optional[dict[str, Any]] = None,
-        grid: Optional[list[list[int]]] = None,
+            self,
+            kind: DisplayEvent.__annotations__['kind'],
+            *,
+            meta: Optional[dict[str, Any]] = None,
+            grid: Optional[list[list[int]]] = None,
     ) -> None:
         if not hasattr(self, '_display_history') or self._display_history is None:
             self._display_history = deque(maxlen=256)

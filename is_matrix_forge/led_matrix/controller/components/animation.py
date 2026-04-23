@@ -3,13 +3,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Optional
 
-from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
-
-from is_matrix_forge.led_matrix.display.animations import Animation
+from aliaser import Aliases, alias
 from is_matrix_forge.assets.font_map.base import FontMap
+from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
+from is_matrix_forge.led_matrix.display.animations import Animation
+
+from ..errors import LEDMatrixControllerPropWriteError, LEDMatrixControllerPropReadError
 
 
-class AnimationManager:
+class AnimationManager(Aliases):
     """
     AnimationManager
 
@@ -41,10 +43,39 @@ class AnimationManager:
         halt_animation():
             Stop the hardware animation mode if active.
     """
+    running_animations: List[Animation] = []
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self._current_animation: Optional[Animation] = None
+
+    @property
+    @alias('is_animating')
+    def hw_animating(self):
+        from is_matrix_forge.led_matrix.hardware import get_animate
+        log = self.method_logger
+
+        if self.device is not None:
+            return get_animate(self.device)
+        else:
+            try:
+                raise LEDMatrixControllerPropReadError(property_name='hw_animating', reason='Device is None')
+            except LEDMatrixControllerPropReadError as e:
+                log.error(e)
+
+        log.warn_once('Cannot get hardware animation state: device is None')
+        return
+
+    @hw_animating.setter
+    def hw_animating(self, value: bool):
+        log = self.method_logger
+        if self.device is not None:
+            self.animate(value)
+        else:
+            try:
+                raise LEDMatrixControllerPropWriteError(property_name='hw_animating', reason='Device is None')
+            except LEDMatrixControllerPropWriteError as e:
+                log.error(e)
 
     # --- Hardware animation toggle -------------------------------------------------
 
@@ -60,6 +91,10 @@ class AnimationManager:
         # Local import avoids hard import dependency for non-matrix test contexts
         from is_matrix_forge.led_matrix.hardware import animate as hw_animate
         hw_animate(self.device, enable)
+
+    @synchronized
+    def get_hw_is_animating(self):
+        return get_animate(self.device)
 
     # --- Animation playback --------------------------------------------------------
 
