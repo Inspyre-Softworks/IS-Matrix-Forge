@@ -249,6 +249,11 @@ class Animation(Loggable):
         return self.__cursor == len(self.__frames) - 1
 
     @property
+    def playback_finished(self) -> bool:
+        """Return whether playback has advanced past the final frame."""
+        return bool(self.__frames) and self.__cursor >= len(self.__frames)
+
+    @property
     def devices(self) -> List[Any]:
         """Get the list of devices used by the animation."""
         return self.__devices
@@ -406,7 +411,7 @@ class Animation(Loggable):
         """
         Play the animation on the LED matrix.
         """
-        if self.cursor_at_end:
+        if self.playback_finished:
             raise AnimationFinishedError('Try rewinding the animation first.')
 
         self.__check_ready()
@@ -474,19 +479,88 @@ class Animation(Loggable):
             self.__breathing_thread.join(timeout=0.1)
             self.__breathing_thread = None
 
-    def rewind(self, pos=None):
-        if pos:
-            if not isinstance(pos, int):
-                raise TypeError('"pos" must be an integer!')
+    def seek(self, index: int) -> None:
+        """
+        Jump to an absolute frame index.
 
-            if pos not in range(len(self.frames) + 1):
+        Parameters:
+            index (int):
+                Zero-based frame index to move to.
+        """
+        if not isinstance(index, int):
+            raise TypeError('"index" must be an integer!')
+
+        if self.is_empty:
+            if index != 0:
                 raise ValueError('Frame out of range')
-
-            if pos > self.cursor:
-                raise ValueError('Maybe you meant "fast_forward"... Cursor target position greater than current...')
+        elif index not in range(len(self.frames)):
+            raise ValueError('Frame out of range')
 
         self._stop_event.clear()
-        self.cursor = pos if pos is not None else 0
+        self.cursor = index
+
+    def rewind(self, steps: int = 0) -> None:
+        """
+        Move the cursor backward by ``steps`` frames.
+
+        Parameters:
+            steps (int):
+                Number of frames to move backward. When omitted or set to ``0``,
+                rewind all the way to the first frame. Positive values are
+                clamped at the first frame.
+        """
+        if not isinstance(steps, int):
+            raise TypeError('"steps" must be an integer!')
+        if steps < 0:
+            raise ValueError('"steps" must be non-negative!')
+
+        if self.is_empty:
+            if steps != 0:
+                raise ValueError('Cannot rewind an animation with no frames.')
+            self._stop_event.clear()
+            self.cursor = 0
+            return
+
+        if steps == 0:
+            self.seek(0)
+            return
+
+        current = len(self.frames) if self.playback_finished else self.cursor
+        target = max(0, current - steps)
+        self.seek(target)
+
+    def fast_forward(self, steps: int = 0) -> None:
+        """
+        Move the cursor forward by ``steps`` frames.
+
+        Parameters:
+            steps (int):
+                Number of frames to move forward. When omitted or set to ``0``,
+                fast-forward all the way to the last frame. Positive values are
+                clamped at the last frame.
+        """
+        if not isinstance(steps, int):
+            raise TypeError('"steps" must be an integer!')
+        if steps < 0:
+            raise ValueError('"steps" must be non-negative!')
+
+        if self.is_empty:
+            if steps != 0:
+                raise ValueError('Cannot fast-forward an animation with no frames.')
+            self._stop_event.clear()
+            self.cursor = 0
+            return
+
+        if steps == 0:
+            self.seek(len(self.frames) - 1)
+            return
+
+        if self.playback_finished:
+            target = len(self.frames) - 1
+        else:
+            target = min(len(self.frames) - 1, self.cursor + steps)
+
+        self.seek(target)
 
     def stop(self, do_not_clear=False) -> None:
         self._stop_event.set()

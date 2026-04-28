@@ -277,6 +277,8 @@ class BrightnessManager(Aliases):
             ValueError: If value is out of range.
             InvalidBrightnessError: If hardware rejects the raw write.
         """
+        if hasattr(self, '_ensure_game_not_running'):
+            self._ensure_game_not_running(method_name='actual_brightness')
         if value < 0:
             raise ValueError(f'Brightness can not go below 0! {value} was provided.')
         if value > 255:
@@ -300,6 +302,7 @@ class BrightnessManager(Aliases):
             self._brightness_cache = self._read_brightness_pct()
         return self._brightness_cache
 
+    @synchronized(pause_breather=False)
     def set_brightness(self, brightness: Union[int, float, str]) -> None:
         """
         Parameters:

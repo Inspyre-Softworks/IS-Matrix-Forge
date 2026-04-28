@@ -3,10 +3,10 @@ from typing import Optional, Dict, Any
 import threading
 from aliaser import alias, Aliases
 from serial.tools.list_ports_common import ListPortInfo
+from is_matrix_forge.led_matrix.helpers.location import ensure_device_location
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.hardware import send_command
-from is_matrix_forge.led_matrix.constants import SLOT_MAP
 from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
 from is_matrix_forge.log_engine import ROOT_LOGGER
 
@@ -38,6 +38,7 @@ class DeviceBase(Aliases):
         if not device:
             raise ValueError('device cannot be None or empty.')
         self._device: ListPortInfo = device
+        self._location: Dict[str, Any] = ensure_device_location(device)
         self._thread_safe: bool = bool(thread_safe)
         self._cmd_lock: Optional[threading.RLock] = None
         # Cooperative init: forward any remaining kwargs down the MRO chain
@@ -66,7 +67,7 @@ class DeviceBase(Aliases):
 
     @property
     def location(self) -> Dict[str, Any]:
-        return SLOT_MAP.get(self.device.location)
+        return self._location
 
     @property
     def location_abbrev(self) -> str:

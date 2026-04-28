@@ -4,6 +4,8 @@ LED Matrix controller wiring together mixin components with the device base.
 Key design notes:
 - Multiple inheritance uses cooperative initialization via ``super()``.
 - ``DeviceBase`` is placed early in the MRO so mixins can safely access ``self.device``.
+- ``GameManager`` comes early so synchronized methods can reliably inspect
+  controller game state before other managers act on the display.
 - ``BrightnessManager`` precedes ``BreatherManager`` in the MRO because the breather
   inspects the controller brightness on initialization.
 - ``IdentifyManager`` comes after ``BreatherManager`` because it may call
@@ -21,6 +23,7 @@ from is_matrix_forge.led_matrix.controller.components.animation import Animation
 from is_matrix_forge.led_matrix.controller.components.breather import BreatherManager
 from is_matrix_forge.led_matrix.controller.components.brightness import BrightnessManager
 from is_matrix_forge.led_matrix.controller.components.drawing import DrawingManager
+from is_matrix_forge.led_matrix.controller.components.game import GameManager
 from is_matrix_forge.led_matrix.controller.components.history import DisplayHistoryManager
 from is_matrix_forge.led_matrix.controller.components.identify import IdentifyManager
 from is_matrix_forge.led_matrix.controller.components.keep_alive import KeepAliveManager
@@ -33,6 +36,7 @@ class LEDMatrixController(
     DeviceBase,
     DisplayHistoryManager,
     KeepAliveManager,
+    GameManager,
     AnimationManager,
     DrawingManager,
     BrightnessManager,
@@ -43,7 +47,7 @@ class LEDMatrixController(
     def __init__(self, device, *, thread_safe: bool = False, parent_log_device=MOD_LOGGER, **kwargs):
         """
         Concrete controller wiring together all mixins and the device base using a
-        single cooperative ``super().__init__`` chain.
+            single cooperative ``super().__init__`` chain.
 
         Parameters:
             device:

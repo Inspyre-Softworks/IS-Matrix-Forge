@@ -1,5 +1,4 @@
-
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 import threading
 import time
@@ -7,14 +6,9 @@ from collections.abc import Callable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
+from is_matrix_forge.led_matrix.helpers.location import resolve_controller_location
 
 ARGUMENTS = Arguments()
-
-
-def _normalize_side(value):
-    if isinstance(value, str):
-        return value.strip().lower()
-    return None
 
 def _desired_side(cli_args):
     if cli_args is None:
@@ -25,76 +19,16 @@ def _desired_side(cli_args):
         return 'right'
     return None
 
-def _resolve_location(controller) -> Tuple[Optional[str], Optional[int]]:
-    """
-    Return a normalized (side, slot) tuple from a controller.
 
-    Looks in this order:
-      1) Explicit attributes: controller.side_of_keyboard, controller.slot
-      2) controller.location if it's a dict with 'side'/'slot'
-      3) controller.location if it's a dict with 'abbrev' (e.g. 'L0', 'R2')
-      4) controller.location if it's a str, resolved via SLOT_MAP
-    """
-    # 1) explicit attributes
-    side = _normalize_side(getattr(controller, 'side_of_keyboard', None))
-    slot = getattr(controller, 'slot', None)
-
-    location = getattr(controller, 'location', None)
-
-    # 2) dict with 'side'/'slot'
-    if isinstance(location, dict):
-        if side is None:
-            side = _normalize_side(location.get('side'))
-        if slot is None:
-            slot = location.get('slot')
-
-        # 3) dict with 'abbrev' like 'L0', 'R1'
-        if (side is None or slot is None) and 'abbrev' in location and isinstance(location['abbrev'], str):
-            abbrev = location['abbrev'].strip().upper()
-            # Try SLOT_MAP first, then parse fallback
-            try:
-                from is_matrix_forge.led_matrix.constants import SLOT_MAP
-            except Exception:
-                SLOT_MAP = {}
-
-            entry = SLOT_MAP.get(abbrev) or {}
-            side = _normalize_side(side or entry.get('side'))
-            slot = slot if slot is not None else entry.get('slot')
-
-            if (side is None or slot is None):
-                # Parse e.g. 'L0'/'R12' -> ('left'/'right', 0/12)
-                if len(abbrev) >= 2 and abbrev[0] in ('L', 'R') and abbrev[1:].isdigit():
-                    side = _normalize_side(side or ('left' if abbrev[0] == 'L' else 'right'))
-                    slot = slot if slot is not None else int(abbrev[1:])
-
-    # 4) location is a string -> SLOT_MAP lookup
-    if (side is None or slot is None) and isinstance(location, str):
-        try:
-            from is_matrix_forge.led_matrix.constants import SLOT_MAP
-        except Exception:
-            SLOT_MAP = {}
-        entry = SLOT_MAP.get(location, {})
-        side = _normalize_side(side or entry.get('side'))
-        slot = slot if slot is not None else entry.get('slot')
-
-    # normalize slot
-    try:
-        slot = int(slot) if slot is not None else None
-    except (TypeError, ValueError):
-        slot = None
-
-    return side, slot
-
-
-def _controller_side(controller) -> Optional[str]:
-    side, _ = _resolve_location(controller)
+def _controller_side(controller):
+    side, _ = resolve_controller_location(controller)
     return side
 
 def _slot_rank(controller) -> int:
     """
     Returns an integer for sorting. Unknown becomes 0 (neutral).
     """
-    _, slot = _resolve_location(controller)
+    _, slot = resolve_controller_location(controller)
     try:
         return int(slot)
     except (TypeError, ValueError):

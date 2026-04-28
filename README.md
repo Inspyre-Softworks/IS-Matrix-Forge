@@ -127,6 +127,31 @@ ctrl = LEDMatrixController(DEVICES[0])
 ctrl.scroll_text("Hello World!", loop=False)
 ```
 
+### Navigate an Animation
+
+```python
+from is_matrix_forge.led_matrix.display.animations.animation import Animation
+from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
+
+animation = Animation(
+    frame_data=[
+        Frame(grid=[[1]], duration=0.1, width=1, height=1),
+        Frame(grid=[[0]], duration=0.1, width=1, height=1),
+        Frame(grid=[[1]], duration=0.1, width=1, height=1),
+    ]
+)
+
+animation.fast_forward()   # jump all the way to the last frame
+animation.rewind()         # jump all the way back to the first frame
+animation.fast_forward(2)  # move ahead two frames from the current cursor
+animation.rewind(1)        # move back one frame from the current cursor
+animation.seek(0)          # jump to an absolute frame index
+```
+
+`Animation.rewind()` and `Animation.fast_forward()` use relative step counts.
+Passing `0` or omitting the argument jumps to the beginning/end respectively.
+Use `Animation.seek(index)` when you want to jump to an absolute frame index.
+
 ## Controller Architecture
 
 - Composition is implemented via multiple mixins that all use cooperative

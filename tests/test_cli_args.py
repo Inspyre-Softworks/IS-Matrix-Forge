@@ -48,10 +48,6 @@ def _install_test_stubs() -> None:
             'APP_DIR':  Path('/tmp/led-matrix'),
             'PRESETS_DIR': Path('/tmp/led-matrix/presets'),
         },
-        'is_matrix_forge.led_matrix.constants': {
-            'APP_DIRS': type('_D', (), {'user_data_path': Path('/tmp/led-matrix')})(),
-            'SLOT_MAP': {},
-        },
         'is_matrix_forge.common.helpers.github_api': {
             'REPO_PRESETS_URL': 'https://example.com/presets',
             'assemble_github_content_path_url': lambda *a, **kw: '',
