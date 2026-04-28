@@ -53,6 +53,13 @@ def register_command(parser: ArgumentParser):
         help='Treat multiple matrices as a single wide canvas when scrolling horizontally. Cannot be used with --sequential.',
     )
 
+    scroll_parser.add_argument(
+        '-f', '--frame-duration',
+        type=float,
+        default=0.33,
+        help='The length of time (in seconds) that each frame of the text scroll stays active.'
+    )
+
     add_matrix_selection_args(scroll_parser)
 
     return scroll_parser
