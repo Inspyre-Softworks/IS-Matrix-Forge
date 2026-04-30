@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
+from packaging.version import InvalidVersion, Version
+
 from is_matrix_forge.led_matrix.hardware import get_version as get_firmware_version
 from is_matrix_forge.led_matrix.helpers.device import get_devices
 from is_matrix_forge.led_matrix.helpers.location import resolve_device_location
@@ -149,6 +151,26 @@ def _query_firmware_version(device) -> str:
         return f"Unavailable ({type(exc).__name__}: {exc})"
 
 
+def _parse_version(version_text: Optional[str]) -> Optional[Version]:
+    if not version_text:
+        return None
+
+    try:
+        return Version(str(version_text).strip())
+    except (InvalidVersion, TypeError, ValueError):
+        return None
+
+
+def _is_newer_than_pypi(current_version: Optional[str], latest_version: Optional[str]) -> bool:
+    parsed_current = _parse_version(current_version)
+    parsed_latest = _parse_version(latest_version)
+
+    if parsed_current is None or parsed_latest is None:
+        return False
+
+    return parsed_current > parsed_latest
+
+
 def _build_device_fields(device, *, include_firmware: bool = True) -> list[tuple[str, str]]:
     resolved_location, raw_location = _format_location(device)
     fields = [
@@ -208,27 +230,44 @@ def safe_check_for_updates(*, timeout: float = 3.0) -> dict[str, Optional[str]]:
             info = PyPiVersionInfo("IS-Matrix-Forge", include_pre_release_for_update_check=True)
 
         latest = info.latest_pre_release or info.latest_stable or info.latest
+        latest_text = str(latest) if latest is not None else None
         installed = str(info.installed) if info.installed else None
+        snapshot = get_version_snapshot()
+        source_version = snapshot.get("source_version") or snapshot.get("display_version")
+        messages: list[str] = []
+        current_status = "up-to-date"
 
         if installed is None:
-            return {
-                "status": "unavailable",
-                "message": f"PyPI latest release: {latest} (installed distribution metadata unavailable for comparison).",
-                "latest": str(latest) if latest is not None else None,
-            }
-
-        if info.check_for_update():
+            messages.append(
+                f"PyPI latest release: {latest_text} (installed distribution metadata unavailable for comparison)."
+            )
+            current_status = "unavailable"
+        elif _is_newer_than_pypi(installed, latest_text):
+            messages.append(
+                f"Installed distribution version {installed} is newer than the latest PyPI release {latest_text}."
+            )
+            current_status = "local-newer-than-pypi"
+        elif info.check_for_update():
             newer_version = str(info.newer_available_version or latest)
-            return {
-                "status": "update-available",
-                "message": f"Update available on PyPI: {newer_version} (installed: {installed}).",
-                "latest": newer_version,
-            }
+            messages.append(f"Update available on PyPI: {newer_version} (installed: {installed}).")
+            current_status = "update-available"
+        else:
+            messages.append(f"Installed distribution matches the latest PyPI release ({latest_text}).")
+
+        if (
+            source_version
+            and source_version != installed
+            and _is_newer_than_pypi(source_version, latest_text)
+        ):
+            messages.append(
+                f"Current source tree version {source_version} is newer than the latest PyPI release {latest_text}."
+            )
+            current_status = "local-newer-than-pypi"
 
         return {
-            "status": "up-to-date",
-            "message": f"PyPI is up to date for the installed distribution (latest: {latest}).",
-            "latest": str(latest) if latest is not None else None,
+            "status": current_status,
+            "message": " ".join(messages),
+            "latest": latest_text,
         }
     except Exception as exc:
         return {
