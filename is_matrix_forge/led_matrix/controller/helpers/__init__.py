@@ -18,8 +18,8 @@ def get_controllers(
     Create LEDMatrixController objects, optionally in parallel threads, and
     propagate the 'threaded' flag to the controller constructor when supported.
     """
-    from is_matrix_forge.led_matrix.constants import DEVICES
     from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.helpers.device import DEVICES
 
     _devices = devices or DEVICES
     _controller_cls = controller_cls or LEDMatrixController
