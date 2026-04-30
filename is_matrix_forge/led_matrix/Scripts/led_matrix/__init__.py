@@ -441,12 +441,62 @@ def bootloader_command(cli_args):
         cli_args: argparse.Namespace
             The parsed arguments for the ``bootloader`` sub-command.
     """
-    controllers = execute_get_controllers(cli_args)
+    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import get_selected_devices
+    from is_matrix_forge.led_matrix.console import info
+    from is_matrix_forge.led_matrix.hardware import bootloader_jump
 
-    for controller in controllers:
-        from is_matrix_forge.led_matrix.console import info
-        info(f'Entering bootloader on [bold]{controller!r}[/bold] …')
-        controller.jump_to_bootloader()
+    devices = get_selected_devices(cli_args)
+
+    for device in devices:
+        info(f"Entering bootloader on [bold]{getattr(device, 'name', device)!r}[/bold] …")
+        bootloader_jump(device)
+
+
+def controller_info_command(cli_args):
+    """Print detailed controller/device information for debugging."""
+    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import (
+        build_controller_info_report,
+        get_selected_devices,
+    )
+    from is_matrix_forge.led_matrix.console import CONSOLE
+
+    devices = get_selected_devices(cli_args)
+    report = build_controller_info_report(
+        devices,
+        include_firmware=not getattr(cli_args, "no_firmware", False),
+    )
+    CONSOLE.print(report, markup=False)
+
+
+def ticket_info_command(cli_args):
+    """Generate a support-friendly report for issue filing."""
+    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import (
+        build_ticket_info_report,
+        copy_text_to_clipboard,
+    )
+    from is_matrix_forge.led_matrix.console import CONSOLE, success, warning
+
+    report = build_ticket_info_report(
+        cli_args,
+        include_update_check=not getattr(cli_args, "no_update_check", False),
+        include_firmware=not getattr(cli_args, "no_firmware", False),
+    )
+    CONSOLE.print(report, markup=False)
+
+    if getattr(cli_args, "copy", False):
+        copy_report = build_ticket_info_report(
+            cli_args,
+            include_update_check=not getattr(cli_args, "no_update_check", False),
+            include_firmware=not getattr(cli_args, "no_firmware", False),
+            format=getattr(cli_args, "copy_format", "plain"),
+        )
+        copied, backend = copy_text_to_clipboard(copy_report)
+        if copied:
+            success(
+                f"Ticket info copied to the clipboard as {getattr(cli_args, 'copy_format', 'plain')} text via {backend}."
+            )
+        else:
+            warning(f"Could not copy ticket info automatically. {backend}")
 
 
 def install_presets_command(cli_args):
@@ -667,6 +717,8 @@ def main(cli_args=ARGUMENTS):
         ('scroll_until_parser',       'Scroll-until command parser was not initialized.',         scroll_until_command),
         ('set_presets_dir_parser',    'Set-presets-dir command parser was not initialized.',      set_presets_dir_command),
         ('show_presets_dir_parser',   'Show-presets-dir command parser was not initialized.',     show_presets_dir_command),
+        ('controller_info_parser',    'Controller-info command parser was not initialized.',      controller_info_command),
+        ('ticket_info_parser',        'Ticket-info command parser was not initialized.',          ticket_info_command),
     )
 
     for attr_name, error_message, handler in parser_bindings:

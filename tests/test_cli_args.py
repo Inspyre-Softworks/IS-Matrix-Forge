@@ -86,9 +86,12 @@ EXPECTED_SUBCOMMANDS = [
     'display-text',
     'identify-matrices',
     'bootloader',
+    'controller-info',
     'install-presets',
     'scroll-until',
     'set-presets-dir',
+    'show-presets-dir',
+    'ticket-info',
 ]
 
 
@@ -161,6 +164,14 @@ class TestMatrixSelectionAfterSubcommand:
 
     def test_only_left_after_scroll_until(self):
         ns = _parse(['scroll-until', '-L', 'Loading…', 'sleep 1'])
+        assert ns.only_left is True
+
+    def test_only_right_after_controller_info(self):
+        ns = _parse(['controller-info', '-R'])
+        assert ns.only_right is True
+
+    def test_only_left_after_ticket_info(self):
+        ns = _parse(['ticket-info', '-L'])
         assert ns.only_left is True
 
 
@@ -277,3 +288,51 @@ class TestSetPresetsDirArgs:
     def test_path_captured(self):
         ns = _parse(['set-presets-dir', '/custom/presets'])
         assert ns.path == '/custom/presets'
+
+
+class TestControllerInfoArgs:
+    def test_no_firmware_flag(self):
+        ns = _parse(['controller-info', '--no-firmware'])
+        assert ns.no_firmware is True
+
+
+class TestTicketInfoArgs:
+    def test_copy_flag(self):
+        ns = _parse(['ticket-info', '--copy'])
+        assert ns.copy is True
+
+    def test_copy_format_markdown(self):
+        ns = _parse(['ticket-info', '--copy-format', 'markdown'])
+        assert ns.copy_format == 'markdown'
+
+    def test_no_update_check_flag(self):
+        ns = _parse(['ticket-info', '--no-update-check'])
+        assert ns.no_update_check is True
+
+
+class TestVersionFlags:
+    def test_version_flag_prints_and_exits(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            'is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.build_version_output',
+            lambda check_updates=False: 'version-output',
+        )
+
+        args = Arguments()
+        with pytest.raises(SystemExit) as excinfo:
+            args.parse_args(['-V'])
+
+        assert excinfo.value.code == 0
+        assert capsys.readouterr().out == 'version-output\n'
+
+    def test_check_updates_flag_prints_and_exits(self, monkeypatch, capsys):
+        monkeypatch.setattr(
+            'is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.build_version_output',
+            lambda check_updates=False: 'update-output' if check_updates else 'version-output',
+        )
+
+        args = Arguments()
+        with pytest.raises(SystemExit) as excinfo:
+            args.parse_args(['--check-updates'])
+
+        assert excinfo.value.code == 0
+        assert capsys.readouterr().out == 'update-output\n'
