@@ -359,6 +359,7 @@ def scroll_text_command(cli_args=ARGUMENTS):
                 animation = span_animations.get(controller)
                 if animation is None:
                     return
+                animation.set_all_frame_durations(frame_duration)
                 controller.play_animation(animation)
             else:
                 controller.scroll_text(text, direction=direction, frame_duration=frame_duration)

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example mixin template (`is_matrix_forge/led_matrix/controller/components/example_template.py`).
 - Tests: MRO order verification (`tests/test_controller_mro.py`).
 - Tests: Identify parameter validation (`tests/test_identify_validation.py`).
+- `scroll-text` CLI: New `-f`/`--frame-duration` argument (float, default `0.33`) to control how long each animation frame is displayed.
+- Tests: `--frame-duration` CLI argument parsing and `frame_duration` forwarding to `controller.scroll_text()`.
 
 ### Changed
 - Reorganized code from `led_matrix_battery.inputmodule.ledmatrix` into multiple specialized modules:
@@ -38,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   factor-pair heuristic bounded by target canvas, preferring common widths.
 - DeviceBase: Initializes `_device`, thread-safety flags, and lock before forwarding kwargs
   via `super()` so mixins can safely access `self.device` during init.
+- `AnimationManager.scroll_text()`: Default `frame_duration` changed from `0.05` → `0.33` s.
+- `TextScrollerConfig`: Default `frame_duration` changed from `0.05` → `0.33` s.
+- `scroll_text_command`: `frame_duration` is now forwarded to `controller.scroll_text()` in both the direct and span-animation paths.
+- `Animation`: Logger child name corrected to avoid duplicating the program-name prefix; removed stray `LOGGER.info('Test')` call; added structured `debug`/`error` log calls during `__init__`.
 
 ### Removed
 - Dependency on the monolithic `ledmatrix.py` module

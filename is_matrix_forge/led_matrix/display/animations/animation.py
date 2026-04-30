@@ -14,7 +14,7 @@ from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
 
 
-LOGGER = ROOT_LOGGER.get_child('IS-Matrix-Forge.led_matrix.display.animations.animation')
+LOGGER = ROOT_LOGGER.get_child('led_matrix.display.animations.animation')
 
 
 class Animation(Loggable):
