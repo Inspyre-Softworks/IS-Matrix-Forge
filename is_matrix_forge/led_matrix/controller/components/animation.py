@@ -193,6 +193,7 @@ class AnimationManager(Aliases):
         scroller = TextScroller(cfg)
         anim = scroller.generate_animation()
 
+
         if set_duration_override is not None:
             anim.set_all_frame_durations(set_duration_override)
 
