@@ -5,7 +5,7 @@ Author:
     Inspyre Softworks
 
 Project:
-    led-matrix-battery
+    IS-Matrix-Forge
 
 File: 
     ${DIR_PATH}/${FILE_NAME}

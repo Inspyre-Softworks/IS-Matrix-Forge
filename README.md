@@ -21,6 +21,34 @@ Highlighted features include:
 - Built-in and custom animations
 - Progress bars that render on the matrix
 
+## What It Tracks and Where Data Comes From
+
+IS Matrix Forge focuses on **local hardware and UI inputs** that drive the LED
+matrix, not on ingesting external telemetry streams.
+
+**Primary inputs and events**
+- **LED matrix commands** such as grids, patterns, text, animations, and
+  brightness changes. The controller can record these display events to support
+  history and restore operations.【F:is_matrix_forge/led_matrix/controller/components/history/manager.py†L13-L199】
+- **Local UI events** from the included PySimpleGUI tools (designer) for
+  controlling what the matrix displays.【F:is_matrix_forge/designer_gui/main_window/__init__.py†L165-L272】
+
+## How “Real-Time” Updates Work
+
+The real-time behavior is **local polling and rendering**: the controller reacts
+to commands and display events, immediately updating the matrix.
+
+## Scope and Use Cases
+
+Matrix Forge is designed for **device UI, hardware status, and visual
+notifications**, such as:
+- LED matrix dashboards for a workstation or appliance
+- Custom animations, text banners, or progress indicators
+
+It is **not** a SOC/observability platform and does **not** ingest or correlate
+network logs, SIEM feeds, or remote sensor telemetry out of the box. Its inputs
+are primarily local hardware state and user-driven UI events.
+
 ## Hardware Requirements
 
 - LED Matrix display with dimensions 9x34 (compatible with the project's specifications)
@@ -94,6 +122,31 @@ from is_matrix_forge.led_matrix.helpers.device import DEVICES
 ctrl = LEDMatrixController(DEVICES[0])
 ctrl.scroll_text("Hello World!", loop=False)
 ```
+
+### Navigate an Animation
+
+```python
+from is_matrix_forge.led_matrix.display.animations.animation import Animation
+from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
+
+animation = Animation(
+    frame_data=[
+        Frame(grid=[[1]], duration=0.1, width=1, height=1),
+        Frame(grid=[[0]], duration=0.1, width=1, height=1),
+        Frame(grid=[[1]], duration=0.1, width=1, height=1),
+    ]
+)
+
+animation.fast_forward()   # jump all the way to the last frame
+animation.rewind()         # jump all the way back to the first frame
+animation.fast_forward(2)  # move ahead two frames from the current cursor
+animation.rewind(1)        # move back one frame from the current cursor
+animation.seek(0)          # jump to an absolute frame index
+```
+
+`Animation.rewind()` and `Animation.fast_forward()` use relative step counts.
+Passing `0` or omitting the argument jumps to the beginning/end respectively.
+Use `Animation.seek(index)` when you want to jump to an absolute frame index.
 
 ## Controller Architecture
 

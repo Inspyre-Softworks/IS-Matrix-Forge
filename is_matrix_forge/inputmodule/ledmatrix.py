@@ -4,6 +4,13 @@ import serial
 
 from . import font
 from . import send_command, CommandVals, PatternVals, FWK_MAGIC, send_serial, brightness
+from is_matrix_forge.led_matrix.display.helpers import light_leds, render_matrix
+from is_matrix_forge.led_matrix.hardware import (
+    animate as _hw_animate,
+    get_animate,
+    percentage,
+    pwm_freq,
+)
 
 from is_matrix_forge.led_matrix.helpers.status_handler import get_status, set_status
 
@@ -40,24 +47,11 @@ PWM_FREQUENCIES = [
 ]
 
 
-def percentage(dev, p):
-    """Fill a percentage of the screen. Bottom to top"""
-    send_command(dev, CommandVals.Pattern, [PatternVals.Percentage, p])
-
-
 def animate(dev, b: bool):
-    """Tell the firmware to start/stop animation.
-    Scrolls the currently saved grid vertically down."""
+    """Tell the firmware to start/stop animation and update local status tracking."""
     if b:
         set_status('animate')
-    send_command(dev, CommandVals.Animate, [b])
-
-
-def get_animate(dev):
-    """Tell the firmware to start/stop animation.
-    Scrolls the currently saved grid vertically down."""
-    res = send_command(dev, CommandVals.Animate, with_response=True)
-    return bool(res[0])
+    _hw_animate(dev, b)
 
 
 def image_bl(dev, image_file):
@@ -137,69 +131,6 @@ def camera(dev):
 
                 send_col(dev, s, x, vals)
             commit_cols(dev, s)
-
-
-def video(dev, video_file):
-    set_status('video')
-    """Resize and play back a video"""
-    with serial.Serial(dev.device, 115200) as s:
-        import cv2
-
-        capture = cv2.VideoCapture(video_file)
-        ret, frame = capture.read()
-
-        scale_y = HEIGHT / frame.shape[0]
-
-        # Scale the video to 34 pixels height
-        dim = (HEIGHT, int(round(frame.shape[1] * scale_y)))
-        # Find the starting position to crop the width to be centered
-        # For very narrow videos, make sure to stay in bounds
-        start_x = max(0, int(round(dim[1] / 2 - WIDTH / 2)))
-        end_x = min(dim[1], start_x + WIDTH)
-
-        processed = []
-
-        # Pre-process the video into resized, cropped, grayscale frames
-        while get_status() == 'video':
-            ret, frame = capture.read()
-            if not ret:
-                print("Failed to read video frames")
-                break
-
-            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-            resized = cv2.resize(gray, (dim[1], dim[0]))
-            cropped = resized[0:HEIGHT, start_x:end_x]
-
-            processed.append(cropped)
-
-        # Determine frame delay based on the video's FPS.  Default to 30 FPS if
-        # the information isn't available.
-        fps = capture.get(cv2.CAP_PROP_FPS)
-        try:
-            fps = float(fps)
-            if fps <= 0 or fps != fps:
-                raise ValueError
-        except Exception:
-            fps = 30.0
-        frame_delay = 1.0 / fps
-
-        # Write it out to the module one frame at a time while respecting the
-        # frame rate.
-        for frame in processed:
-            start = time.time()
-            for x in range(0, cropped.shape[1]):
-                vals = [0 for _ in range(HEIGHT)]
-
-                for y in range(0, HEIGHT):
-                    vals[y] = frame[y, x]
-
-                send_col(dev, s, x, vals)
-            commit_cols(dev, s)
-
-            elapsed = time.time() - start
-            if frame_delay > elapsed:
-                time.sleep(frame_delay - elapsed)
 
 
 def pixel_to_brightness(pixel):
@@ -330,72 +261,6 @@ def eq(dev, vals):
             matrix[col][row - 1 - i] = 0xFF
 
     render_matrix(dev, matrix)
-
-
-def render_matrix(dev, matrix):
-    """Show a black/white matrix
-    Send everything in a single command"""
-    # Initialize a byte array to hold the binary representation of the matrix
-    # 39 bytes = 312 bits, which is enough for 9x34 = 306 pixels
-    vals = [0x00 for _ in range(39)]
-
-    # Iterate through each position in the 9x34 matrix
-    for x in range(9):
-        for y in range(34):
-            # Convert 2D coordinates to a linear index
-            # The matrix is stored in column-major order (y changes faster than x)
-            i = x + 9 * y
-
-            # If the pixel at this position is "on" (non-zero)
-            if matrix[x][y]:
-                # Calculate which byte in the vals array this pixel belongs to
-                byte_index = int(i / 8)
-
-                # Calculate which bit within that byte represents this pixel
-                bit_position = i % 8
-
-                # Set the corresponding bit in the appropriate byte
-                # This efficiently packs 8 pixels into each byte
-                vals[byte_index] = vals[byte_index] | (1 << bit_position)
-
-    # Send the packed binary data to the device
-    send_command(dev, CommandVals.Draw, vals)
-
-
-def light_leds(dev, leds):
-    """Light a specific number of LEDs"""
-    # Initialize a byte array with all LEDs off
-    vals = [0x00 for _ in range(39)]
-
-    # Calculate how many complete bytes we need to fill (each byte = 8 LEDs)
-    complete_bytes = int(leds / 8)
-
-    # Set all complete bytes to 0xFF (all 8 bits on)
-    for byte in range(complete_bytes):
-        vals[byte] = 0xFF
-
-    # Handle the remaining LEDs (less than 8) in the last partial byte
-    remaining_leds = leds % 8
-
-    # For each remaining LED, set the corresponding bit in the last byte
-    # This creates a binary pattern like 00011111 for 5 remaining LEDs
-    for i in range(remaining_leds):
-        vals[complete_bytes] += 1 << i
-
-    # Send the command to the device to display the pattern
-    send_command(dev, CommandVals.Draw, vals)
-
-
-def pwm_freq(dev, freq):
-    """Display a pattern that's already programmed into the firmware"""
-    if freq == "29kHz":
-        send_command(dev, CommandVals.PwmFreq, [0])
-    elif freq == "3.6kHz":
-        send_command(dev, CommandVals.PwmFreq, [1])
-    elif freq == "1.8kHz":
-        send_command(dev, CommandVals.PwmFreq, [2])
-    elif freq == "900Hz":
-        send_command(dev, CommandVals.PwmFreq, [3])
 
 
 def pattern(dev, p):

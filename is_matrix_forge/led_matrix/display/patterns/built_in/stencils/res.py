@@ -1,17 +1,22 @@
 from enum import IntEnum
 from is_matrix_forge.led_matrix.display.patterns.built_in.stencils import checkerboard, every_nth_col, every_nth_row, all_brightnesses
-from is_matrix_forge.led_matrix.hardware import send_command
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 
 
+def _send_pattern(dev, pattern):
+    from is_matrix_forge.led_matrix.hardware import send_command
+
+    send_command(dev, CommandVals.Pattern, [pattern])
+
+
 PATTERN_MAP = {
-    "All LEDs on": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.FullBrightness]),
-    "Gradient (0-13% Brightness)": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.Gradient]),
-    "Double Gradient (0-7-0% Brightness)": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.DoubleGradient]),
-    "\"LOTUS\" sideways": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.DisplayLotus]),
-    "Zigzag": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.ZigZag]),
-    "\"PANIC\"": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.DisplayPanic]),
-    "\"LOTUS\" Top Down": lambda dev: send_command(dev, CommandVals.Pattern, [PatternVals.DisplayLotus2]),
+    "All LEDs on": lambda dev: _send_pattern(dev, PatternVals.FullBrightness),
+    "Gradient (0-13% Brightness)": lambda dev: _send_pattern(dev, PatternVals.Gradient),
+    "Double Gradient (0-7-0% Brightness)": lambda dev: _send_pattern(dev, PatternVals.DoubleGradient),
+    "\"LOTUS\" sideways": lambda dev: _send_pattern(dev, PatternVals.DisplayLotus),
+    "Zigzag": lambda dev: _send_pattern(dev, PatternVals.ZigZag),
+    "\"PANIC\"": lambda dev: _send_pattern(dev, PatternVals.DisplayPanic),
+    "\"LOTUS\" Top Down": lambda dev: _send_pattern(dev, PatternVals.DisplayLotus2),
     "All brightness levels (1 LED each)": lambda dev: all_brightnesses(dev),
     "Every Second Row": lambda dev: every_nth_row(dev, 2),
     "Every Third Row": lambda dev: every_nth_row(dev, 3),

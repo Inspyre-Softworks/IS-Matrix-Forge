@@ -4,8 +4,8 @@ from . import add_matrix_selection_args
 
 
 DIRECTION_MAP = {
-    'up': 'vertical_down',
-    'down': 'vertical_up',
+    'up': 'vertical_up',
+    'down': 'vertical_down',
     'h': 'horizontal'
 }
 
@@ -38,7 +38,12 @@ def register_command(parser: ArgumentParser):
         '--sequential',
         action='store_true',
         default=False,
-        help='Scroll across one matrix at a time when multiple are selected. Cannot be used with --span-matrices.',
+        help=(
+            'Treat multiple matrices as a single unified screen. '
+            'For horizontal scrolling, the text spans all matrices as one wide canvas. '
+            'For vertical scrolling, all matrices display the same animation simultaneously. '
+            'Cannot be used with --span-matrices.'
+        ),
     )
 
     scroll_parser.add_argument(
@@ -46,6 +51,13 @@ def register_command(parser: ArgumentParser):
         action='store_true',
         default=False,
         help='Treat multiple matrices as a single wide canvas when scrolling horizontally. Cannot be used with --sequential.',
+    )
+
+    scroll_parser.add_argument(
+        '-f', '--frame-duration',
+        type=float,
+        default=0.33,
+        help='The length of time (in seconds) that each frame of the text scroll stays active.'
     )
 
     add_matrix_selection_args(scroll_parser)

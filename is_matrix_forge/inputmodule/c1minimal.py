@@ -1,4 +1,4 @@
-from inputmodule.inputmodule import send_command, CommandVals
+from . import CommandVals, send_command
 
 RGB_COLORS = ["white", "black", "red", "green",
               "blue", "cyan", "yellow", "purple"]

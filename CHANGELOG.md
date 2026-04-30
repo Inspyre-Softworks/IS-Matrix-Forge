@@ -14,14 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example mixin template (`is_matrix_forge/led_matrix/controller/components/example_template.py`).
 - Tests: MRO order verification (`tests/test_controller_mro.py`).
 - Tests: Identify parameter validation (`tests/test_identify_validation.py`).
+- `scroll-text` CLI: New `-f`/`--frame-duration` argument (float, default `0.33`) to control how long each animation frame is displayed.
+- Tests: `--frame-duration` CLI argument parsing and `frame_duration` forwarding to `controller.scroll_text()`.
 
 ### Changed
-- Reorganized code from `led_matrix_battery.inputmodule.ledmatrix` into multiple specialized modules:
-  - `led_matrix_battery.led_matrix.hardware`: Low-level hardware communication functions
-  - `led_matrix_battery.led_matrix.display.patterns`: Pattern-related display functions
-  - `led_matrix_battery.led_matrix.display.text`: Text and symbol rendering functions
-  - `led_matrix_battery.led_matrix.display.media`: Image and video-related functions
-- Moved all display-related functionality to the `led_matrix_battery.led_matrix.display` package
+- Reorganized code from `is_matrix_forge.inputmodule.ledmatrix` into multiple specialized modules:
+  - `is_matrix_forge.led_matrix.hardware`: Low-level hardware communication functions
+  - `is_matrix_forge.led_matrix.display.patterns`: Pattern-related display functions
+  - `is_matrix_forge.led_matrix.display.text`: Text and symbol rendering functions
+  - `is_matrix_forge.led_matrix.display.media`: Image and video-related functions
+- Moved all display-related functionality to the `is_matrix_forge.led_matrix.display` package
 - Updated all imports throughout the codebase to use the new module structure
 - Improved code organization with better separation of concerns
 - LEDMatrixController: Adopted cooperative `super()` initialization across all mixins and
@@ -38,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   factor-pair heuristic bounded by target canvas, preferring common widths.
 - DeviceBase: Initializes `_device`, thread-safety flags, and lock before forwarding kwargs
   via `super()` so mixins can safely access `self.device` during init.
+- `AnimationManager.scroll_text()`: Default `frame_duration` changed from `0.05` → `0.33` s.
+- `TextScrollerConfig`: Default `frame_duration` changed from `0.05` → `0.33` s.
+- `scroll_text_command`: `frame_duration` is now forwarded to `controller.scroll_text()` in both the direct and span-animation paths.
+- `Animation`: Logger child name corrected to avoid duplicating the program-name prefix; removed stray `LOGGER.info('Test')` call; added structured `debug`/`error` log calls during `__init__`.
 
 ### Removed
 - Dependency on the monolithic `ledmatrix.py` module

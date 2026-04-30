@@ -10,7 +10,7 @@ def test_identify_rejects_non_positive_params(monkeypatch):
 
     class Dev:
         name = 'TestDev'
-        location = None
+        location = '1-4.2'
         serial_number = 'SN123'
 
     ctrl = LEDMatrixController(

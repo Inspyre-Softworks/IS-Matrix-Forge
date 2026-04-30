@@ -48,10 +48,6 @@ def _install_test_stubs() -> None:
             'APP_DIR':  Path('/tmp/led-matrix'),
             'PRESETS_DIR': Path('/tmp/led-matrix/presets'),
         },
-        'is_matrix_forge.led_matrix.constants': {
-            'APP_DIRS': type('_D', (), {'user_data_path': Path('/tmp/led-matrix')})(),
-            'SLOT_MAP': {},
-        },
         'is_matrix_forge.common.helpers.github_api': {
             'REPO_PRESETS_URL': 'https://example.com/presets',
             'assemble_github_content_path_url': lambda *a, **kw: '',
@@ -199,6 +195,18 @@ class TestScrollTextArgs:
     def test_sequential_flag(self):
         ns = _parse(['scroll-text', '--sequential', 'hi'])
         assert ns.sequential is True
+
+    def test_default_frame_duration(self):
+        ns = _parse(['scroll-text', 'hi'])
+        assert ns.frame_duration == pytest.approx(0.33)
+
+    def test_custom_frame_duration_long(self):
+        ns = _parse(['scroll-text', '--frame-duration', '0.1', 'hi'])
+        assert ns.frame_duration == pytest.approx(0.1)
+
+    def test_custom_frame_duration_short(self):
+        ns = _parse(['scroll-text', '-f', '0.5', 'hi'])
+        assert ns.frame_duration == pytest.approx(0.5)
 
 
 # ---------------------------------------------------------------------------

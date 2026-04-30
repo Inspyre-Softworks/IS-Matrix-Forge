@@ -1,5 +1,5 @@
 """
-Constants for the LED Matrix Battery Monitor.
+Constants for IS Matrix Forge.
 
 This module defines various constants used throughout the application, including:
 - Serial communication settings (baudrate, response size)
@@ -32,7 +32,7 @@ WIDTH  = 9
 
 # Project URLs
 PROJECT_URLS = {
-    'github_api': 'https://api.github.com/repos/Inspyre-Softworks/led-matrix-battery/contents'
+    'github_api': 'https://api.github.com/repos/Inspyre-Softworks/IS-Matrix-Forge/contents'
 }
 
 GITHUB_REQ_HEADERS = {"Accept": "application/vnd.github.v3+json"}
@@ -51,7 +51,6 @@ try:
     from cv2 import COLOR_BGR2GRAY, COLOR_RGB2GRAY
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     COLOR_BGR2GRAY = COLOR_RGB2GRAY = 0
-from is_matrix_forge.led_matrix.helpers.device import DEVICES
 from is_matrix_forge.common.dirs import APP_DIRS
 from is_matrix_forge.dev_tools.presets import MANIFEST_FILE_NAME
 
@@ -84,3 +83,12 @@ __all__ = [
     'VID',
     'WIDTH',
 ]
+
+
+def __getattr__(name: str):
+    """Resolve device discovery lazily to avoid constants/device import cycles."""
+    if name == 'DEVICES':
+        from is_matrix_forge.led_matrix.helpers.device import DEVICES
+
+        return DEVICES
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

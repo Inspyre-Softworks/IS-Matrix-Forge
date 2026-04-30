@@ -5,6 +5,7 @@ from typing import List, Type, Optional
 
 from concurrent.futures import ThreadPoolExecutor
 import inspect
+from is_matrix_forge.led_matrix.helpers.location import resolve_controller_location
 
 def get_controllers(
     threaded: bool = False,
@@ -17,8 +18,8 @@ def get_controllers(
     Create LEDMatrixController objects, optionally in parallel threads, and
     propagate the 'threaded' flag to the controller constructor when supported.
     """
-    from is_matrix_forge.led_matrix.constants import DEVICES
     from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+    from is_matrix_forge.led_matrix.helpers.device import DEVICES
 
     _devices = devices or DEVICES
     _controller_cls = controller_cls or LEDMatrixController
@@ -55,7 +56,6 @@ def get_controllers(
         return list(ex.map(create_controller, _devices))
 
 
-
 def find_leftmost(controllers):
     """
     Return the physically leftmost controller on a Framework 16.
@@ -75,18 +75,11 @@ def find_leftmost(controllers):
         return None
 
     def sort_key(ctrl):
-        location = getattr(ctrl, 'location', None)
-        if not isinstance(location, dict):
-            # Malformed or missing location: order last
-            return (2, float('inf'))
-        side = location.get('side')
-        slot = location.get('slot')
-        # If side is missing or invalid, order last
+        side, slot = resolve_controller_location(ctrl)
         if side not in ('left', 'right'):
             return (2, float('inf'))
         side_order = 0 if side == 'left' else 1
-        # If slot is missing or not an int, order last within side
-        if not isinstance(slot, int):
+        if slot is None:
             slot = float('inf')
         return (side_order, slot)
 
@@ -112,15 +105,23 @@ def find_rightmost(controllers):
         return None
 
     def sort_key(ctrl):
-        side = ctrl.location.get('side')
-        slot = ctrl.location.get('slot', 0)
+        side, slot = resolve_controller_location(ctrl)
+        if side == 'right':
+            side_rank = 0
+        elif side == 'left':
+            side_rank = 2
+        else:
+            side_rank = 1
 
-        # Map physical order: left side before right side
-        side_order = 0 if side == 'left' else 1
+        slot_rank = -(slot if slot is not None else 0)
+        return (side_rank, slot_rank)
 
-        # On left: larger slot = more right; on right: larger slot = more right
-        return (side_order, slot)
+    return min(controllers, key=sort_key)
 
-    return max(controllers, key=sort_key)
 
+__all__ = [
+    'get_controllers',
+    'find_leftmost',
+    'find_rightmost',
+]
 

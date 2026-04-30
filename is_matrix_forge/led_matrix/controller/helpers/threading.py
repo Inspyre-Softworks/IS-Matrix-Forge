@@ -4,7 +4,7 @@ import threading
 from is_matrix_forge.log_engine import ROOT_LOGGER as PARENT_LOGGER
 
 
-def synchronized(method=None, *, pause_breather=True):
+def synchronized(method=None, *, pause_breather=True, allow_when_game_running=False):
     def decorator(method):
         @functools.wraps(method)
         def wrapper(self, *args, **kwargs):
@@ -19,6 +19,14 @@ def synchronized(method=None, *, pause_breather=True):
                     '%r called from thread %r but thread_safe=False',
                     self, threading.current_thread().name
                 )
+
+            if (
+                not allow_when_game_running
+                and hasattr(self, 'game_running')
+                and getattr(self, 'game_running', False)
+                and hasattr(self, '_ensure_game_not_running')
+            ):
+                self._ensure_game_not_running(method_name=method.__name__)
 
             ctx_factory = None
             if pause_breather:

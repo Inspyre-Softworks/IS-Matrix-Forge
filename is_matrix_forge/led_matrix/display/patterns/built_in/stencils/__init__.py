@@ -5,7 +5,7 @@ Author:
     Inspyre Softworks
 
 Project:
-    led-matrix-battery
+    IS-Matrix-Forge
 
 File: 
     ${DIR_PATH}/${FILE_NAME}
@@ -18,14 +18,16 @@ Description:
 import serial
 
 from is_matrix_forge.led_matrix.constants import WIDTH, HEIGHT
-from is_matrix_forge.led_matrix.display.helpers.columns import send_col, commit_cols
-from is_matrix_forge.led_matrix.hardware import send_command
-from is_matrix_forge.led_matrix.hardware import CommandVals
 
 
 def all_brightnesses(dev):
     """Increase the brightness with each pixel.
     Only 0-255 available, so it can't fill all 306 LEDs"""
+    from is_matrix_forge.led_matrix.display.helpers.columns import (
+        commit_cols,
+        send_col,
+    )
+
     with serial.Serial(dev.device, 115200) as s:
         for x in range(0, WIDTH):
             vals = [0 for _ in range(HEIGHT)]
@@ -43,6 +45,8 @@ def all_brightnesses(dev):
 
 
 def every_nth_row(dev, n):
+    from is_matrix_forge.led_matrix.hardware import CommandVals, send_command
+
     for x in range(WIDTH):
         vals = [(0xFF if y % n == 0 else 0) for y in range(HEIGHT)]
 
@@ -51,6 +55,8 @@ def every_nth_row(dev, n):
 
 
 def every_nth_col(dev, n):
+    from is_matrix_forge.led_matrix.hardware import CommandVals, send_command
+
     for x in range(WIDTH):
         vals = [(0xFF if x % n == 0 else 0) for _ in range(HEIGHT)]
 
@@ -59,6 +65,8 @@ def every_nth_col(dev, n):
 
 
 def checkerboard(dev, n):
+    from is_matrix_forge.led_matrix.hardware import CommandVals, send_command
+
     for x in range(WIDTH):
         vals = []
         col_phase = (x // n) % 2  # alternate every n columns

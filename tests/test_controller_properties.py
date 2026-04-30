@@ -43,6 +43,8 @@ _install_test_stubs()
 from is_matrix_forge.led_matrix.Scripts.led_matrix import (
     find_leftmost_matrix,
     find_rightmost_matrix,
+    _filter_controllers_by_side,
+    _order_controllers_for_span,
 )
 from is_matrix_forge.led_matrix.constants import SLOT_MAP
 
@@ -293,3 +295,173 @@ def test_find_rightmost_matrix_with_duplicate_slots() -> None:
     assert result is not None
     assert result.name == "right-second"
     assert result.device_location == "1-3.3"
+
+
+# ---------------------------------------------------------------------------
+# _filter_controllers_by_side
+# ---------------------------------------------------------------------------
+
+class _MockArgs:
+    """Minimal argparse namespace stand-in."""
+
+    def __init__(self, only_left: bool = False, only_right: bool = False) -> None:
+        self.only_left = only_left
+        self.only_right = only_right
+
+
+class TestFilterControllersBySide:
+    """_filter_controllers_by_side must honour -L/-R and return exactly one controller."""
+
+    def _lr_pair(self) -> list[MockController]:
+        """One left + one right controller."""
+        return [
+            MockController("1-4.2", "L1"),
+            MockController("1-3.2", "R1"),
+        ]
+
+    def test_no_flag_returns_all_controllers(self) -> None:
+        """Without -L/-R every available controller is returned."""
+        controllers = self._lr_pair()
+        result = _filter_controllers_by_side(controllers, _MockArgs())
+        assert len(result) == 2
+
+    def test_only_right_returns_single_rightmost_controller(self) -> None:
+        """``-R`` must return exactly ONE controller (the rightmost), not all right-side devices."""
+        controllers = [
+            MockController("1-4.2", "L1"),
+            MockController("1-3.2", "R1"),
+            MockController("1-3.3", "R2"),
+        ]
+        result = _filter_controllers_by_side(controllers, _MockArgs(only_right=True))
+        assert len(result) == 1
+        assert result[0].name == "R2"
+
+    def test_only_left_returns_single_leftmost_controller(self) -> None:
+        """``-L`` must return exactly ONE controller (the leftmost), not all left-side devices."""
+        controllers = [
+            MockController("1-4.2", "L1"),
+            MockController("1-4.3", "L2"),
+            MockController("1-3.2", "R1"),
+        ]
+        result = _filter_controllers_by_side(controllers, _MockArgs(only_left=True))
+        assert len(result) == 1
+        assert result[0].name == "L1"
+
+    def test_only_right_from_mixed_pair_picks_right(self) -> None:
+        """``-R`` on a standard L+R pair selects the right-side matrix."""
+        controllers = self._lr_pair()
+        result = _filter_controllers_by_side(controllers, _MockArgs(only_right=True))
+        assert len(result) == 1
+        assert result[0].side_of_keyboard == "right"
+
+    def test_only_left_from_mixed_pair_picks_left(self) -> None:
+        """``-L`` on a standard L+R pair selects the left-side matrix."""
+        controllers = self._lr_pair()
+        result = _filter_controllers_by_side(controllers, _MockArgs(only_left=True))
+        assert len(result) == 1
+        assert result[0].side_of_keyboard == "left"
+
+    def test_only_right_returns_empty_for_no_controllers(self) -> None:
+        """``-R`` with an empty list returns an empty list."""
+        result = _filter_controllers_by_side([], _MockArgs(only_right=True))
+        assert result == []
+
+    def test_only_left_returns_empty_for_no_controllers(self) -> None:
+        """``-L`` with an empty list returns an empty list."""
+        result = _filter_controllers_by_side([], _MockArgs(only_left=True))
+        assert result == []
+
+    def test_none_cli_args_returns_all_controllers(self) -> None:
+        """Passing ``None`` as cli_args returns all controllers unchanged."""
+        controllers = self._lr_pair()
+        result = _filter_controllers_by_side(controllers, None)
+        assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# _order_controllers_for_span
+# ---------------------------------------------------------------------------
+
+class TestOrderControllersForSpan:
+    """_order_controllers_for_span must return controllers ordered left-to-right.
+
+    The first controller in the result must be the physically leftmost matrix and
+    the last must be the physically rightmost, so that the canvas slice at index 0
+    (the leftmost portion of the combined display) is assigned to the leftmost
+    physical matrix and the text flows correctly left-to-right.
+    """
+
+    def _lr_pair(self):
+        """Return one left and one right controller."""
+        return [
+            MockController("1-4.2", "L1"),
+            MockController("1-3.2", "R1"),
+        ]
+
+    def test_leftmost_is_first(self) -> None:
+        """The first entry in the ordered list must be the leftmost matrix."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert result[0].side_of_keyboard == "left"
+
+    def test_rightmost_is_last(self) -> None:
+        """The last entry in the ordered list must be the rightmost matrix."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert result[-1].side_of_keyboard == "right"
+
+    def test_length_preserved(self) -> None:
+        """All controllers must be present in the result."""
+        controllers = self._lr_pair()
+        result = _order_controllers_for_span(controllers)
+        assert len(result) == len(controllers)
+
+    def test_single_controller_returned_as_is(self) -> None:
+        """A single controller needs no reordering."""
+        ctrl = MockController("1-3.2", "only")
+        result = _order_controllers_for_span([ctrl])
+        assert result == [ctrl]
+
+    def test_order_regardless_of_input_order(self) -> None:
+        """Input order must not affect the output: rightmost should still end up last."""
+        left = MockController("1-4.2", "L")
+        right = MockController("1-3.2", "R")
+        # Supply controllers right-first
+        result = _order_controllers_for_span([right, left])
+        assert result[0].side_of_keyboard == "left"
+        assert result[-1].side_of_keyboard == "right"
+
+
+# ---------------------------------------------------------------------------
+# DIRECTION_MAP correctness
+# ---------------------------------------------------------------------------
+
+class TestDirectionMap:
+    """The DIRECTION_MAP in scroll_text must map user-visible labels to the
+    animation direction string that produces the expected visual motion."""
+
+    def _get_direction_map(self):
+        from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.commands.scroll_text import DIRECTION_MAP
+        return DIRECTION_MAP
+
+    def test_up_maps_to_vertical_up(self) -> None:
+        """``-d up`` must use the vertical_up animation direction.
+
+        ``vertical_up`` uses increasing canvas offsets: the window slides downward
+        through the canvas, so content enters from the bottom of the display and
+        exits at the top — producing genuine upward visual motion.
+        """
+        assert self._get_direction_map()["up"] == "vertical_up"
+
+    def test_down_maps_to_vertical_down(self) -> None:
+        """``-d down`` must use the vertical_down animation direction.
+
+        ``vertical_down`` uses decreasing canvas offsets: the window slides upward
+        through the canvas, so content enters from the top of the display and
+        exits at the bottom — producing genuine downward visual motion.
+        """
+        assert self._get_direction_map()["down"] == "vertical_down"
+
+    def test_h_maps_to_horizontal(self) -> None:
+        """``-d h`` must produce a horizontal scroll."""
+        assert self._get_direction_map()["h"] == "horizontal"

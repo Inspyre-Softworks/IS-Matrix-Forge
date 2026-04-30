@@ -1,5 +1,4 @@
-
-from typing import Iterable, Optional, Tuple
+from typing import Iterable
 
 import threading
 import time
@@ -7,14 +6,9 @@ from collections.abc import Callable
 
 from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
 from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
+from is_matrix_forge.led_matrix.helpers.location import resolve_controller_location
 
 ARGUMENTS = Arguments()
-
-
-def _normalize_side(value):
-    if isinstance(value, str):
-        return value.strip().lower()
-    return None
 
 def _desired_side(cli_args):
     if cli_args is None:
@@ -25,76 +19,16 @@ def _desired_side(cli_args):
         return 'right'
     return None
 
-def _resolve_location(controller) -> Tuple[Optional[str], Optional[int]]:
-    """
-    Return a normalized (side, slot) tuple from a controller.
 
-    Looks in this order:
-      1) Explicit attributes: controller.side_of_keyboard, controller.slot
-      2) controller.location if it's a dict with 'side'/'slot'
-      3) controller.location if it's a dict with 'abbrev' (e.g. 'L0', 'R2')
-      4) controller.location if it's a str, resolved via SLOT_MAP
-    """
-    # 1) explicit attributes
-    side = _normalize_side(getattr(controller, 'side_of_keyboard', None))
-    slot = getattr(controller, 'slot', None)
-
-    location = getattr(controller, 'location', None)
-
-    # 2) dict with 'side'/'slot'
-    if isinstance(location, dict):
-        if side is None:
-            side = _normalize_side(location.get('side'))
-        if slot is None:
-            slot = location.get('slot')
-
-        # 3) dict with 'abbrev' like 'L0', 'R1'
-        if (side is None or slot is None) and 'abbrev' in location and isinstance(location['abbrev'], str):
-            abbrev = location['abbrev'].strip().upper()
-            # Try SLOT_MAP first, then parse fallback
-            try:
-                from is_matrix_forge.led_matrix.constants import SLOT_MAP
-            except Exception:
-                SLOT_MAP = {}
-
-            entry = SLOT_MAP.get(abbrev) or {}
-            side = _normalize_side(side or entry.get('side'))
-            slot = slot if slot is not None else entry.get('slot')
-
-            if (side is None or slot is None):
-                # Parse e.g. 'L0'/'R12' -> ('left'/'right', 0/12)
-                if len(abbrev) >= 2 and abbrev[0] in ('L', 'R') and abbrev[1:].isdigit():
-                    side = _normalize_side(side or ('left' if abbrev[0] == 'L' else 'right'))
-                    slot = slot if slot is not None else int(abbrev[1:])
-
-    # 4) location is a string -> SLOT_MAP lookup
-    if (side is None or slot is None) and isinstance(location, str):
-        try:
-            from is_matrix_forge.led_matrix.constants import SLOT_MAP
-        except Exception:
-            SLOT_MAP = {}
-        entry = SLOT_MAP.get(location, {})
-        side = _normalize_side(side or entry.get('side'))
-        slot = slot if slot is not None else entry.get('slot')
-
-    # normalize slot
-    try:
-        slot = int(slot) if slot is not None else None
-    except (TypeError, ValueError):
-        slot = None
-
-    return side, slot
-
-
-def _controller_side(controller) -> Optional[str]:
-    side, _ = _resolve_location(controller)
+def _controller_side(controller):
+    side, _ = resolve_controller_location(controller)
     return side
 
 def _slot_rank(controller) -> int:
     """
     Returns an integer for sorting. Unknown becomes 0 (neutral).
     """
-    _, slot = _resolve_location(controller)
+    _, slot = resolve_controller_location(controller)
     try:
         return int(slot)
     except (TypeError, ValueError):
@@ -155,17 +89,28 @@ def find_rightmost_matrix(controllers: Iterable):
 
 
 def _filter_controllers_by_side(controllers, cli_args):
-    """Return the controllers that match the requested keyboard side."""
+    """Return the controllers that match the requested keyboard side.
+
+    When ``--only-right`` is requested, returns only the single rightmost
+    matrix (via :func:`find_rightmost_matrix`) so that exactly one device is
+    targeted even when multiple matrices share the same side.  Likewise for
+    ``--only-left``.
+    """
 
     desired = _desired_side(cli_args)
 
     if desired is None:
         return list(controllers)
 
-    return [
-        controller for controller in controllers
-        if _controller_side(controller) == desired
-    ]
+    if desired == 'right':
+        result = find_rightmost_matrix(controllers)
+        return [result] if result is not None else []
+
+    if desired == 'left':
+        result = find_leftmost_matrix(controllers)
+        return [result] if result is not None else []
+
+    return list(controllers)
 
 
 def _describe_selection(cli_args):
@@ -186,13 +131,8 @@ def _order_controllers_for_span(controllers: Iterable):
     if len(controllers) <= 1:
         return controllers
 
-    origin = find_rightmost_matrix(controllers)
-
-    if origin is None:
-        return controllers
-
-    ordered = [origin]
-    remaining = [controller for controller in controllers if controller is not origin]
+    ordered = []
+    remaining = list(controllers)
 
     while remaining:
         next_controller = find_leftmost_matrix(remaining)
@@ -383,23 +323,34 @@ def scroll_text_command(cli_args=ARGUMENTS):
 
     sequential_requested = getattr(cli_args, 'sequential', False) and len(controllers) > 1
     span_requested = getattr(cli_args, 'span_matrices', False) and len(controllers) > 1
+    frame_duration = float(getattr(cli_args, 'frame_duration', 0.33))
 
     span_animations = None
 
-    if span_requested:
-        if cli_args.direction.strip().lower() != 'h':
-            raise SystemExit('--span-matrices requires --direction h.')
+    if span_requested and sequential_requested:
+        raise SystemExit('--span-matrices cannot be combined with --sequential.')
 
-        if sequential_requested:
-            raise SystemExit('--span-matrices cannot be combined with --sequential.')
+    direction_key = cli_args.direction.strip().lower()
+
+    # All cases run all controllers concurrently; the only variation is whether
+    # spanning animations are pre-built (horizontal span/sequential) or each
+    # controller scrolls independently.
+    if span_requested:
+        if direction_key != 'h':
+            raise SystemExit('--span-matrices requires --direction h.')
 
         controllers = _order_controllers_for_span(controllers)
         span_animations = _build_horizontal_span_animations(text, controllers)
-        sequential = False
-        concurrent = True
-    else:
-        sequential = sequential_requested
-        concurrent = not sequential
+
+    elif sequential_requested:
+        # Treat all matrices as a single unified screen.
+        # For horizontal: build spanning animations so the text flows across all
+        # matrices as one wide canvas (text appears once, traversing all panels).
+        # For vertical: play the same animation on all matrices concurrently so
+        # that the panels act as a single combined display.
+        if direction_key == 'h':
+            controllers = _order_controllers_for_span(controllers)
+            span_animations = _build_horizontal_span_animations(text, controllers)
 
     def activator(devices, _stop_event):
         def operation(controller):
@@ -408,11 +359,12 @@ def scroll_text_command(cli_args=ARGUMENTS):
                 animation = span_animations.get(controller)
                 if animation is None:
                     return
+                animation.set_all_frame_durations(frame_duration)
                 controller.play_animation(animation)
             else:
-                controller.scroll_text(text, direction=direction)
+                controller.scroll_text(text, direction=direction, frame_duration=frame_duration)
 
-        _run_operation(devices, operation, concurrent=concurrent)
+        _run_operation(devices, operation, concurrent=True)
 
     def invoke(targets, index=None):
         run_with_guard(
@@ -423,11 +375,7 @@ def scroll_text_command(cli_args=ARGUMENTS):
             thread_name='scroll-text-guard' if index is None else f'scroll-text-guard-{index}',
         )
 
-    if sequential:
-        for index, controller in enumerate(controllers, start=1):
-            invoke([controller], index)
-    else:
-        invoke(controllers)
+    invoke(controllers)
 
 
 def display_text_command(cli_args):

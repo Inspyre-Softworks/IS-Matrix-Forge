@@ -5,7 +5,7 @@ try:  # pragma: no cover - fallback when inspy_logger is unavailable
     LOG_LEVELS = [level for level in LEVEL_MAP.keys()]
     del LEVEL_MAP
 
-    PROGNAME = 'LEDMatrixBattery'
+    PROGNAME = 'IS-Matrix-Forge'
     AUTHOR = 'Inspyre-Softworks'
 
     INSPY_LOG_LEVEL = 'INFO'
@@ -20,7 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover - simplified logging
             self.method_logger = self.class_logger
 
     LOG_LEVELS = list(logging._nameToLevel.keys())
-    PROGNAME = 'LEDMatrixBattery'
+    PROGNAME = 'IS-Matrix-Forge'
     AUTHOR = 'Inspyre-Softworks'
     INSPY_LOG_LEVEL = 'INFO'
     class _Logger(logging.Logger):
