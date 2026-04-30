@@ -10,10 +10,9 @@ hardware, tools for building animations, and utilities such as progress bars.
 
 ## Project Overview
 
-Matrix Forge grew out of the LED Matrix project.  The goal is to
-make it easy to create rich LED matrix experiences from Python.  You can design
-custom frames, display scrolling text, run animations, and integrate the LED
-matrix with your own applications.
+Matrix Forge is focused on making it easy to create rich LED matrix
+experiences from Python. You can design custom frames, display scrolling text,
+run animations, and integrate the LED matrix with your own applications.
 
 Highlighted features include:
 - Device discovery and control via `pyserial`
