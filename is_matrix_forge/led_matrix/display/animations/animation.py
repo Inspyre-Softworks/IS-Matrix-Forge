@@ -78,8 +78,13 @@ class Animation(Loggable):
         if frame_data:
             self._load_frames(frame_data)
             log.debug('Loaded %d frame(s) from frame_data', len(self.__frames))
+            if not self.__frames:
+                log.error('frame_data was provided but no frames were loaded')
         elif frame_data is not None:
             log.error('frame_data was provided but no frames were loaded')
+
+        if not self.frames:
+            log.debug('No frames loaded.')
 
         # 5) reset cursor into valid range
         self._reset_cursor()
