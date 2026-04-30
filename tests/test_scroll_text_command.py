@@ -62,6 +62,7 @@ def _make_cli_args(
     only_left: bool = False,
     only_right: bool = False,
     input_text: str = "hello",
+    frame_duration: float = 0.33,
 ) -> MagicMock:
     """Return a minimal argparse-namespace stand-in for scroll_text_command."""
     ns = MagicMock()
@@ -71,6 +72,7 @@ def _make_cli_args(
     ns.only_left = only_left
     ns.only_right = only_right
     ns.input = input_text
+    ns.frame_duration = frame_duration
     return ns
 
 
@@ -202,3 +204,58 @@ class TestSpanMatricesDirectionRestriction:
             pytest.raises(SystemExit),
         ):
             scroll_text_command(cli_args)
+
+
+class TestFrameDurationForwarding:
+    """frame_duration must be forwarded to scroll_text in the non-span path."""
+
+    def _run_and_capture_scroll_text_calls(self, cli_args, controllers):
+        """Run scroll_text_command and return the calls made to controller.scroll_text."""
+        from is_matrix_forge.led_matrix.Scripts.led_matrix import scroll_text_command
+
+        ctrl = controllers[0]
+        captured_kwargs = []
+
+        def fake_scroll_text(text, **kwargs):
+            captured_kwargs.append(kwargs)
+
+        ctrl.scroll_text.side_effect = fake_scroll_text
+        ctrl.keep_alive = False
+
+        with (
+            patch(
+                "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+                return_value=controllers,
+            ),
+            patch(
+                "is_matrix_forge.led_matrix.Scripts.led_matrix.run_with_guard",
+                side_effect=lambda targets, **kwargs: kwargs["activator"](targets, None),
+            ),
+            patch(
+                "is_matrix_forge.led_matrix.Scripts.led_matrix._run_operation",
+                side_effect=lambda devices, operation, **kwargs: [operation(c) for c in devices],
+            ),
+        ):
+            scroll_text_command(cli_args)
+
+        return captured_kwargs
+
+    def test_default_frame_duration_forwarded(self) -> None:
+        """Default frame_duration (0.33) must be passed to scroll_text."""
+        controllers = [_make_controller("C1")]
+        cli_args = _make_cli_args(direction="up", frame_duration=0.33)
+
+        calls = self._run_and_capture_scroll_text_calls(cli_args, controllers)
+
+        assert len(calls) == 1
+        assert calls[0]["frame_duration"] == pytest.approx(0.33)
+
+    def test_custom_frame_duration_forwarded(self) -> None:
+        """Explicit frame_duration must be forwarded to scroll_text."""
+        controllers = [_make_controller("C1")]
+        cli_args = _make_cli_args(direction="up", frame_duration=0.1)
+
+        calls = self._run_and_capture_scroll_text_calls(cli_args, controllers)
+
+        assert len(calls) == 1
+        assert calls[0]["frame_duration"] == pytest.approx(0.1)

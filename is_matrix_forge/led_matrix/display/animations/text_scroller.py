@@ -30,7 +30,7 @@ class TextScrollerConfig:
     text: str
     font_map: Mapping[str, List[List[int]]]
     spacing: int = 1
-    frame_duration: float = 0.05
+    frame_duration: float = 0.33
     wrap: bool = False  # unused for vertical mode
     direction: str = "horizontal"  # one of: "horizontal", "vertical_up", "vertical_down"
     fit: str = "error"
@@ -221,4 +221,3 @@ class TextScroller:
         anim = Animation(frame_data=frames)
         anim.set_all_frame_durations(self.config.frame_duration)
         return anim
-

@@ -123,7 +123,7 @@ class AnimationManager(Aliases):
             text: str,
             *,
             spacing: int = 1,
-            frame_duration: float = 0.05,
+            frame_duration: float = 0.33,
             wrap: bool = False,
             direction: str = 'horizontal',
             font_map: Optional[FontMap] = None,
@@ -187,7 +187,7 @@ class AnimationManager(Aliases):
             frame_duration=frame_duration,
             wrap=wrap,
             direction=direction,
-            case_sensitive=case_sensitive,
+            case_sensitive=case_sensitive
         )
 
         scroller = TextScroller(cfg)

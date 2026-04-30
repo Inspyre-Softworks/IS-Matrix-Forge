@@ -323,6 +323,7 @@ def scroll_text_command(cli_args=ARGUMENTS):
 
     sequential_requested = getattr(cli_args, 'sequential', False) and len(controllers) > 1
     span_requested = getattr(cli_args, 'span_matrices', False) and len(controllers) > 1
+    frame_duration = float(getattr(cli_args, 'frame_duration', 0.33))
 
     span_animations = None
 
@@ -358,9 +359,10 @@ def scroll_text_command(cli_args=ARGUMENTS):
                 animation = span_animations.get(controller)
                 if animation is None:
                     return
+                animation.set_all_frame_durations(frame_duration)
                 controller.play_animation(animation)
             else:
-                controller.scroll_text(text, direction=direction)
+                controller.scroll_text(text, direction=direction, frame_duration=frame_duration)
 
         _run_operation(devices, operation, concurrent=True)
 
