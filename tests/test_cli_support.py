@@ -147,6 +147,7 @@ def test_safe_check_for_updates_reports_source_tree_newer_than_pypi(monkeypatch)
             self.latest = "1.0.0.dev28"
             self.installed = "1.0.0.dev28"
             self.newer_available_version = None
+            self.installed_newer_than_latest = False
 
         def check_for_update(self):
             return False
@@ -172,3 +173,40 @@ def test_safe_check_for_updates_reports_source_tree_newer_than_pypi(monkeypatch)
     assert result["status"] == "local-newer-than-pypi"
     assert "Installed distribution matches the latest PyPI release (1.0.0.dev28)." in result["message"]
     assert "Current source tree version 1.0.0-dev.29 is newer than the latest PyPI release 1.0.0.dev28." in result["message"]
+
+
+def test_safe_check_for_updates_uses_installed_newer_than_latest(monkeypatch):
+    class FakePyPiVersionInfo:
+        def __init__(self, package_name, include_pre_release_for_update_check=False):
+            self.package_name = package_name
+            self.include_pre_release_for_update_check = include_pre_release_for_update_check
+            self.latest_pre_release = "1.0.0.dev28"
+            self.latest_stable = "1.0.0.dev27"
+            self.latest = "1.0.0.dev28"
+            self.installed = "1.0.0.dev29"
+            self.newer_available_version = None
+            self.installed_newer_than_latest = True
+
+        def check_for_update(self):
+            return False
+
+    monkeypatch.setattr(
+        support,
+        "get_version_snapshot",
+        lambda: {
+            "package_name": "IS-Matrix-Forge",
+            "display_version": "1.0.0-dev.29",
+            "source_version": "1.0.0-dev.29",
+            "installed_version": "1.0.0.dev29",
+        },
+    )
+    monkeypatch.setattr(support, "_pypi_request_timeout", lambda timeout: contextlib.nullcontext())
+
+    import inspyre_toolbox.ver_man as ver_man
+
+    monkeypatch.setattr(ver_man, "PyPiVersionInfo", FakePyPiVersionInfo)
+
+    result = support.safe_check_for_updates()
+
+    assert result["status"] == "local-newer-than-pypi"
+    assert "Installed distribution version 1.0.0.dev29 is newer than the latest PyPI release 1.0.0.dev28." in result["message"]

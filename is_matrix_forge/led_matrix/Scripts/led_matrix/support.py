@@ -237,12 +237,14 @@ def safe_check_for_updates(*, timeout: float = 3.0) -> dict[str, Optional[str]]:
         messages: list[str] = []
         current_status = "up-to-date"
 
+        installed_newer_than_latest = bool(getattr(info, "installed_newer_than_latest", False))
+
         if installed is None:
             messages.append(
                 f"PyPI latest release: {latest_text} (installed distribution metadata unavailable for comparison)."
             )
             current_status = "unavailable"
-        elif _is_newer_than_pypi(installed, latest_text):
+        elif installed_newer_than_latest or _is_newer_than_pypi(installed, latest_text):
             messages.append(
                 f"Installed distribution version {installed} is newer than the latest PyPI release {latest_text}."
             )
