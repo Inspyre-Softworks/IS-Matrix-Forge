@@ -3,7 +3,7 @@ Author:
     Taylor B.
 
 Project:
-    led-matrix-battery
+    IS-Matrix-Forge
 
 File:
     is_matrix_forge/led_matrix/Scripts/install_presets/main.py

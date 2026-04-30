@@ -1,5 +1,5 @@
 """
-Constants for the LED Matrix Battery Monitor.
+Constants for IS Matrix Forge.
 
 This module defines various constants used throughout the application, including:
 - Serial communication settings (baudrate, response size)
@@ -32,7 +32,7 @@ WIDTH  = 9
 
 # Project URLs
 PROJECT_URLS = {
-    'github_api': 'https://api.github.com/repos/Inspyre-Softworks/led-matrix-battery/contents'
+    'github_api': 'https://api.github.com/repos/Inspyre-Softworks/IS-Matrix-Forge/contents'
 }
 
 GITHUB_REQ_HEADERS = {"Accept": "application/vnd.github.v3+json"}

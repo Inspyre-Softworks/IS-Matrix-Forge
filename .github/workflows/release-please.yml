@@ -17,5 +17,5 @@ jobs:
       - uses: google-github-actions/release-please-action@v4
         with:
           release-type: python
-          package-name: led-matrix-battery
+          package-name: IS-Matrix-Forge
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -30,23 +30,19 @@ matrix, not on ingesting external telemetry streams.
 - **LED matrix commands** such as grids, patterns, text, animations, and
   brightness changes. The controller can record these display events to support
   history and restore operations.【F:is_matrix_forge/led_matrix/controller/components/history/manager.py†L13-L199】
-- **Battery/power state** via `psutil.sensors_battery()` for the built-in power
-  monitor (plugged/unplugged state and battery percentage).【F:is_matrix_forge/monitor/helpers.py†L1-L41】
-- **Local UI events** from the included PySimpleGUI tools (designer/monitor) for
-  controlling what the matrix displays.【F:is_matrix_forge/designer_gui/main_window/__init__.py†L165-L272】【F:is_matrix_forge/monitor/gui/windows/main/__init__.py†L32-L76】
+- **Local UI events** from the included PySimpleGUI tools (designer) for
+  controlling what the matrix displays.【F:is_matrix_forge/designer_gui/main_window/__init__.py†L165-L272】
 
 ## How “Real-Time” Updates Work
 
-The real-time behavior is **local polling and rendering**: the power monitor
-checks the system battery status on a short interval and immediately updates the
-matrix (plus optional alert sounds) when the state changes.【F:is_matrix_forge/monitor/monitor.py†L1-L112】【F:is_matrix_forge/monitor/monitor.py†L291-L343】
+The real-time behavior is **local polling and rendering**: the controller reacts
+to commands and display events, immediately updating the matrix.
 
 ## Scope and Use Cases
 
 Matrix Forge is designed for **device UI, hardware status, and visual
 notifications**, such as:
 - LED matrix dashboards for a workstation or appliance
-- Power/battery status displays
 - Custom animations, text banners, or progress indicators
 
 It is **not** a SOC/observability platform and does **not** ingest or correlate
