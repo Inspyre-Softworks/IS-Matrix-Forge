@@ -1,6 +1,32 @@
-from argparse import ArgumentParser
+from argparse import Action, ArgumentParser
 from is_matrix_forge.log_engine import LOG_LEVELS
 from is_matrix_forge.led_matrix.constants import APP_DIRS
+
+
+def build_version_output(*, check_updates: bool = False) -> str:
+    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import build_version_output as _build_version_output
+
+    return _build_version_output(check_updates=check_updates)
+
+
+class _VersionAction(Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        kwargs.setdefault("nargs", 0)
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(build_version_output(check_updates=False))
+        parser.exit()
+
+
+class _CheckUpdatesAction(Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        kwargs.setdefault("nargs", 0)
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(build_version_output(check_updates=True))
+        parser.exit()
 
 
 class Arguments(ArgumentParser):
@@ -25,6 +51,19 @@ class Arguments(ArgumentParser):
         self.__scroll_until_parser    = None
         self.__set_presets_dir_parser = None
         self.__show_presets_dir_parser = None
+        self.__controller_info_parser = None
+        self.__ticket_info_parser = None
+
+        self.add_argument(
+            "-V", "--version",
+            action=_VersionAction,
+            help="Show the installed/source version information and exit.",
+        )
+        self.add_argument(
+            "--check-updates",
+            action=_CheckUpdatesAction,
+            help="Check PyPI for a newer release and exit.",
+        )
 
         selection_group = self.add_mutually_exclusive_group()
         selection_group.add_argument(
@@ -99,6 +138,14 @@ class Arguments(ArgumentParser):
     def show_presets_dir_parser(self):
         return self.__show_presets_dir_parser
 
+    @property
+    def controller_info_parser(self):
+        return self.__controller_info_parser
+
+    @property
+    def ticket_info_parser(self):
+        return self.__ticket_info_parser
+
     def __build_identify_matrices(self):
         from .commands.identify_matrices import register_command
         self.__identify_parser = register_command(self)
@@ -131,6 +178,14 @@ class Arguments(ArgumentParser):
         from .commands.show_presets_dir import register_command
         self.__show_presets_dir_parser = register_command(self)
 
+    def __build_controller_info(self):
+        from .commands.controller_info import register_command
+        self.__controller_info_parser = register_command(self)
+
+    def __build_ticket_info(self):
+        from .commands.ticket_info import register_command
+        self.__ticket_info_parser = register_command(self)
+
     def __build(self):
         self.__building = True
 
@@ -142,6 +197,8 @@ class Arguments(ArgumentParser):
         self.__build_scroll_until()
         self.__build_set_presets_dir()
         self.__build_show_presets_dir()
+        self.__build_controller_info()
+        self.__build_ticket_info()
 
         self.__building = False
         self.__built    = True

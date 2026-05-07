@@ -6,6 +6,9 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report a bug! Please fill out the fields below so we can reproduce and fix the issue.
+        
+        If you can run the CLI, please attach the output of `led-matrix ticket-info`
+        or paste the Markdown version from `led-matrix ticket-info --copy --copy-format markdown`.
 
   - type: textarea
     id: description
