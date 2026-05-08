@@ -1,11 +1,11 @@
 # IS Matrix Forge - User Manual
 
 ## Table of Contents
-1. Introduction
-2. Hardware Setup
-3. Software Installation
-4. Using the Features
-5. Troubleshooting
+1. [Introduction](#introduction)
+2. [Hardware Setup](#hardware-setup)
+3. [Software Installation](#software-installation)
+4. [Using the Features](#using-the-features)
+5. [Troubleshooting](#troubleshooting)
 
 ## Introduction
 
