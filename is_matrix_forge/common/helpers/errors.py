@@ -20,4 +20,3 @@ def catch_and_notify(
         log_level,
         f'Operation "{operation}" failed with exception: {exception}'
     )
-)
