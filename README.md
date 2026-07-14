@@ -165,7 +165,7 @@ Use `Animation.seek(index)` when you want to jump to an absolute frame index.
   and the fallback stub supports it.
 
 MRO diagram (left → right, init order)
-`DeviceBase → KeepAliveManager → AnimationManager → DrawingManager → BrightnessManager → BreatherManager → IdentifyManager → Loggable`
+`DeviceBase → DisplayHistoryManager → KeepAliveManager → GameManager → AnimationManager → DrawingManager → BrightnessManager → BreatherManager → IdentifyManager → Loggable`
 
 ### Progress Bars
 

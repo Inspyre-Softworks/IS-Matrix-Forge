@@ -16,13 +16,15 @@ The `LEDMatrixController` is the central component that integrates all functiona
 ### Controller Initialization Order
 
 1. `DeviceBase` - Provides core device access
-2. `KeepAliveManager` - Maintains connection with the hardware
-3. `AnimationManager` - Handles animations and sequences
-4. `DrawingManager` - Manages grid drawing and patterns
-5. `BrightnessManager` - Controls LED brightness
-6. `BreatherManager` - Manages breathing effects and pauses
-7. `IdentifyManager` - Handles device identification
-8. `Loggable` - Provides logging capabilities
+2. `DisplayHistoryManager` - Records display events for history and restore operations
+3. `KeepAliveManager` - Maintains connection with the hardware
+4. `GameManager` - Manages game state on the matrix
+5. `AnimationManager` - Handles animations and sequences
+6. `DrawingManager` - Manages grid drawing and patterns
+7. `BrightnessManager` - Controls LED brightness
+8. `BreatherManager` - Manages breathing effects and pauses
+9. `IdentifyManager` - Handles device identification
+10. `Loggable` - Provides logging capabilities
 
 ## Component Managers
 
@@ -34,11 +36,22 @@ Each manager is responsible for a specific aspect of LED matrix functionality:
 - Provides low-level device access for other components
 - Handles device initialization and basic communication
 
+### DisplayHistoryManager
+
+- Records display events (grids, patterns, text, animations)
+- Supports history and restore operations for the display state
+
 ### KeepAliveManager
 
 - Prevents device timeouts by sending periodic signals
 - Manages connection health and reconnection strategies
 - Ensures reliable communication with the hardware
+
+### GameManager
+
+- Tracks game state running on the matrix
+- Initialized early so synchronized methods can inspect game state before
+  other managers act on the display
 
 ### AnimationManager
 
