@@ -18,9 +18,6 @@ class BuiltInPatterns:
         from serial.tools.list_ports_common import ListPortInfo
         from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
-        if dev is None:
-            from is_matrix_forge.led_matrix.controller.helpers import get_controllers
-
         if not isinstance(dev, ListPortInfo) and not isinstance(dev, LEDMatrixController):
             raise TypeError(f'dev must be of type `ListPortInfo` or `LEDMatrixController`, not {type(dev)}')
         elif isinstance(dev, LEDMatrixController):

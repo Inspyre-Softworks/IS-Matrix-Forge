@@ -1,4 +1,3 @@
-import types
 
 import pytest
 
@@ -60,7 +59,7 @@ def test_controller_init_order(monkeypatch):
         serial_number = 'SN123'
 
     # Avoid hardware side-effects during init
-    ctrl = LEDMatrixController(
+    LEDMatrixController(
         Dev(),
         thread_safe=False,
         skip_all_init_animations=True,

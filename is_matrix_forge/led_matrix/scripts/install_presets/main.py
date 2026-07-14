@@ -48,11 +48,11 @@ import requests
 import hashlib
 from is_matrix_forge.progress import tqdm
 
-from is_matrix_forge.led_matrix.constants import PROJECT_URLS, APP_DIRS, GITHUB_REQ_HEADERS as REQ_HEADERS
+from is_matrix_forge.led_matrix.constants import APP_DIRS, GITHUB_REQ_HEADERS as REQ_HEADERS
 from is_matrix_forge.led_matrix.display.grid.presets.manifest import GridPresetManifest
 from inspy_logger import InspyLogger, Loggable
 from inspyre_toolbox.path_man import provision_path
-from is_matrix_forge.common.helpers.github_api import assemble_github_content_path_url as assemble_url, REPO_PRESETS_URL
+from is_matrix_forge.common.helpers.github_api import REPO_PRESETS_URL
 
 LOGGER = InspyLogger('IS-Matrix-Forge:PresetInstaller', console_level='info', no_file_logging=True)
 

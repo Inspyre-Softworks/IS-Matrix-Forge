@@ -15,8 +15,10 @@ Description:
     $DESCRIPTION
 
 """
-from typing import List
+from typing import TYPE_CHECKING, List
 
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 
 class TextScroller:

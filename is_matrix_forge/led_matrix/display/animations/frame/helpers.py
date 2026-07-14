@@ -1,4 +1,4 @@
-from typing import Any, List, Union
+from typing import TYPE_CHECKING, Any, List, Union
 from pathlib import Path
 import time
 from threading import Event
@@ -6,6 +6,9 @@ from threading import Event
 from inspyre_toolbox.path_man import provision_path
 
 from is_matrix_forge.led_matrix.display.grid.helpers import is_valid_grid
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 
 def check_path(path: Union[str, Path], skip_exists_check: bool = False) -> Path:
@@ -18,8 +21,6 @@ def check_path(path: Union[str, Path], skip_exists_check: bool = False) -> Path:
 
 
 def load_frames_from_file(path: Union[str, Path]) -> List['Frame']:
-    from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
-    from is_matrix_forge.led_matrix.helpers import get_json_from_file
 
     path = provision_path(path)
 

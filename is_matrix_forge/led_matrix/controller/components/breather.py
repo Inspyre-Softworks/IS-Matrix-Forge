@@ -12,7 +12,7 @@ class _BreatherPauseCtx:
     Safely avoids self-join if invoked from the breather thread, and restores
     prior breathing state on exit.
     """
-    def __init__(self, controller: 'BreatherMixin'):
+    def __init__(self, controller: 'BreatherManager'):
         self.controller = controller
         self._was_breathing = False
 

@@ -1,9 +1,8 @@
 import json
-from typing import List, Tuple, Any, Dict
+from typing import List, Tuple, Any
 import PySimpleGUI as sg
 import copy
 import os
-import json
 
 from is_matrix_forge.led_matrix.helpers.device import DEVICES
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
@@ -11,6 +10,9 @@ from is_matrix_forge.led_matrix.display.grid.helpers import is_valid_grid
 from is_matrix_forge.led_matrix.display.animations.frame.helpers import is_valid_frames
 from is_matrix_forge.designer_gui.main_window.layout import PixelGridLayout
 from is_matrix_forge.led_matrix.display.helpers import render_matrix
+from is_matrix_forge.log_engine import ROOT_LOGGER
+
+MOD_LOGGER = ROOT_LOGGER.get_child('designer_gui.main_window')
 
 
 sg.theme('DarkTeal2')
@@ -175,7 +177,7 @@ class PixelGrid:
     def _toggle_pixel(self, key: Tuple[int, int]) -> None:
         col, row = key
         new = 1 - self.grid[col][row]
-        print(f'Pixel {col},{row} toggled from {self.grid[col][row]} to {new}')
+        MOD_LOGGER.debug(f'Pixel {col},{row} toggled from {self.grid[col][row]} to {new}')
         self.grid = [[new if (c==col and r==row) else self.grid[c][r]
                       for r in range(self.height)]
                      for c in range(self.width)]
@@ -276,7 +278,8 @@ class PixelGrid:
                 [sg.Checkbox('Always choose', key='REM')],
                 [sg.OK(), sg.Cancel()]
             ], modal=True)
-            ev, vals = win.read(); win.close()
+            ev, vals = win.read()
+            win.close()
             if ev != 'OK' or not vals['DEV']:
                 return
             dev = devices[descs.index(vals['DEV'][0])]

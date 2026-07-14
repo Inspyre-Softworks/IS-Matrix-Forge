@@ -1,6 +1,5 @@
-from typing import Optional, List, Union
+from typing import Optional
 
-from is_matrix_forge.led_matrix.display.grid import Grid
 from .base import CompositeGrid
 from .helpers import load_grid, transpose
 from is_matrix_forge.led_matrix.display.grid.composite import BackgroundGrid, ForegroundGrid
@@ -66,8 +65,7 @@ class PercentDisplayScene(Loggable):
 
         self.class_logger.debug('PercentDisplayScene initialized')
 
-        print(self.percent)
-        print(self.controller)
+        self.class_logger.debug(f'percent={self.percent}, controller={self.controller}')
 
         if not self.provisioned:
             self.class_logger.error('Error provisioning PercentDisplayScene')
@@ -270,8 +268,7 @@ class PercentDisplayScene(Loggable):
         if self.composite == self.__last_scene:
             return
 
-        print(self.__last_scene)
-
+        self.class_logger.debug(f'Last scene: {self.__last_scene}')
 
         self.composite.draw(self.controller)
 

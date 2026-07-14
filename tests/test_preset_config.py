@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -425,7 +424,6 @@ class TestRunInstaller:
     def test_installer_receives_configured_presets_dir(self, tmp_path, monkeypatch):
         """When config has a custom presets_dir, _run_installer must create an
         installer that targets that exact directory, not app_dir / 'presets'."""
-        from is_matrix_forge.common.preset_config import _run_installer
 
         custom_dir = tmp_path / 'my custom presets'
 

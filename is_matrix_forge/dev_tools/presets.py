@@ -15,9 +15,6 @@ Description:
     
 
 """
-from pathlib import Path
-from typing import Union, Optional
-from is_matrix_forge.common.dirs import PRESETS_DIR
 from is_matrix_forge.led_matrix.constants import PROJECT_URLS
 import requests
 

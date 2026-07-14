@@ -1,7 +1,10 @@
 from __future__ import annotations
-from typing import Optional, Literal
+from typing import TYPE_CHECKING, Optional
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from aliaser import alias, Aliases
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.display.grid.base import Grid
 
 
 class DrawingManager(Aliases):

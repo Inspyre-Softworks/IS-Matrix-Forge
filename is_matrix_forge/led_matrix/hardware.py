@@ -14,7 +14,7 @@ from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.display.patterns.built_in.stencils.res import PatternVals
 
 from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC, WIDTH, HEIGHT
-from is_matrix_forge.led_matrix.helpers import disconnect_dev, DISCONNECTED_DEVS
+from is_matrix_forge.led_matrix.helpers import disconnect_dev
 
 from is_matrix_forge.log_engine import ROOT_LOGGER
 
@@ -63,20 +63,6 @@ class GameControlVal(IntEnum):
     Left  = 2
     Right = 3
     Quit  = 4
-
-
-def disconnect_dev(dev):
-    """
-    Disconnect the device from the system.
-
-    Parameters:
-        dev (str):
-            The device to disconnect.
-    """
-    global DISCONNECTED_DEVS
-    if dev in DISCONNECTED_DEVS:
-        return
-    DISCONNECTED_DEVS.append(dev)
 
 
 def bootloader_jump(dev):
@@ -229,9 +215,10 @@ def send_serial(
         raise ValueError("Command must be bytes, bytearray, or list of ints")
 
     if print_debug:
-        print(f"[send_serial] Integer bytes: {list(cmd_bytes)}")
-        print(f"[send_serial] Hex bytes:    {[f'0x{b:02X}' for b in cmd_bytes]}")
-        print(f"[send_serial] Raw bytes:    {cmd_bytes!r}")
+        log = MOD_LOGGER.get_child('send_serial')
+        log.debug(f'Integer bytes: {list(cmd_bytes)}')
+        log.debug(f"Hex bytes:    {[f'0x{b:02X}' for b in cmd_bytes]}")
+        log.debug(f'Raw bytes:    {cmd_bytes!r}')
 
     try:
         with serial.Serial(str(controller.device), baud) as ser:

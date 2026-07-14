@@ -8,7 +8,6 @@ from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.hardware import send_command
 from is_matrix_forge.led_matrix.display.text import show_string as _show_string_raw
-from is_matrix_forge.log_engine import ROOT_LOGGER
 
 
 COMMANDS = CommandVals

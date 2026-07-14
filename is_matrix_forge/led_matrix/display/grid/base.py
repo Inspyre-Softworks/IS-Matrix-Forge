@@ -19,12 +19,9 @@ Description:
 
 import itertools
 from pathlib import Path
-from typing import List, Optional, Union, ClassVar, Type, Any, Dict  # Added Any, Dict
-from ...constants import WIDTH as __WIDTH, HEIGHT as __HEIGHT, PRESETS_DIR
+from typing import List, Optional, Union, Any  # Added Any, Dict
 from .helpers import is_valid_grid, generate_blank_grid
 from ...helpers import load_from_file as _helpers_load_from_file
-from is_matrix_forge.common.helpers import coerce_to_int
-from aliaser import alias, Aliases
 
 
 MATRIX_HEIGHT = 34

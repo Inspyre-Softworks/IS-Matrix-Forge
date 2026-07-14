@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Author:
     Inspyre Softworks (Tay-Tay)
@@ -51,6 +49,8 @@ Example Usage:
                   keepalive_sec=20.0):
         do_work()
 """
+
+from __future__ import annotations
 
 import itertools
 import threading

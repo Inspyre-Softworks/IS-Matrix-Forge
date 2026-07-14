@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Deque, Literal, Optional
+from typing import Any, Literal, Optional
+
+DisplayEventKind = Literal[
+    'grid', 'text', 'pattern', 'percentage', 'animation', 'clear', 'restore', 'brightness'
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,9 +20,9 @@ class DisplayEvent:
         grid: Optional snapshot of the grid (list of lists) if available.
     """
     ts: float
-    kind: Literal['grid', 'text', 'pattern', 'percentage', 'animation', 'clear', 'restore', 'brightness']
+    kind: DisplayEventKind
     meta: dict[str, Any]
     grid: Optional[list[list[int]]] = None
 
 
-__all__ = ['DisplayEvent']
+__all__ = ['DisplayEvent', 'DisplayEventKind']

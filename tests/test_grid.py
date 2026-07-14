@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock
 
-from is_matrix_forge.led_matrix.display.grid.base import Grid, MATRIX_WIDTH, MATRIX_HEIGHT
+from is_matrix_forge.led_matrix.display.grid.base import Grid
 from is_matrix_forge.assets.font_map.base import FontMap
 
 # Mocks for helpers/constants

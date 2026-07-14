@@ -9,7 +9,7 @@ This module defines various constants used throughout the application, including
 - Physical slot mapping for device locations
 - Project URLs for external resources
 """
-from is_matrix_forge.common.dirs import PRESETS_DIR
+from is_matrix_forge.common.dirs import APP_DIRS, PRESETS_DIR
 
 
 # Hardware identifiers
@@ -51,8 +51,9 @@ try:
     from cv2 import COLOR_BGR2GRAY, COLOR_RGB2GRAY
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     COLOR_BGR2GRAY = COLOR_RGB2GRAY = 0
-from is_matrix_forge.common.dirs import APP_DIRS
-from is_matrix_forge.dev_tools.presets import MANIFEST_FILE_NAME
+# Imported here (not at the top) because dev_tools.presets imports
+# PROJECT_URLS from this module; by this point it is already defined.
+from is_matrix_forge.dev_tools.presets import MANIFEST_FILE_NAME  # noqa: E402
 
 MANIFEST_FILE_PATH = PRESETS_DIR.joinpath(MANIFEST_FILE_NAME)
 
@@ -69,7 +70,7 @@ del COLOR_BGR2GRAY, COLOR_RGB2GRAY
 __all__ = [
     'APP_DIRS',
     'DEFAULT_BAUDRATE',
-    'DEVICES',
+    'DEVICES',  # noqa: F822 -- provided lazily by __getattr__ below
     'DISCONNECTED_DEVS',
     'FWK_MAGIC',
     'GITHUB_REQ_HEADERS',

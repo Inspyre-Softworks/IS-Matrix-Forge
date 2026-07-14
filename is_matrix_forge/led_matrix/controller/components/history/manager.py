@@ -4,7 +4,7 @@ from collections import deque
 from time import time
 from typing import Any, Deque, Optional
 
-from .event import DisplayEvent
+from .event import DisplayEvent, DisplayEventKind
 
 
 class DisplayHistoryManager:
@@ -75,7 +75,7 @@ class DisplayHistoryManager:
 
     def _record_event(
             self,
-            kind: DisplayEvent.__annotations__['kind'],
+            kind: DisplayEventKind,
             *,
             meta: Optional[dict[str, Any]] = None,
             grid: Optional[list[list[int]]] = None,

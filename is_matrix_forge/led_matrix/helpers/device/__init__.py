@@ -5,10 +5,15 @@ This module provides utility functions for working with LED matrix devices,
 including functions to convert between different device location formats.
 """
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from serial import Serial, SerialException
 from serial.tools import list_ports
 from is_matrix_forge.log_engine import ROOT_LOGGER
 from is_matrix_forge.led_matrix.constants import VID as EXPECTED_VID, PID as EXPECTED_PID
+
+if TYPE_CHECKING:
+    from serial.tools.list_ports_common import ListPortInfo
 
 
 MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.helpers.device')

@@ -7,9 +7,7 @@ previously returned user_data_path instead of user_data_path / filename).
 
 from __future__ import annotations
 
-from pathlib import Path
 
-import pytest
 
 
 # ---------------------------------------------------------------------------

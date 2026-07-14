@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, List
+from typing import List
 
 try:
     from inspyre_toolbox.chrono import sleep as ist_sleep
@@ -10,7 +10,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback when dependency missi
 from serial.tools.list_ports_common import ListPortInfo
 
 from is_matrix_forge.common.helpers import coerce_to_int
-from is_matrix_forge.led_matrix.helpers.device import get_devices
 from is_matrix_forge.led_matrix.constants import HEIGHT, WIDTH
 from is_matrix_forge.led_matrix.display.helpers import render_matrix
 from is_matrix_forge.led_matrix.errors import MalformedGridError

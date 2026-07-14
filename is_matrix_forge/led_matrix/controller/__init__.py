@@ -15,3 +15,12 @@ from .helpers.threading import synchronized
 
 def generate_blank_grid(width: Optional[int] = None, height: Optional[int] = None) -> Grid:
     return Grid.load_blank_grid(width=width or WIDTH, height=height or HEIGHT)
+
+
+__all__ = [
+    'LEDMatrixController',
+    'MultitonMeta',
+    'generate_blank_grid',
+    'get_controllers',
+    'synchronized',
+]

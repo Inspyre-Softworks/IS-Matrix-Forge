@@ -19,6 +19,8 @@ elif platform.system() in ['Linux', 'Darwin']:
 else:
     raise UnsupportedOSError()
 
+__all__ = ['RP2BootloaderMixin', 'UnsupportedOSError', 'find_bootloader_drive']
+
 
 class RP2BootloaderMixin:
     BOOTLOADER_LABEL = "RPI-RP2"

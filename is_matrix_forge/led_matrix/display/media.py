@@ -7,14 +7,16 @@ It includes functions for rendering images, playing videos, and capturing from a
 
 import serial
 import time
-import cv2
 from PIL import Image
 
 from ..constants import WIDTH, HEIGHT
-from ..hardware import send_serial, send_command
+from ..hardware import send_command
 from ..commands.map import CommandVals
 from .helpers.columns import send_col, commit_cols
 from is_matrix_forge.led_matrix.helpers.status_handler import get_status, set_status
+from is_matrix_forge.log_engine import ROOT_LOGGER
+
+MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.display.media')
 
 
 def image(dev, image_file):
@@ -117,7 +119,7 @@ def camera(dev):
         while get_status() == 'camera':
             ret, frame = capture.read()
             if not ret:
-                print("Failed to capture video frames")
+                MOD_LOGGER.warning('Failed to capture video frames')
                 break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -159,7 +161,7 @@ def video(dev, video_file):
         while get_status() == 'video':
             ret, frame = capture.read()
             if not ret:
-                print("Failed to read video frames")
+                MOD_LOGGER.warning('Failed to read video frames')
                 break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)

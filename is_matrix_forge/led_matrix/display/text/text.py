@@ -22,13 +22,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Iterable, List, Mapping, Optional, Sequence, Union
 
 from aliaser import alias, Aliases
 
 # Project imports
 from is_matrix_forge.led_matrix.display.helpers import render_matrix
-from is_matrix_forge.led_matrix.display.grid import Grid
 from is_matrix_forge.led_matrix.display.grid.helpers import generate_blank_grid
 
 # Font infra (your existing classes)

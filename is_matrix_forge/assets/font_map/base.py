@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Iterator
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Optional, Tuple, Callable
+from typing import Any, Dict, Iterable, Optional, Callable
 
 from inspyre_toolbox.syntactic_sweets.classes import validate_type
 from is_matrix_forge.assets.font_map.models.glyph import Glyph

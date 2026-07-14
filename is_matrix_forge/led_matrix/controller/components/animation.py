@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from aliaser import Aliases, alias
 from is_matrix_forge.assets.font_map.base import FontMap
@@ -94,6 +94,7 @@ class AnimationManager(Aliases):
 
     @synchronized
     def get_hw_is_animating(self):
+        from is_matrix_forge.led_matrix.hardware import get_animate
         return get_animate(self.device)
 
     # --- Animation playback --------------------------------------------------------

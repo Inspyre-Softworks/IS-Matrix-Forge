@@ -23,7 +23,10 @@ from threading import Thread
 
 import json
 from pathlib import Path
-from typing import Union, Optional, List, Any, ByteString
+from typing import TYPE_CHECKING, Union, Optional, List, Any, ByteString
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 
 
 DISCONNECTED_DEVS = []

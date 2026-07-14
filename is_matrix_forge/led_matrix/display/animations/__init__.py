@@ -1,9 +1,12 @@
 from time import sleep
 
 from is_matrix_forge.led_matrix.hardware import brightness
+from is_matrix_forge.log_engine import ROOT_LOGGER
 from .animation import Animation
 from .frame import Frame
 from .audio_visualizer import AudioVisualizer
+
+MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.display.animations')
 
 
 def clear(dev):
@@ -32,13 +35,15 @@ def checkerboard_cycle(dev):
 
     while frame < 5:
         brightness(dev, 25)
-        print(f'Processing frame: {frame}')
+        MOD_LOGGER.debug(f'Processing frame: {frame}')
         sleep(1)
         checkerboard(dev, frame)
         frame += 1
 
 
 def goodbye_animation(dev):
+    from is_matrix_forge.led_matrix.display.text import show_string
+
     clear(dev)
     sleep(.1)
     checkerboard_cycle(dev)
@@ -47,7 +52,9 @@ def goodbye_animation(dev):
 
 
 __all__ = [
+    'Animation',
     'AudioVisualizer',
+    'Frame',
     'clear',
     'checkerboard_cycle',
     'flash_matrix',

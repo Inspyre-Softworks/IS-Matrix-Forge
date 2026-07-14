@@ -40,13 +40,13 @@ def _install_test_stubs() -> None:
 
 _install_test_stubs()
 
-from is_matrix_forge.led_matrix.scripts.led_matrix import (
+from is_matrix_forge.led_matrix.scripts.led_matrix import (  # noqa: E402 -- must come after _install_test_stubs()
     find_leftmost_matrix,
     find_rightmost_matrix,
     _filter_controllers_by_side,
     _order_controllers_for_span,
 )
-from is_matrix_forge.led_matrix.constants import SLOT_MAP
+from is_matrix_forge.led_matrix.constants import SLOT_MAP  # noqa: E402 -- must come after _install_test_stubs()
 
 
 @dataclass(frozen=True)

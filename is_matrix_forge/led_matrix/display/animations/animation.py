@@ -1,7 +1,6 @@
-import logging
 import threading
 from threading import Event
-from typing import List, Dict, Optional, Union, Any
+from typing import TYPE_CHECKING, List, Dict, Optional, Union, Any
 from time import sleep  # Potentially used by Frame.play()
 import time
 from pathlib import Path
@@ -12,6 +11,9 @@ from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
 from is_matrix_forge.led_matrix.display.animations.frame.base import Frame
 from is_matrix_forge.led_matrix.helpers import get_json_from_file
 from is_matrix_forge.led_matrix.display.animations.errors import AnimationFinishedError
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
 
 LOGGER = ROOT_LOGGER.get_child('led_matrix.display.animations.animation')
@@ -604,7 +606,6 @@ class Animation(Loggable):
 
     def _paused_display_loop(self):
         """Keeps redrawing the current frame while paused. Adds breathing effect if enabled."""
-        breath_phase = 0.0
         while not self.__pause_event.is_set():
             current_frame = self.__frames[self.cursor]
             for device in self.devices:

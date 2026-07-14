@@ -1,6 +1,4 @@
 from argparse import Action, ArgumentParser
-from is_matrix_forge.log_engine import LOG_LEVELS
-from is_matrix_forge.led_matrix.constants import APP_DIRS
 
 
 def build_version_output(*, check_updates: bool = False) -> str:
@@ -35,8 +33,8 @@ class Arguments(ArgumentParser):
         description = kwargs.pop('description', 'Use the Framework LED matrices from the command-line.')
 
         super().__init__(
-            'led-matrix',
-            description='Use the Framework LED matrices from the command-line.',
+            prog,
+            description=description,
             *args,
             **kwargs
         )

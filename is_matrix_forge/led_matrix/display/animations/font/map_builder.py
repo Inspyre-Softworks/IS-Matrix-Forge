@@ -97,7 +97,7 @@ class FontMapBuilder:
             text_w, text_h = right - left, bottom - top
             x  = (width - text_w) // 2 - left
             y = (height - text_h) // 2 - top
-        except AttributeError as e:
+        except AttributeError:
             # Maintain compatibility with pre 8.0.0 Pillow
             text_w, text_h = self._font.getsize(ch)
             x = (width - text_w) // 2

@@ -1,11 +1,13 @@
 from __future__ import annotations
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Type, Optional
-
-
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, List, Type, Optional
+
+
 import inspect
 from is_matrix_forge.led_matrix.helpers.location import resolve_controller_location
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
 def get_controllers(
     threaded: bool = False,

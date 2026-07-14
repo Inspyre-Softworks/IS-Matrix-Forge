@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Mapping, MutableMapping, Sequence, Tuple
+from typing import Dict, Mapping, MutableMapping, Sequence
 
 from .models.glyph import Glyph
 from .base import FontMap

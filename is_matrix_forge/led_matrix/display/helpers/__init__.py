@@ -28,7 +28,6 @@ def keep_image(
     base_brightness = controller.brightness
     t = 0.0
     period = 1.0  # one full sine cycle = 1 second
-    step = 1.0 / breathe_fps
 
     while controller.keep_image:
         if breathe:
@@ -87,9 +86,9 @@ def render_matrix(dev, matrix):
     # 39 bytes = 312 bits, which is enough for 9x34 = 306 pixels
     vals = [0x00 for _ in range(39)]
 
-    # Determine provided matrix dimensions (column-major)
+    # Determine provided matrix width (column-major; per-column bounds are
+    # checked in the loop below)
     width = len(matrix)
-    height = len(matrix[0]) if width and isinstance(matrix[0], list) else 0
 
     # Iterate through each position in the 9x34 matrix
     for x in range(9):
@@ -119,10 +118,24 @@ def render_matrix(dev, matrix):
     send_command(dev, CommandVals.Draw, vals)
 
 
-from is_matrix_forge.led_matrix.hardware import (
+# Imported at the bottom to avoid an import cycle with the hardware module.
+# These names are re-exported for backward compatibility.
+from is_matrix_forge.led_matrix.hardware import (  # noqa: E402
     brightness,
     get_brightness,
     animate,
     get_animate,
     percentage, send_command,
 )
+
+__all__ = [
+    'animate',
+    'brightness',
+    'get_animate',
+    'get_brightness',
+    'keep_image',
+    'light_leds',
+    'percentage',
+    'render_matrix',
+    'send_command',
+]

@@ -13,7 +13,6 @@ Description:
     installer.
 """
 from argparse import ArgumentParser
-from is_matrix_forge.log_engine import LOG_LEVELS
 from is_matrix_forge.led_matrix.constants import APP_DIRS
 from is_matrix_forge.common.helpers.github_api import REPO_PRESETS_URL
 

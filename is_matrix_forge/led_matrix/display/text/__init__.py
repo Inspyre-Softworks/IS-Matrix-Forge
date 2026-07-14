@@ -1,4 +1,3 @@
-from .scroller import TextScroller
 """
 Text and symbol rendering module for LED Matrix.
 
@@ -6,10 +5,13 @@ This module provides functions for displaying text and symbols on the LED matrix
 It includes functions for rendering strings, fonts, and special symbols.
 """
 
+from .scroller import TextScroller
 from ..assets import fonts as font
 from ...hardware import send_command
 from ...commands.map import CommandVals
 from aliaser import alias
+
+__all__ = ['TextScroller', 'show_font', 'show_string', 'show_symbols']
 
 
 @alias('show_text')

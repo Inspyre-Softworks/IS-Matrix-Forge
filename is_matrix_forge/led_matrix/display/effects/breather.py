@@ -1,8 +1,12 @@
 import threading
 import time
-import contextlib
+from typing import TYPE_CHECKING
+
 from is_matrix_forge.common.decorators.freeze_setter import freeze_setter
 from is_matrix_forge.log_engine import ROOT_LOGGER, Loggable
+
+if TYPE_CHECKING:
+    from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
 
 
 MOD_LOGGER = ROOT_LOGGER.get_child(__name__)

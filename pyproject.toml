@@ -31,6 +31,7 @@ pysimplegui-4-foss = "==4.60.4.1"
 requests = "^2.32.4"
 aliaser = "^1.0.0.dev4"
 platformdirs = "^4.5.0"
+psutil = ">=6.0.0,<7.0.0"
 tqdm = "^4.66"
 pillow = "^12.0.0"
 rich = ">=13.9.4,<15"
@@ -60,6 +61,10 @@ format = "sdist"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
