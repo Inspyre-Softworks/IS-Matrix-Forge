@@ -1,6 +1,6 @@
 from __future__ import annotations
 from threading import Thread
-from is_matrix_forge.common.logging.log_exceptions import log_on_exception
+from is_matrix_forge.log_engine import log_on_exception
 
 
 class SafeOps:

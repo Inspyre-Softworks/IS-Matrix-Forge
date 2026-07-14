@@ -77,7 +77,7 @@ def parse_args(args: Optional[list[str]] = None) -> argparse.Namespace:
 def _load_identify_command() -> Callable[[argparse.Namespace], None]:
     """Import the shared identify command without creating circular imports."""
 
-    from is_matrix_forge.led_matrix.Scripts.led_matrix import identify_matrices_command
+    from is_matrix_forge.led_matrix.scripts.led_matrix import identify_matrices_command
 
     return identify_matrices_command
 

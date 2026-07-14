@@ -33,6 +33,55 @@ except ModuleNotFoundError:  # pragma: no cover - simplified logging
 
 
 
+def _norm_level(level) -> int:
+    import logging
+
+    if isinstance(level, int):
+        return level
+    if isinstance(level, str):
+        return getattr(logging, level.upper(), logging.DEBUG)
+    return logging.DEBUG
+
+
+def log_on_exception(
+    *,
+    level='debug',
+    reraise: bool = False,
+    logger_attr: str = 'LOGGER',
+    fallback_logger=None,
+    msg=None,
+):
+    """
+    Decorator: log exceptions at `level` with exc_info=True, optionally re-raise.
+
+    - If bound method, uses `self.LOGGER` or `cls.LOGGER` (name configurable via `logger_attr`).
+    - Otherwise uses `fallback_logger` (defaults to a child of ROOT_LOGGER).
+    """
+    import logging
+    from functools import wraps
+
+    lvl = _norm_level(level)
+
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Exception as e:  # intentionally broad: we're *logging* and (optionally) swallowing
+                bound_logger = fallback_logger or ROOT_LOGGER.get_child('log_on_exception')
+                if args:
+                    candidate = getattr(args[0], logger_attr, None)
+                    if isinstance(candidate, logging.Logger):
+                        bound_logger = candidate
+
+                text = msg or f'Exception in {fn.__qualname__}: {e!r}'
+                bound_logger.log(lvl, text, exc_info=True)
+                if reraise:
+                    raise
+        return wrapper
+    return deco
+
+
 __all__ = [
     'AUTHOR',
     'INSPY_LOG_LEVEL',
@@ -40,5 +89,6 @@ __all__ = [
     'LOG_LEVELS',
     'PROGNAME',
     'ROOT_LOGGER',
+    'log_on_exception',
 ]
 

@@ -64,7 +64,7 @@ def _install_test_stubs() -> None:
 
 _install_test_stubs()
 
-from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments  # noqa: E402
+from is_matrix_forge.led_matrix.scripts.led_matrix.arguments import Arguments  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +248,7 @@ class TestDisplayTextArgs:
 
 class TestIdentifyMatricesArgs:
     def test_default_cycle_count(self):
-        from is_matrix_forge.led_matrix.Scripts.identify_matrices import DEFAULT_CYCLES
+        from is_matrix_forge.led_matrix.scripts.identify_matrices import DEFAULT_CYCLES
         ns = _parse(['identify-matrices'])
         assert ns.cycle_count == DEFAULT_CYCLES
 
@@ -313,7 +313,7 @@ class TestTicketInfoArgs:
 class TestVersionFlags:
     def test_version_flag_prints_and_exits(self, monkeypatch, capsys):
         monkeypatch.setattr(
-            'is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.build_version_output',
+            'is_matrix_forge.led_matrix.scripts.led_matrix.arguments.build_version_output',
             lambda check_updates=False: 'version-output',
         )
 
@@ -326,7 +326,7 @@ class TestVersionFlags:
 
     def test_check_updates_flag_prints_and_exits(self, monkeypatch, capsys):
         monkeypatch.setattr(
-            'is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.build_version_output',
+            'is_matrix_forge.led_matrix.scripts.led_matrix.arguments.build_version_output',
             lambda check_updates=False: 'update-output' if check_updates else 'version-output',
         )
 

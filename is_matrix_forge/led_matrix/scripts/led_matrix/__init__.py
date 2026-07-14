@@ -4,8 +4,8 @@ import threading
 import time
 from collections.abc import Callable
 
-from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments import Arguments
-from is_matrix_forge.led_matrix.Scripts.led_matrix.guards import run_with_guard
+from is_matrix_forge.led_matrix.scripts.led_matrix.arguments import Arguments
+from is_matrix_forge.led_matrix.scripts.led_matrix.guards import run_with_guard
 from is_matrix_forge.led_matrix.helpers.location import resolve_controller_location
 
 ARGUMENTS = Arguments()
@@ -441,7 +441,7 @@ def bootloader_command(cli_args):
         cli_args: argparse.Namespace
             The parsed arguments for the ``bootloader`` sub-command.
     """
-    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import get_selected_devices
+    from is_matrix_forge.led_matrix.scripts.led_matrix.support import get_selected_devices
     from is_matrix_forge.led_matrix.console import info
     from is_matrix_forge.led_matrix.hardware import bootloader_jump
 
@@ -454,7 +454,7 @@ def bootloader_command(cli_args):
 
 def controller_info_command(cli_args):
     """Print detailed controller/device information for debugging."""
-    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import (
+    from is_matrix_forge.led_matrix.scripts.led_matrix.support import (
         build_controller_info_report,
         get_selected_devices,
     )
@@ -470,7 +470,7 @@ def controller_info_command(cli_args):
 
 def ticket_info_command(cli_args):
     """Generate a support-friendly report for issue filing."""
-    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import (
+    from is_matrix_forge.led_matrix.scripts.led_matrix.support import (
         build_ticket_info_report,
         copy_text_to_clipboard,
     )
@@ -513,7 +513,7 @@ def install_presets_command(cli_args):
         cli_args: argparse.Namespace
             The parsed arguments for the ``install-presets`` sub-command.
     """
-    from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
+    from is_matrix_forge.led_matrix.scripts.install_presets.main import PresetInstaller
     from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS as REQ_HEADERS
     from is_matrix_forge.common.preset_config import get_preset_config
     from pathlib import Path

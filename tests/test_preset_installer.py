@@ -91,7 +91,7 @@ def PresetInstaller(monkeypatch, tmp_path):
     import inspyre_toolbox.path_man as _ptm
     monkeypatch.setattr(_ptm, 'provision_path', lambda p: Path(p))
 
-    from is_matrix_forge.led_matrix.Scripts.install_presets.main import (
+    from is_matrix_forge.led_matrix.scripts.install_presets.main import (
         PresetInstaller as _PI,
     )
     return _PI

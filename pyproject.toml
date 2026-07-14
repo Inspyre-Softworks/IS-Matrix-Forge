@@ -46,8 +46,8 @@ ipyboost = { version = "1.0.0.a3", source = "testpypi" }
 pytest = "^8.4.1"
 
 [tool.poetry.scripts]
-led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
-pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
+led-matrix = "is_matrix_forge.led_matrix.scripts.led_matrix:main"
+pixel-grid = "is_matrix_forge.led_matrix.scripts.pixel_grid:main"
 
 [[tool.poetry.include]]
 path = "presets/**"

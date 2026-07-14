@@ -4,7 +4,7 @@ from is_matrix_forge.led_matrix.constants import APP_DIRS
 
 
 def build_version_output(*, check_updates: bool = False) -> str:
-    from is_matrix_forge.led_matrix.Scripts.led_matrix.support import build_version_output as _build_version_output
+    from is_matrix_forge.led_matrix.scripts.led_matrix.support import build_version_output as _build_version_output
 
     return _build_version_output(check_updates=check_updates)
 

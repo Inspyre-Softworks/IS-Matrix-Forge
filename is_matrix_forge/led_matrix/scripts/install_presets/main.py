@@ -6,7 +6,7 @@ Project:
     IS-Matrix-Forge
 
 File:
-    is_matrix_forge/led_matrix/Scripts/install_presets/main.py
+    is_matrix_forge/led_matrix/scripts/install_presets/main.py
 
 Description:
     Provides a CLI to download JSON preset files from the GitHub repository and save them locally,

@@ -6,7 +6,7 @@ Project:
     IS-Matrix-Forge
 
 File: 
-    is_matrix_forge/led_matrix/Scripts/pixel_grid.py
+    is_matrix_forge/led_matrix/scripts/pixel_grid.py
  
 
 Description:

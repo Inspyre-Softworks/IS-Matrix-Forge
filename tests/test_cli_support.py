@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from types import SimpleNamespace
 
-from is_matrix_forge.led_matrix.Scripts.led_matrix import support
+from is_matrix_forge.led_matrix.scripts.led_matrix import support
 
 
 class DummyDevice:

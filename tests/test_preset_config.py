@@ -446,7 +446,7 @@ class TestRunInstaller:
                 return 0
 
         monkeypatch.setattr(
-            'is_matrix_forge.led_matrix.Scripts.install_presets.main.PresetInstaller',
+            'is_matrix_forge.led_matrix.scripts.install_presets.main.PresetInstaller',
             FakeInstaller,
         )
         import is_matrix_forge.common.preset_config as pc_mod
@@ -459,11 +459,11 @@ class TestRunInstaller:
         captured.clear()
 
         import sys
-        original = sys.modules.get('is_matrix_forge.led_matrix.Scripts.install_presets.main')
+        original = sys.modules.get('is_matrix_forge.led_matrix.scripts.install_presets.main')
 
-        fake_main = type(sys)('is_matrix_forge.led_matrix.Scripts.install_presets.main')
+        fake_main = type(sys)('is_matrix_forge.led_matrix.scripts.install_presets.main')
         fake_main.PresetInstaller = FakeInstaller
-        sys.modules['is_matrix_forge.led_matrix.Scripts.install_presets.main'] = fake_main
+        sys.modules['is_matrix_forge.led_matrix.scripts.install_presets.main'] = fake_main
 
         try:
             # Also stub GITHUB_REQ_HEADERS to avoid import chain
@@ -474,10 +474,10 @@ class TestRunInstaller:
             real_run(config)
         finally:
             if original is not None:
-                sys.modules['is_matrix_forge.led_matrix.Scripts.install_presets.main'] = original
+                sys.modules['is_matrix_forge.led_matrix.scripts.install_presets.main'] = original
             else:
                 sys.modules.pop(
-                    'is_matrix_forge.led_matrix.Scripts.install_presets.main', None
+                    'is_matrix_forge.led_matrix.scripts.install_presets.main', None
                 )
 
         assert 'presets_dir' in captured

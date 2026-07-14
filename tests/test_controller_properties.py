@@ -40,7 +40,7 @@ def _install_test_stubs() -> None:
 
 _install_test_stubs()
 
-from is_matrix_forge.led_matrix.Scripts.led_matrix import (
+from is_matrix_forge.led_matrix.scripts.led_matrix import (
     find_leftmost_matrix,
     find_rightmost_matrix,
     _filter_controllers_by_side,
@@ -441,7 +441,7 @@ class TestDirectionMap:
     animation direction string that produces the expected visual motion."""
 
     def _get_direction_map(self):
-        from is_matrix_forge.led_matrix.Scripts.led_matrix.arguments.commands.scroll_text import DIRECTION_MAP
+        from is_matrix_forge.led_matrix.scripts.led_matrix.arguments.commands.scroll_text import DIRECTION_MAP
         return DIRECTION_MAP
 
     def test_up_maps_to_vertical_up(self) -> None:

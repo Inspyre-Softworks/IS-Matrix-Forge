@@ -141,7 +141,14 @@ def test_connection(port_name):
         return False
 
 
-DEVICES = get_devices()
+def __getattr__(name: str):
+    if name == 'DEVICES':
+        devices = get_devices()
 
-if len(DEVICES) == 0:
-    MOD_LOGGER.warning('No devices found. Please connect a device and try again.')
+        if len(devices) == 0:
+            MOD_LOGGER.warning('No devices found. Please connect a device and try again.')
+
+        globals()['DEVICES'] = devices
+        return devices
+
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

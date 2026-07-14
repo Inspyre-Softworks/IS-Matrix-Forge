@@ -91,24 +91,24 @@ class TestSequentialSingleScreen:
 
     def _run_command(self, cli_args, controllers):
         """Invoke scroll_text_command with the given controllers, fully mocked."""
-        from is_matrix_forge.led_matrix.Scripts.led_matrix import scroll_text_command
+        from is_matrix_forge.led_matrix.scripts.led_matrix import scroll_text_command
 
         sentinel_animation = object()
 
         with (
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.execute_get_controllers",
                 return_value=controllers,
             ),
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix._build_horizontal_span_animations",
+                "is_matrix_forge.led_matrix.scripts.led_matrix._build_horizontal_span_animations",
                 return_value={c: sentinel_animation for c in controllers},
             ) as mock_build_span,
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.run_with_guard",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.run_with_guard",
             ) as mock_run,
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix._order_controllers_for_span",
+                "is_matrix_forge.led_matrix.scripts.led_matrix._order_controllers_for_span",
                 side_effect=lambda c: list(c),
             ) as mock_order,
         ):
@@ -174,11 +174,11 @@ class TestSequentialSpanMutualExclusion:
         controllers = [_make_controller("L1"), _make_controller("R1")]
         cli_args = _make_cli_args(direction="h", sequential=True, span_matrices=True)
 
-        from is_matrix_forge.led_matrix.Scripts.led_matrix import scroll_text_command
+        from is_matrix_forge.led_matrix.scripts.led_matrix import scroll_text_command
 
         with (
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.execute_get_controllers",
                 return_value=controllers,
             ),
             pytest.raises(SystemExit),
@@ -194,11 +194,11 @@ class TestSpanMatricesDirectionRestriction:
         controllers = [_make_controller("L1"), _make_controller("R1")]
         cli_args = _make_cli_args(direction="up", sequential=False, span_matrices=True)
 
-        from is_matrix_forge.led_matrix.Scripts.led_matrix import scroll_text_command
+        from is_matrix_forge.led_matrix.scripts.led_matrix import scroll_text_command
 
         with (
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.execute_get_controllers",
                 return_value=controllers,
             ),
             pytest.raises(SystemExit),
@@ -211,7 +211,7 @@ class TestFrameDurationForwarding:
 
     def _run_and_capture_scroll_text_calls(self, cli_args, controllers):
         """Run scroll_text_command and return the calls made to controller.scroll_text."""
-        from is_matrix_forge.led_matrix.Scripts.led_matrix import scroll_text_command
+        from is_matrix_forge.led_matrix.scripts.led_matrix import scroll_text_command
 
         ctrl = controllers[0]
         captured_kwargs = []
@@ -224,15 +224,15 @@ class TestFrameDurationForwarding:
 
         with (
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.execute_get_controllers",
                 return_value=controllers,
             ),
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix.run_with_guard",
+                "is_matrix_forge.led_matrix.scripts.led_matrix.run_with_guard",
                 side_effect=lambda targets, **kwargs: kwargs["activator"](targets, None),
             ),
             patch(
-                "is_matrix_forge.led_matrix.Scripts.led_matrix._run_operation",
+                "is_matrix_forge.led_matrix.scripts.led_matrix._run_operation",
                 side_effect=lambda devices, operation, **kwargs: [operation(c) for c in devices],
             ),
         ):

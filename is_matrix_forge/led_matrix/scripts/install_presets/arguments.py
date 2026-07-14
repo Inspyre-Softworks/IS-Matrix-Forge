@@ -6,7 +6,7 @@ Project:
     IS-Matrix-Forge
 
 File: 
-    is_matrix_forge/led_matrix/Scripts/install_presets/arguments.py
+    is_matrix_forge/led_matrix/scripts/install_presets/arguments.py
 
 Description:
     Holds the Arguments class for the command-line arguments for the preset

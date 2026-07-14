@@ -12,7 +12,7 @@ def test_pixel_grid_entrypoint_imports_without_circular_import():
             '-c',
             (
                 'import importlib; '
-                "importlib.import_module('is_matrix_forge.led_matrix.Scripts.pixel_grid')"
+                "importlib.import_module('is_matrix_forge.led_matrix.scripts.pixel_grid')"
             ),
         ],
         capture_output=True,

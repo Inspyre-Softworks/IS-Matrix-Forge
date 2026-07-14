@@ -305,7 +305,7 @@ def check_and_prompt_presets() -> None:
 def _run_installer(config: PresetConfig) -> None:
     """Silently run the preset installer using the configured preset directory."""
     try:
-        from is_matrix_forge.led_matrix.Scripts.install_presets.main import PresetInstaller
+        from is_matrix_forge.led_matrix.scripts.install_presets.main import PresetInstaller
         from is_matrix_forge.led_matrix.constants import GITHUB_REQ_HEADERS
         from is_matrix_forge.led_matrix.console import success
 
