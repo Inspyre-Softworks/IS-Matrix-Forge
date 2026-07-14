@@ -21,7 +21,6 @@ priority = "explicit"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-chime = ">=0.7.0,<0.8.0"
 pyserial = ">=3.5,<4.0"
 inspy-logger = ">=3.2.3,<4.0.0"
 inspyre-toolbox = ">=1.6.0.dev23"
@@ -29,14 +28,10 @@ opencv-python = ">=4.11.0.86,<5.0.0.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
 pysimplegui-4-foss = "==4.60.4.1"
-pysimpleguiweb = "==0.39.0"
-imapclient = "==3.0.1"
 requests = "^2.32.4"
 aliaser = "^1.0.0.dev4"
-notebook = "^7.4.4"
-ipywidgets = "==8.1.7"
-wmi = { version="^1.5.1", markers = "sys_platform == 'win32'" }
 platformdirs = "^4.5.0"
+tqdm = "^4.66"
 pillow = "^12.0.0"
 rich = ">=13.9.4,<15"
 
@@ -52,7 +47,6 @@ pytest = "^8.4.1"
 
 [tool.poetry.scripts]
 led-matrix = "is_matrix_forge.led_matrix.Scripts.led_matrix:main"
-python-path = "Scripts.python_path:main"
 pixel-grid = "is_matrix_forge.led_matrix.Scripts.pixel_grid:main"
 
 [[tool.poetry.include]]

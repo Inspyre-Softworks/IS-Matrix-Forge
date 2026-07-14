@@ -6,14 +6,13 @@ ENV POETRY_VERSION=1.8.5 \
     POETRY_CACHE_DIR=/root/.cache/pypoetry \
     PIP_CACHE_DIR=/root/.cache/pip
 
-# System deps for building wheels and running GUI/audio
+# System deps for building wheels and running the GUI
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         libgl1 \
         libglib2.0-0 \
         tk \
-        libasound2 \
         git \
         && rm -rf /var/lib/apt/lists/*
 
@@ -55,7 +54,6 @@ USER appuser
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Default command: open a shell, or you can set a main script if available
-# If you want to run the monitor directly, you can set an entrypoint here, e.g.:
-# ENTRYPOINT ["python", "-m", "is_matrix_forge.monitor"]
+# Default command: open a shell, or set a main script as the entrypoint, e.g.:
+# ENTRYPOINT ["led-matrix"]
 CMD ["bash"]
