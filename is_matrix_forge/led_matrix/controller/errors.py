@@ -1,11 +1,4 @@
-from inspyre_toolbox.exceptional import CustomRootException
-
-
-class LEDMatrixControllerError(CustomRootException):
-    """
-    Base exception for LEDMatrixController errors.
-    """
-    pass
+from is_matrix_forge.led_matrix.errors.base import LEDMatrixControllerError
 
 
 class LEDMatrixControllerPropReadError(LEDMatrixControllerError):

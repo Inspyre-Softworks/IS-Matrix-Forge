@@ -1,7 +1,7 @@
-from .base import CustomRootException
+from .base import LEDMatrixControllerError
 
 
-class MiscError(CustomRootException):
+class MiscError(LEDMatrixControllerError):
     pass
 
 

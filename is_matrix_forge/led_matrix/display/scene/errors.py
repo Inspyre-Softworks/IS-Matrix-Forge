@@ -1,7 +1,7 @@
-from inspyre_toolbox.exceptional import CustomRootException
+from is_matrix_forge.led_matrix.errors.base import LEDMatrixControllerError
 
 
-class SceneError(CustomRootException):
+class SceneError(LEDMatrixControllerError):
     """
     Base class for all scene related errors.
     """
