@@ -15,12 +15,16 @@ poetry install                      # install all deps (incl. dev)
 poetry run pytest                   # run full test suite
 poetry run pytest tests/test_grid.py                  # single test file
 poetry run pytest tests/test_grid.py::test_name       # single test
-ruff check .                        # lint (matches CI; ruff is not a dev dep — pip install ruff)
+ruff check .                        # lint (matches CI; config in [tool.ruff]; ruff is not a dev dep — pip install ruff)
 ```
+
+The suite includes `tests/test_import_smoke.py`, which imports every module in
+the package in a clean subprocess — a broken import anywhere fails the suite.
+`ruff check .` passes with zero violations; keep it that way.
 
 Pytest config lives in `pyproject.toml` (`testpaths = ["tests"]`, `test_*.py` / `Test*` / `test_*`). `tests/conftest.py` adds the repo root to `sys.path`, so tests run against the source tree without installing the package.
 
-Entry-point scripts (from `[tool.poetry.scripts]`): `led-matrix`, `pixel-grid`, `python-path`.
+Entry-point scripts (from `[tool.poetry.scripts]`): `led-matrix`, `pixel-grid` (both under `is_matrix_forge/led_matrix/scripts/`).
 
 ## Architecture
 
@@ -53,11 +57,9 @@ Thread safety: pass `thread_safe=True` to enable an internal `RLock`; the `@sync
 
 ### Package layout (high level)
 
-- `is_matrix_forge/led_matrix/` — core: `controller/` (mixins in `components/`), `display/` (animations, grid, text, effects, scenes), `commands/` (low-level serial commands), `helpers/` (device discovery, e.g. `helpers.device.DEVICES`), `hardware.py`, `constants.py`.
-- `is_matrix_forge/designer_gui/` — PySimpleGUI-based matrix designer.
-- `is_matrix_forge/serial_com/` — serial communication layer.
-- `is_matrix_forge/notify/`, `monitor/` — notifications and monitoring utilities.
+- `is_matrix_forge/led_matrix/` — core: `controller/` (mixins in `components/`), `display/` (animations, grid, text, effects, scenes), `commands/` (low-level serial commands), `helpers/` (device discovery; `helpers.device.DEVICES` is resolved lazily — no serial scan at import time), `scripts/` (CLI entry points), `hardware.py`, `constants.py`, `errors/` (all exceptions inherit `LEDMatrixControllerError`).
+- `is_matrix_forge/designer_gui/` — PySimpleGUI-based matrix designer (reachable via `pixel-grid`).
 - `is_matrix_forge/progress.py` — tqdm-style progress bar rendered on the matrix.
-- `is_matrix_forge/log_engine.py` — InspyLogger integration with a fallback `Loggable` stub (both accept `parent_log_device=`).
+- `is_matrix_forge/log_engine.py` — InspyLogger integration with a fallback `Loggable` stub (both accept `parent_log_device=`); also home of `log_on_exception`. Use these loggers in library code, not `print()`.
 - `presets/` — bundled patterns/animations (packaged via sdist includes).
 - `docs/` — Sphinx docs (Read the Docs via `.readthedocs.yaml`), ADRs, user manual.

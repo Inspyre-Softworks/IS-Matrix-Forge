@@ -59,14 +59,14 @@ are primarily local hardware state and user-driven UI events.
 
 ## Software Dependencies
 
-This project requires Python 3.12 or newer and the following dependencies:
+This project requires Python 3.12 or newer. Key dependencies (see
+`pyproject.toml` for the full list):
 
-- chime (>=0.7.0,<0.8.0) - For audio notifications
 - pyserial (>=3.5,<4.0) - For serial communication with the LED matrix
 - inspy-logger (>=3.2.3,<4.0.0) - For logging
 - inspyre-toolbox (>=1.6.0) - Utility functions
-- pillow (>=11.2.1,<12.0.0) - Image processing
-- opencv-python (>=4.11.0.86,<5.0.0.0) - Image processing
+- pillow (>=12.0.0) - Image processing
+- opencv-python (>=4.11.0.86,<5.0.0.0) - Image and video processing
 
 ## Installation Instructions
 
@@ -185,12 +185,6 @@ for _ in tqdm(range(100)):
 2. Verify that the LED matrix has the correct hardware identifiers (VID, PID, SN_PREFIX).
 3. Make sure you have the necessary permissions to access the serial port.
 4. Try running the application with administrator/root privileges.
-
-### Audio Notifications Not Working
-
-1. Ensure your system's audio is working correctly.
-2. Check that the WAV files for notifications exist in the expected locations.
-3. Verify that the chime library is properly installed.
 
 ### Animation Issues
 

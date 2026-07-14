@@ -10,10 +10,8 @@ IS Matrix Forge is a Python framework for creating applications that drive 9×34
 
 ## Structure
 - **is_matrix_forge/**: Main package containing all core functionality
-  - **led_matrix/**: LED matrix control and display components
-  - **notify/**: Notification system
+  - **led_matrix/**: LED matrix control and display components (including CLI scripts)
   - **designer_gui/**: GUI for designing matrix displays
-  - **serial_com/**: Serial communication with hardware
 - **tests/**: Unit tests for the project
 - **presets/**: Predefined matrix patterns and animations
 - **docs/**: Documentation including ADRs and user manual
@@ -28,12 +26,11 @@ IS Matrix Forge is a Python framework for creating applications that drive 9×34
 ## Dependencies
 **Main Dependencies**:
 - pyserial (>=3.5,<4.0) - Serial communication with LED matrix
-- chime (>=0.7.0,<0.8.0) - Audio notifications
 - inspy-logger (>=3.2.3,<4.0.0) - Logging system
 - inspyre-toolbox (>=1.6.0) - Utility functions
-- pillow (>=11.2.1,<12.0.0) - Image processing
+- pillow (>=12.0.0) - Image processing
 - opencv-python (>=4.11.0.86,<5.0.0.0) - Image processing
-- pysimplegui-4-foss (>=4.60.4.1) - GUI components
+- pysimplegui-4-foss (==4.60.4.1) - GUI components
 
 **Development Dependencies**:
 - ipython (^9.1.0)
@@ -77,9 +74,8 @@ poetry run pytest
 
 ## Main Entry Points
 **Scripts**:
-- led-matrix-identify: Identify connected LED matrices
-- is-matrix-forge-install-presets: Install predefined matrix patterns
-- pixel-grid: Display pixel grid utility
+- led-matrix: Command-line interface (identify-matrices, scroll-text, install-presets, etc.)
+- pixel-grid: Display pixel grid designer GUI
 
 **Core Components**:
 - LEDMatrixController: Main controller for LED matrix operations

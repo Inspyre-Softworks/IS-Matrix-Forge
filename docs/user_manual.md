@@ -52,7 +52,7 @@ pip install .
 ### Verifying Installation
 To verify installation, run the identify command:
 ```bash
-led-matrix-identify
+led-matrix identify-matrices
 ```
 
 This command detects connected LED matrices and displays identification information on each one.
@@ -94,7 +94,7 @@ directory. Each preset is a JSON file that defines animation frames and timing.
 
 To install sample presets:
 ```bash
-is-matrix-forge-install-presets
+led-matrix install-presets
 ```
 
 ## Troubleshooting
@@ -104,10 +104,6 @@ is-matrix-forge-install-presets
 2. Verify that the device appears in your system's device list
 3. Try a different USB port
 4. Restart the application
-
-### Audio Notifications Not Working
-1. Ensure your system's audio is working correctly.
-2. Verify that the chime library is properly installed.
 
 ### Animation Issues
 1. Verify that the LED matrix is functioning correctly.
