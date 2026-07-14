@@ -13,7 +13,7 @@ from PIL import Image
 from ..constants import WIDTH, HEIGHT
 from ..hardware import send_serial, send_command
 from ..commands.map import CommandVals
-from . import send_col, commit_cols
+from .helpers.columns import send_col, commit_cols
 from is_matrix_forge.led_matrix.helpers.status_handler import get_status, set_status
 
 
