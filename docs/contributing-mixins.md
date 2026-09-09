@@ -51,6 +51,24 @@ class FooManager:
 - Avoid leaking threads: if you start background threads, provide a clean stop
   path and guard against joining from the same thread.
 
+## Framebuffer Transactions
+
+- Per-LED grayscale writes must stage all nine 34-value columns through one
+  serial connection and commit only after every column succeeds.
+- Update controller cache and display history only after a successful commit.
+- Partial operations must fail when framebuffer state is unknown; never assume
+  omitted staging-buffer columns preserve their prior values.
+- Binary drawing methods should synchronize grayscale cache as `0/255`.
+  Firmware-rendered output that cannot be reconstructed should invalidate it.
+
+## Public API Documentation
+
+- Every new public method, property, class, and exception requires a docstring.
+- Document coordinate order, accepted units and ranges, side effects, and
+  failure behavior for hardware-facing APIs.
+- Update the README, user manual, getting-started guide, changelog, and relevant
+  architecture guidance when adding controller capabilities.
+
 ## Common Pitfalls
 
 - Forgetting `super().__init__(**kwargs)` breaks the init chain.

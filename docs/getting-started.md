@@ -51,6 +51,35 @@ controller = LEDMatrixController(DEVICES[0])
 controller.scroll_text("Hello World!", loop=False)
 ```
 
+## Per-LED Brightness
+
+Set a complete 9×34 percentage grid before making partial updates:
+
+```python
+levels = [[0 for _ in range(34)] for _ in range(9)]
+levels[4][17] = 25
+
+controller.set_brightness_grid(levels)
+controller.set_pixel_brightness(4, 17, 75)
+```
+
+The grid is column-major (`levels[x][y]`). Percentage methods accept `0..100`;
+their `*_raw` counterparts accept the hardware's native `0..255` levels.
+
+## Stored Animations
+
+Place animation JSON files in `controller.animations_dir`, then discover and
+load them without hard-coding paths:
+
+```python
+print(controller.list_animation_names())
+animation = controller.load_animation("status-pulse")
+controller.play_animation(animation)
+```
+
+For standalone use, call `Animation.list_names()` and
+`Animation.from_name("status-pulse")`.
+
 ## Next Steps
 
 - Read the full [User Manual](user_manual.md)

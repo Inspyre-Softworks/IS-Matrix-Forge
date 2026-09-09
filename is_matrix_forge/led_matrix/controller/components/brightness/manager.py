@@ -35,6 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from threading import Thread
 from time import sleep
+from collections.abc import Sequence
 from typing import Callable, Optional, Union
 
 from aliaser import alias, Aliases
@@ -47,11 +48,16 @@ from is_matrix_forge.led_matrix.controller.components.brightness.helpers import 
     BreatherKiller,
 )
 from is_matrix_forge.led_matrix.controller.helpers.threading import synchronized
-from is_matrix_forge.led_matrix.errors import InvalidBrightnessError
+from is_matrix_forge.led_matrix.errors import (
+    FramebufferStateUnknownError,
+    InvalidBrightnessError,
+)
 from is_matrix_forge.led_matrix.hardware import (
     brightness as _set_brightness_raw,
     get_framebuffer_brightness as _get_framebuffer_brightness,
     get_brightness as _get_brightness_raw,
+    normalize_framebuffer_brightness_grid as _normalize_framebuffer_brightness_grid,
+    set_framebuffer_brightness as _set_framebuffer_brightness_raw,
 )
 
 
@@ -132,6 +138,12 @@ class BrightnessManager(Aliases):
         get_brightness_grid:
             : Return a MATRIX_WIDTH x MATRIX_HEIGHT list of per-pixel brightness ints.
 
+        set_brightness_grid / set_brightness_grid_raw:
+            : Atomically display a complete percentage or native 0..255 framebuffer.
+
+        set_pixel_brightness / set_pixel_brightness_raw:
+            : Safely update one LED after complete framebuffer state is known.
+
     Raises:
         InvalidBrightnessError:
             : If hardware layer rejects computed raw value.
@@ -176,6 +188,10 @@ class BrightnessManager(Aliases):
 
         # optional cache container (only honored if USE_CACHE=True)
         self._brightness_cache: Optional[int] = None
+        # The stock firmware cannot read its grayscale framebuffer. Partial
+        # pixel updates are therefore allowed only after this process has
+        # established a known complete framebuffer.
+        self._pixel_brightness_cache: Optional[list[list[int]]] = None
 
         # Optional user-settable easing — default to linear if not provided
         # You can override self.easing at runtime with any f:[0,1]->[0,1].
@@ -326,6 +342,10 @@ class BrightnessManager(Aliases):
         """
         Returns:
             list[list[int]]: Per-pixel brightness values as a MATRIX_WIDTH × MATRIX_HEIGHT grid.
+
+        Notes:
+            Command 0x0B is supported only by some firmware builds. Stock
+            Framework firmware does not currently expose a framebuffer read.
         """
         flat = _get_framebuffer_brightness(self.device)
         grid = [[0] * MATRIX_HEIGHT for _ in range(MATRIX_WIDTH)]
@@ -333,7 +353,175 @@ class BrightnessManager(Aliases):
             x = idx % MATRIX_WIDTH
             y = idx // MATRIX_WIDTH
             grid[x][y] = level
-        return grid
+        # A real serial response is byte-valued. Preserve the historical
+        # getter contract here rather than adding stricter validation to reads;
+        # every write path validates before touching hardware.
+        self._pixel_brightness_cache = [column[:] for column in grid]
+        return [column[:] for column in grid]
+
+    @property
+    def has_pixel_brightness_state(self) -> bool:
+        """Whether this controller can safely preserve pixels during partial updates."""
+        return self._pixel_brightness_cache is not None
+
+    @property
+    def pixel_brightness_grid(self) -> list[list[int]]:
+        """Return a defensive copy of the known raw 0..255 framebuffer."""
+        return [column[:] for column in self._require_pixel_brightness_cache()]
+
+    def _require_pixel_brightness_cache(self) -> list[list[int]]:
+        """Return the known framebuffer or reject an unsafe partial update."""
+        if self._pixel_brightness_cache is None:
+            raise FramebufferStateUnknownError()
+        return self._pixel_brightness_cache
+
+    def _write_pixel_brightness_grid(
+        self,
+        grid: Sequence[Sequence[int]],
+        *,
+        operation: str,
+        meta: Optional[dict] = None,
+    ) -> None:
+        """Validate, commit, cache, and record one complete framebuffer."""
+        normalized = _normalize_framebuffer_brightness_grid(grid)
+        _set_framebuffer_brightness_raw(self.device, normalized)
+        # Update state only after the complete transaction and commit succeed.
+        self._pixel_brightness_cache = [column[:] for column in normalized]
+        self._record_pixel_brightness_event(
+            operation=operation,
+            grid=normalized,
+            meta=meta,
+        )
+
+    def _record_pixel_brightness_event(
+        self,
+        *,
+        operation: str,
+        grid: list[list[int]],
+        meta: Optional[dict] = None,
+    ) -> None:
+        """Record a grayscale display event when history support is composed in."""
+        recorder = getattr(self, '_record_event', None)
+        if not callable(recorder):
+            return
+        event_meta = {'operation': operation, 'unit': 'raw'}
+        event_meta.update(meta or {})
+        recorder(
+            'brightness_grid',
+            meta=event_meta,
+            brightness_grid=[column[:] for column in grid],
+        )
+
+    @staticmethod
+    def _validate_pixel_coordinates(x: int, y: int) -> None:
+        """Validate one physical matrix coordinate."""
+        if isinstance(x, bool) or not isinstance(x, int):
+            raise TypeError('x must be an integer')
+        if isinstance(y, bool) or not isinstance(y, int):
+            raise TypeError('y must be an integer')
+        if not 0 <= x < MATRIX_WIDTH:
+            raise IndexError(f'x must be between 0 and {MATRIX_WIDTH - 1}')
+        if not 0 <= y < MATRIX_HEIGHT:
+            raise IndexError(f'y must be between 0 and {MATRIX_HEIGHT - 1}')
+
+    @synchronized
+    def set_brightness_grid_raw(self, grid: Sequence[Sequence[int]]) -> None:
+        """Display a complete column-major 9×34 grid of raw 0..255 levels."""
+        self._write_pixel_brightness_grid(grid, operation='set_grid_raw')
+
+    @synchronized
+    def set_brightness_grid(self, grid: Sequence[Sequence[Union[int, float, str]]]) -> None:
+        """Display a complete column-major 9×34 grid of percentage levels."""
+        if isinstance(grid, (str, bytes, bytearray)) or not isinstance(grid, Sequence):
+            raise TypeError('brightness grid must be a sequence of columns')
+        if len(grid) != MATRIX_WIDTH:
+            raise ValueError(f'brightness grid must contain exactly {MATRIX_WIDTH} columns')
+
+        raw_grid: list[list[int]] = []
+        for x, column in enumerate(grid):
+            if isinstance(column, (str, bytes, bytearray)) or not isinstance(column, Sequence):
+                raise TypeError(f'brightness column {x} must be a sequence')
+            if len(column) != MATRIX_HEIGHT:
+                raise ValueError(
+                    f'brightness column {x} must contain exactly {MATRIX_HEIGHT} values'
+                )
+            raw_column = []
+            for y, value in enumerate(column):
+                if isinstance(value, bool):
+                    raise TypeError(f'brightness at ({x}, {y}) cannot be a boolean')
+                pct = Percent.norm(value)
+                raw_column.append(percentage_to_value(max_value=255, percent=pct))
+            raw_grid.append(raw_column)
+
+        self._write_pixel_brightness_grid(
+            raw_grid,
+            operation='set_grid_percent',
+            meta={'input_unit': 'percent'},
+        )
+
+    @synchronized
+    def set_pixel_brightness_raw(self, x: int, y: int, value: int) -> None:
+        """Set one LED to a raw 0..255 level while preserving known neighbors."""
+        self._validate_pixel_coordinates(x, y)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError('raw pixel brightness must be an integer')
+        if not 0 <= value <= 255:
+            raise ValueError('raw pixel brightness must be between 0 and 255')
+
+        grid = [column[:] for column in self._require_pixel_brightness_cache()]
+        grid[x][y] = value
+        self._write_pixel_brightness_grid(
+            grid,
+            operation='set_pixel_raw',
+            meta={'x': x, 'y': y, 'value': value},
+        )
+
+    @synchronized
+    def set_pixel_brightness(
+        self,
+        x: int,
+        y: int,
+        brightness: Union[int, float, str],
+    ) -> None:
+        """Set one LED using a 0..100 percentage while preserving known neighbors."""
+        self._validate_pixel_coordinates(x, y)
+        if isinstance(brightness, bool):
+            raise TypeError('pixel brightness cannot be a boolean')
+        pct = Percent.norm(brightness)
+        raw = percentage_to_value(max_value=255, percent=pct)
+
+        grid = [column[:] for column in self._require_pixel_brightness_cache()]
+        grid[x][y] = raw
+        self._write_pixel_brightness_grid(
+            grid,
+            operation='set_pixel_percent',
+            meta={'x': x, 'y': y, 'value': pct, 'input_unit': 'percent'},
+        )
+
+    def get_pixel_brightness_raw(self, x: int, y: int) -> int:
+        """Return one known raw 0..255 pixel level without probing firmware."""
+        self._validate_pixel_coordinates(x, y)
+        return self._require_pixel_brightness_cache()[x][y]
+
+    def get_pixel_brightness(self, x: int, y: int) -> int:
+        """Return one known pixel level as a rounded 0..100 percentage."""
+        return Percent.from_ratio(self.get_pixel_brightness_raw(x, y), 255)
+
+    def _sync_pixel_brightness_from_binary_grid(
+        self,
+        grid: Sequence[Sequence[int]],
+    ) -> None:
+        """Track a binary drawing operation as a raw 0/255 framebuffer."""
+        raw = [[0] * MATRIX_HEIGHT for _ in range(MATRIX_WIDTH)]
+        for x in range(min(len(grid), MATRIX_WIDTH)):
+            column = grid[x]
+            for y in range(min(len(column), MATRIX_HEIGHT)):
+                raw[x][y] = 255 if column[y] else 0
+        self._pixel_brightness_cache = raw
+
+    def _invalidate_pixel_brightness_cache(self) -> None:
+        """Forget framebuffer state after a firmware-rendered display operation."""
+        self._pixel_brightness_cache = None
 
     # ----------------------------------------------------------------------------------
     # Fade orchestration

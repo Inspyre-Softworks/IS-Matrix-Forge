@@ -43,6 +43,10 @@ IdentifyManager → Loggable
 Ordering constraints that must be preserved:
 - `DeviceBase` first so `self.device` exists for all downstream mixins.
 - `BrightnessManager` before `BreatherManager` — the breather reads brightness at init.
+- `BrightnessManager` owns the known 9×34 raw grayscale framebuffer. Complete
+  writes establish state; partial pixel writes fail closed when state is unknown.
+- `AnimationManager` loads named JSON animations from its configurable
+  platform-specific `animations_dir`.
 - `BreatherManager` before `IdentifyManager` — `IdentifyManager.__init__` may call `@synchronized` methods that rely on the breather pause context.
 - `Loggable` last so `parent_log_device=` can pass through the chain without kwarg collisions.
 

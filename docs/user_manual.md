@@ -5,7 +5,9 @@
 2. Hardware Setup
 3. Software Installation
 4. Using the Features
-5. Troubleshooting
+5. Per-LED Brightness
+6. Stored Animations
+7. Troubleshooting
 
 ## Introduction
 
@@ -89,12 +91,70 @@ for _ in tqdm(range(100)):
 ```
 
 ### Customizing Animations
-You can customize animations by creating or modifying preset files in the `presets`
-directory. Each preset is a JSON file that defines animation frames and timing.
+Grid presets remain in the configured `presets` directory. Named animation
+files live separately in the controller's platform-specific
+`animations_dir`. Each animation is a JSON array defining frames and timing.
 
 To install sample presets:
 ```bash
 led-matrix install-presets
+```
+
+## Per-LED Brightness
+
+Framework LED Matrix modules support an independent 8-bit grayscale value for
+each of their 306 LEDs. IS Matrix Forge provides percentage and native raw APIs:
+
+```python
+levels = [[0 for _ in range(34)] for _ in range(9)]
+levels[0][0] = 20
+levels[4][17] = 50
+levels[8][33] = 100
+
+ctrl.set_brightness_grid(levels)
+ctrl.set_pixel_brightness(4, 17, 75)
+
+raw_levels = ctrl.pixel_brightness_grid
+print(ctrl.get_pixel_brightness_raw(4, 17))
+```
+
+`set_brightness_grid()` and `set_pixel_brightness()` accept percentages from
+`0..100`. `set_brightness_grid_raw()` and `set_pixel_brightness_raw()` accept
+integers from `0..255`.
+
+The firmware stages nine complete columns and commits them together. Because
+stock firmware does not provide a framebuffer-read command, a single-pixel
+update is allowed only when this controller process knows the complete current
+framebuffer. Complete grayscale writes establish that state; binary
+`draw_grid()` calls synchronize it as `0/255`. Firmware-rendered patterns,
+percentages, and text invalidate it. Attempting a partial update while state is
+unknown raises `FramebufferStateUnknownError` instead of clearing neighboring
+LEDs.
+
+## Stored Animations
+
+`AnimationManager` creates and uses a platform-specific animation directory:
+
+```python
+print(ctrl.animations_dir)
+print(ctrl.animation_names)
+
+animation = ctrl.load_animation("status-pulse")
+ctrl.play_animation(animation)
+```
+
+`list_animation_names()` returns sorted JSON file stems. `load_animation()`
+accepts a stem or a `.json` filename, searches only the configured animation
+directory, and returns an `Animation` without playing it. Pass
+`animations_dir=...` to `LEDMatrixController` to override the default location.
+
+The `Animation` class exposes the same behavior without a controller:
+
+```python
+from is_matrix_forge.led_matrix.display.animations import Animation
+
+print(Animation.list_names())
+animation = Animation.from_name("status-pulse")
 ```
 
 ## Troubleshooting
@@ -109,6 +169,12 @@ led-matrix install-presets
 1. Verify that the LED matrix is functioning correctly.
 2. Check that the matrix dimensions match the expected 9x34 size.
 3. Try clearing the matrix and restarting the application.
+4. Confirm named files appear in `ctrl.list_animation_names()`.
+
+### Partial Brightness Update Rejected
+
+Call `set_brightness_grid()` or `set_brightness_grid_raw()` once to establish a
+known complete framebuffer, then retry the single-pixel update.
 
 ### Getting Help
 If you encounter issues not covered here, please:

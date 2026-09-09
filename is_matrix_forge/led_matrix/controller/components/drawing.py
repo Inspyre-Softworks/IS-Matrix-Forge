@@ -62,11 +62,17 @@ class DrawingManager(Aliases):
             g = Grid(init_grid=g)
         self._grid = g
         render_matrix(self.device, g.grid)
+        sync_brightness = getattr(self, '_sync_pixel_brightness_from_binary_grid', None)
+        if callable(sync_brightness):
+            sync_brightness(g.grid)
 
     @synchronized
     def draw_pattern(self, pattern: str) -> None:
         from is_matrix_forge.led_matrix.display.patterns.built_in import BuiltInPatterns
         BuiltInPatterns(self).render(pattern)
+        invalidate_brightness = getattr(self, '_invalidate_pixel_brightness_cache', None)
+        if callable(invalidate_brightness):
+            invalidate_brightness()
 
     @synchronized
     def draw_percentage(self, n: int) -> None:
@@ -87,11 +93,17 @@ class DrawingManager(Aliases):
             raise ValueError('n must be between 0 and 100 inclusive')
 
         percentage(self.device, n)
+        invalidate_brightness = getattr(self, '_invalidate_pixel_brightness_cache', None)
+        if callable(invalidate_brightness):
+            invalidate_brightness()
 
     @synchronized
     def show_text(self, text: str) -> None:
         from is_matrix_forge.led_matrix.display.text import show_string
         show_string(self.device, text)
+        invalidate_brightness = getattr(self, '_invalidate_pixel_brightness_cache', None)
+        if callable(invalidate_brightness):
+            invalidate_brightness()
 
     # @synchronized
     # def scroll_text(self, text: str) -> None:

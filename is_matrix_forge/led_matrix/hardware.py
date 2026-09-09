@@ -2,9 +2,11 @@
 Hardware communication module for LED Matrix.
 
 This module provides low-level functions for communicating with LED matrix hardware.
-It includes functions for sending commands, controlling brightness, and other basic operations.
+It includes functions for sending commands, controlling global brightness, and
+atomically staging complete per-LED grayscale framebuffers.
 """
 from enum import IntEnum
+from collections.abc import Sequence
 from typing import List, Optional, ByteString, Union
 
 import serial
@@ -13,7 +15,13 @@ from serial.tools.list_ports_common import ListPortInfo
 from is_matrix_forge.led_matrix.commands.map import CommandVals
 from is_matrix_forge.led_matrix.display.patterns.built_in.stencils.res import PatternVals
 
-from is_matrix_forge.led_matrix.constants import RESPONSE_SIZE, FWK_MAGIC, WIDTH, HEIGHT
+from is_matrix_forge.led_matrix.constants import (
+    DEFAULT_BAUDRATE,
+    RESPONSE_SIZE,
+    FWK_MAGIC,
+    WIDTH,
+    HEIGHT,
+)
 from is_matrix_forge.led_matrix.helpers import disconnect_dev
 
 from is_matrix_forge.log_engine import ROOT_LOGGER
@@ -24,6 +32,99 @@ MOD_LOGGER = ROOT_LOGGER.get_child('led_matrix.hardware')
 del ROOT_LOGGER
 
 FRAMEBUFFER_SIZE = WIDTH * HEIGHT
+
+
+def normalize_framebuffer_brightness_grid(
+    grid: Sequence[Sequence[int]],
+) -> List[List[int]]:
+    """Validate and copy a column-major 9×34 raw brightness framebuffer."""
+    if isinstance(grid, (str, bytes, bytearray)) or not isinstance(grid, Sequence):
+        raise TypeError('brightness grid must be a sequence of columns')
+    if len(grid) != WIDTH:
+        raise ValueError(f'brightness grid must contain exactly {WIDTH} columns')
+
+    normalized: List[List[int]] = []
+    for x, column in enumerate(grid):
+        if isinstance(column, (str, bytes, bytearray)) or not isinstance(column, Sequence):
+            raise TypeError(f'brightness column {x} must be a sequence')
+        if len(column) != HEIGHT:
+            raise ValueError(
+                f'brightness column {x} must contain exactly {HEIGHT} values'
+            )
+
+        normalized_column: List[int] = []
+        for y, value in enumerate(column):
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(
+                    f'brightness at ({x}, {y}) must be an integer from 0 to 255'
+                )
+            if not 0 <= value <= 255:
+                raise ValueError(
+                    f'brightness at ({x}, {y}) must be between 0 and 255'
+                )
+            normalized_column.append(value)
+        normalized.append(normalized_column)
+    return normalized
+
+
+def _write_serial_packet(stream, packet: Sequence[int]) -> None:
+    """Write one complete packet or raise if the serial stream writes partially."""
+    payload = bytes(packet)
+    written = stream.write(payload)
+    if written is not None and written != len(payload):
+        raise IOError(f'Only wrote {written} of {len(payload)} framebuffer bytes')
+
+
+def stage_framebuffer_brightness_column(
+    stream,
+    x: int,
+    values: Sequence[int],
+) -> None:
+    """Stage one complete 34-pixel grayscale column on an open serial stream."""
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise TypeError('column index must be an integer')
+    if not 0 <= x < WIDTH:
+        raise IndexError(f'column index must be between 0 and {WIDTH - 1}')
+    if isinstance(values, (str, bytes, bytearray)) or not isinstance(values, Sequence):
+        raise TypeError('brightness column must be a sequence')
+    if len(values) != HEIGHT:
+        raise ValueError(f'brightness column must contain exactly {HEIGHT} values')
+
+    column = normalize_framebuffer_brightness_grid(
+        [[0] * HEIGHT if col != x else values for col in range(WIDTH)]
+    )[x]
+    _write_serial_packet(
+        stream,
+        FWK_MAGIC + [CommandVals.StageGreyCol, x] + column,
+    )
+
+
+def commit_framebuffer_brightness(stream) -> None:
+    """Atomically display the columns currently in the firmware staging buffer."""
+    _write_serial_packet(
+        stream,
+        FWK_MAGIC + [CommandVals.DrawGreyColBuffer, 0x00],
+    )
+
+
+def set_framebuffer_brightness(
+    dev: ListPortInfo,
+    grid: Sequence[Sequence[int]],
+) -> None:
+    """Display a complete raw per-LED brightness framebuffer atomically.
+
+    ``grid`` is column-major (``grid[x][y]``), with 9 columns, 34 rows, and
+    integer brightness values from 0 through 255.
+    """
+    normalized = normalize_framebuffer_brightness_grid(grid)
+    try:
+        with serial.Serial(str(dev.device), DEFAULT_BAUDRATE) as stream:
+            for x, column in enumerate(normalized):
+                stage_framebuffer_brightness_column(stream, x, column)
+            commit_framebuffer_brightness(stream)
+    except (IOError, OSError):
+        disconnect_dev(dev.device)
+        raise
 
 class Game(IntEnum):
     Snake = 0x00

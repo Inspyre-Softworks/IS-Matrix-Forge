@@ -18,6 +18,8 @@ Highlighted features include:
 - Device discovery and control via `pyserial`
 - Drawing grids and patterns with the `Grid` class
 - Built-in and custom animations
+- Name-based loading from the default per-user animation directory
+- Per-LED 8-bit grayscale brightness control
 - Progress bars that render on the matrix
 
 ## What It Tracks and Where Data Comes From
@@ -121,6 +123,45 @@ from is_matrix_forge.led_matrix.helpers.device import DEVICES
 ctrl = LEDMatrixController(DEVICES[0])
 ctrl.scroll_text("Hello World!", loop=False)
 ```
+
+### Set Per-LED Brightness
+
+The public percentage API uses values from `0` through `100`. A complete
+column-major 9×34 grid establishes the controller's known framebuffer, after
+which individual LEDs can be updated without disturbing their neighbors:
+
+```python
+levels = [[0 for _ in range(34)] for _ in range(9)]
+levels[4][17] = 50
+
+ctrl.set_brightness_grid(levels)
+ctrl.set_pixel_brightness(4, 17, 100)
+```
+
+Raw `0..255` methods are also available as `set_brightness_grid_raw()` and
+`set_pixel_brightness_raw()`. Framework firmware commits a complete staged
+framebuffer, so partial pixel updates raise `FramebufferStateUnknownError`
+until a complete grayscale or binary grid has established known state.
+
+### Load Stored Animations by Name
+
+Animations are JSON files in `ctrl.animations_dir`, which defaults to the
+platform-specific application data directory under `animations`:
+
+```python
+print(ctrl.list_animation_names())
+animation = ctrl.load_animation("status-pulse")
+ctrl.play_animation(animation)
+```
+
+The underlying animation class also supports standalone discovery:
+
+```python
+names = Animation.list_names()
+animation = Animation.from_name("status-pulse")
+```
+
+The `.json` suffix is optional when loading by name in either workflow.
 
 ### Navigate an Animation
 

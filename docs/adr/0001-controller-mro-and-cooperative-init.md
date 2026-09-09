@@ -23,7 +23,9 @@ dependencies during `__init__`:
 ```
 class LEDMatrixController(
     DeviceBase,
+    DisplayHistoryManager,
     KeepAliveManager,
+    GameManager,
     AnimationManager,
     DrawingManager,
     BrightnessManager,
@@ -36,6 +38,10 @@ class LEDMatrixController(
 
 Rationale for ordering:
 - DeviceBase must initialize early so `self.device` exists for downstream mixins.
+- DisplayHistoryManager wraps later display and brightness methods so successful
+  grayscale frame commits can be recorded and restored.
+- GameManager initializes before display managers so synchronized operations can
+  reject display changes while a device game is running.
 - BrightnessManager before BreatherManager because Breather reads controller
   brightness during its initialization.
 - BreatherManager before IdentifyManager because `IdentifyManager.__init__` may
@@ -67,5 +73,9 @@ accepts this parameter as well.
 ## Implementation Notes
 
 - BrightnessManager was updated to participate in cooperative `super()` init.
+- BrightnessManager owns host-side per-LED framebuffer state because stock
+  firmware cannot read the currently displayed grayscale framebuffer.
+- AnimationManager accepts an optional `animations_dir` and otherwise provisions
+  the platform-specific application animation directory.
 - Controller helpers now catch `TypeError` for `default_brightness` to preserve
   backward compatibility with legacy controllers.

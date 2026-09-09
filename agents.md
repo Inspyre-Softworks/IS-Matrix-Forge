@@ -58,6 +58,7 @@ Each manager is responsible for a specific aspect of LED matrix functionality:
 - Controls animation playback and sequencing
 - Provides methods for text scrolling and visual effects
 - Manages animation state and transitions
+- Lists and loads JSON animations by name from the default application animation directory
 
 ### DrawingManager
 
@@ -70,6 +71,8 @@ Each manager is responsible for a specific aspect of LED matrix functionality:
 - Controls LED brightness levels
 - Provides fade effects and brightness transitions
 - Manages power consumption through brightness control
+- Provides percentage and raw per-LED grayscale framebuffer APIs
+- Tracks known framebuffer state so single-pixel updates preserve neighboring LEDs
 
 ### BreatherManager
 

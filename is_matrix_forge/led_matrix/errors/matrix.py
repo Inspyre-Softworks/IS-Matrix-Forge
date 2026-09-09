@@ -70,3 +70,17 @@ class InvalidBrightnessError(MatrixError):
         message = f'{self.default_message}\n\n  Brightness: {brightness}'
 
         super().__init__(message)
+
+
+class FramebufferStateUnknownError(MatrixError):
+    """
+    Raised when a partial grayscale update cannot safely preserve the display.
+
+    Framework LED Matrix modules commit a complete staged framebuffer at once.
+    A caller must therefore establish a known framebuffer before changing only
+    one pixel.
+    """
+    default_message = (
+        'The per-LED brightness framebuffer is unknown. Set or draw a complete '
+        'grid before attempting a partial pixel update.'
+    )

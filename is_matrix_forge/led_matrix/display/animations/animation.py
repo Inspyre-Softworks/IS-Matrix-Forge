@@ -98,6 +98,95 @@ class Animation(Loggable):
     # -------------------------------------------------------------------------
 
     @classmethod
+    def _storage_directory(
+        cls,
+        storage_dir: Optional[Union[str, Path]] = None,
+    ) -> Path:
+        """Resolve and provision the directory used for named animations."""
+        if storage_dir is None:
+            from is_matrix_forge.common.dirs import ANIMATIONS_DIR
+            storage_dir = ANIMATIONS_DIR
+        directory = Path(storage_dir).expanduser()
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
+    @classmethod
+    def _stored_animation_files(
+        cls,
+        storage_dir: Optional[Union[str, Path]] = None,
+    ) -> Dict[str, Path]:
+        """Index stored JSON animations by case-insensitive file stem."""
+        directory = cls._storage_directory(storage_dir)
+        files: Dict[str, Path] = {}
+        candidates = sorted(
+            (
+                path
+                for path in directory.iterdir()
+                if path.is_file() and path.suffix.casefold() == '.json'
+            ),
+            key=lambda path: path.stem.casefold(),
+        )
+        for path in candidates:
+            key = path.stem.casefold()
+            if key in files:
+                raise ValueError(
+                    f'Ambiguous animation name {path.stem!r} in {directory}'
+                )
+            files[key] = path
+        return files
+
+    @classmethod
+    def list_names(
+        cls,
+        storage_dir: Optional[Union[str, Path]] = None,
+    ) -> List[str]:
+        """List sorted JSON animation names from the default or supplied directory."""
+        return [
+            path.stem
+            for path in cls._stored_animation_files(storage_dir).values()
+        ]
+
+    @classmethod
+    def from_name(
+        cls,
+        name: str,
+        *,
+        storage_dir: Optional[Union[str, Path]] = None,
+        fallback_frame_duration: float = 0.33,
+        loop: bool = False,
+    ) -> 'Animation':
+        """Load a stored animation by stem or ``.json`` filename.
+
+        Name lookup is case-insensitive and restricted to the selected storage
+        directory. The returned animation is loaded but not played.
+        """
+        if not isinstance(name, str):
+            raise TypeError('animation name must be a string')
+        requested = name.strip()
+        if not requested:
+            raise ValueError('animation name cannot be empty')
+        if '/' in requested or '\\' in requested:
+            raise ValueError('animation name must not contain a directory path')
+        candidate = Path(requested)
+        if candidate.is_absolute() or candidate.name != requested:
+            raise ValueError('animation name must not contain a directory path')
+        if candidate.suffix and candidate.suffix.casefold() != '.json':
+            raise ValueError('animation name must use the .json extension')
+
+        stem = candidate.stem if candidate.suffix else candidate.name
+        directory = cls._storage_directory(storage_dir)
+        path = cls._stored_animation_files(directory).get(stem.casefold())
+        if path is None:
+            raise FileNotFoundError(
+                f'Animation {stem!r} was not found in {directory}'
+            )
+        return cls.from_file(
+            path,
+            fallback_frame_duration=fallback_frame_duration,
+            loop=loop,
+        )
+
+    @classmethod
     def currently_playing(cls) -> tuple['Animation', ...]:
         """
         Return a snapshot of all animations currently marked as playing.

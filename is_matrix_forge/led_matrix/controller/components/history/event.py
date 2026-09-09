@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
 DisplayEventKind = Literal[
-    'grid', 'text', 'pattern', 'percentage', 'animation', 'clear', 'restore', 'brightness'
+    'grid', 'text', 'pattern', 'percentage', 'animation', 'clear', 'restore',
+    'brightness', 'brightness_grid'
 ]
 
 
@@ -15,14 +16,17 @@ class DisplayEvent:
 
     Fields:
         ts: UNIX timestamp when the event was committed.
-        kind: 'grid' | 'text' | 'pattern' | 'percentage' | 'animation' | 'clear' | 'restore' | 'brightness'
+        kind: Supported display event discriminator, including
+            ``brightness_grid`` for per-LED grayscale framebuffers.
         meta: Lightweight metadata (e.g., {'text': 'HELLO'}).
-        grid: Optional snapshot of the grid (list of lists) if available.
+        grid: Optional binary grid snapshot if available.
+        brightness_grid: Optional raw 0..255 grayscale framebuffer snapshot.
     """
     ts: float
     kind: DisplayEventKind
     meta: dict[str, Any]
     grid: Optional[list[list[int]]] = None
+    brightness_grid: Optional[list[list[int]]] = None
 
 
 __all__ = ['DisplayEvent', 'DisplayEventKind']

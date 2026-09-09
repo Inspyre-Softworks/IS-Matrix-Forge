@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Per-LED grayscale brightness control through `BrightnessManager`, including
+  complete percentage/raw framebuffer writes and safe single-pixel updates.
+- Atomic low-level framebuffer transactions using the Framework LED Matrix
+  `StageGreyCol` and `DrawGreyColBuffer` commands.
+- Host-side framebuffer state tracking, binary-grid synchronization, and
+  fail-closed partial updates when the current framebuffer is unknown.
+- Grayscale framebuffer snapshots in display history and grayscale restoration.
+- `AnimationManager.animations_dir`, `animation_names`,
+  `list_animation_names()`, and `load_animation()` for discovering and loading
+  JSON animations by name from the application animation directory.
+- `Animation.list_names()` and `Animation.from_name()` for the same named-file
+  workflow without constructing a controller.
+- Regression tests for serial packet layout, validation, partial-write safety,
+  per-pixel preservation, and animation storage discovery.
 - Controller docs: Architecture/MRO summary added to `README.md`.
 - ADR 0001: Controller MRO and cooperative initialization (`docs/adr/0001-controller-mro-and-cooperative-init.md`).
 - Contributing guide for authoring mixins (`docs/contributing-mixins.md`).
@@ -18,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tests: `--frame-duration` CLI argument parsing and `frame_duration` forwarding to `controller.scroll_text()`.
 
 ### Changed
+- Package version advanced to `1.0.0-dev.31`.
+- Binary drawing operations now synchronize the known per-LED framebuffer;
+  firmware-rendered patterns, percentages, and text invalidate it.
+- Grayscale column compatibility helpers now share the validated low-level
+  framebuffer transport.
 - Reorganized code from `is_matrix_forge.inputmodule.ledmatrix` into multiple specialized modules:
   - `is_matrix_forge.led_matrix.hardware`: Low-level hardware communication functions
   - `is_matrix_forge.led_matrix.display.patterns`: Pattern-related display functions

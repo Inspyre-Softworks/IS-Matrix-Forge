@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any, List, Optional
 
 from aliaser import Aliases, alias
@@ -33,6 +34,12 @@ class AnimationManager(Aliases):
         play_animation(animation):
             Validate and play a provided Animation (thread-safe).
 
+        list_animation_names():
+            List JSON animations in the configured application storage directory.
+
+        load_animation(name):
+            Load an Animation by stem or JSON filename without playing it.
+
         scroll_text(...):
             Build and play a scrolling text Animation with rich configuration.
             All exposed parameters are honored and forwarded to the scroller.
@@ -45,7 +52,18 @@ class AnimationManager(Aliases):
     """
     running_animations: List[Animation] = []
 
-    def __init__(self, **kwargs: Any):
+    def __init__(
+        self,
+        *,
+        animations_dir: str | Path | None = None,
+        **kwargs: Any,
+    ):
+        """Initialize animation playback and name-based storage discovery."""
+        if animations_dir is None:
+            from is_matrix_forge.common.dirs import ANIMATIONS_DIR
+            animations_dir = ANIMATIONS_DIR
+        self._animations_dir = Path(animations_dir).expanduser()
+        self._animations_dir.mkdir(parents=True, exist_ok=True)
         super().__init__(**kwargs)
         self._current_animation: Optional[Animation] = None
 
@@ -98,6 +116,35 @@ class AnimationManager(Aliases):
         return get_animate(self.device)
 
     # --- Animation playback --------------------------------------------------------
+
+    @property
+    def animations_dir(self) -> Path:
+        """Directory searched by name-based animation operations."""
+        return self._animations_dir
+
+    @property
+    def animation_names(self) -> list[str]:
+        """Names of JSON animations available in :attr:`animations_dir`."""
+        return self.list_animation_names()
+
+    def list_animation_names(self) -> list[str]:
+        """Return sorted animation file stems from the default storage directory."""
+        return Animation.list_names(self.animations_dir)
+
+    def load_animation(
+        self,
+        name: str,
+        *,
+        fallback_frame_duration: float = 0.33,
+        loop: bool = False,
+    ) -> Animation:
+        """Load an animation by file stem (or ``.json`` filename)."""
+        return Animation.from_name(
+            name,
+            storage_dir=self.animations_dir,
+            fallback_frame_duration=fallback_frame_duration,
+            loop=loop,
+        )
 
     @synchronized
     def play_animation(self, animation: Animation) -> None:

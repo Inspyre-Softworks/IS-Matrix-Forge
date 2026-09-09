@@ -78,3 +78,7 @@ Quick checklist for a new mixin:
 - If calling synchronized methods in `__init__`, ensure MRO places you after
   `BreatherManager`.
 - Add docstrings, type hints, and at least one test.
+- Per-LED brightness changes must stage and commit a complete framebuffer
+  atomically; never update cache or history before the commit succeeds.
+- Update every relevant README, user-manual, getting-started, changelog, and
+  architecture document when adding public controller capabilities.

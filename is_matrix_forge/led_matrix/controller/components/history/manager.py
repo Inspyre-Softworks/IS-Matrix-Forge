@@ -79,6 +79,7 @@ class DisplayHistoryManager:
             *,
             meta: Optional[dict[str, Any]] = None,
             grid: Optional[list[list[int]]] = None,
+            brightness_grid: Optional[list[list[int]]] = None,
     ) -> None:
         if not hasattr(self, '_display_history') or self._display_history is None:
             self._display_history = deque(maxlen=256)
@@ -89,7 +90,13 @@ class DisplayHistoryManager:
         if b is not None and 'brightness' not in m:
             m['brightness'] = int(b)
 
-        ev = DisplayEvent(ts=time(), kind=kind, meta=m, grid=grid)
+        ev = DisplayEvent(
+            ts=time(),
+            kind=kind,
+            meta=m,
+            grid=grid,
+            brightness_grid=brightness_grid,
+        )
         self._current_event = ev
         self._display_history.append(ev)
 
@@ -125,10 +132,18 @@ class DisplayHistoryManager:
             event = self._display_history[-n] if n > 0 else self._display_history[n]
         except IndexError:
             return None
-        if event.grid is None:
+        if event.brightness_grid is not None:
+            self.set_brightness_grid_raw(event.brightness_grid)
+        elif event.grid is not None:
+            self.draw_grid(event.grid)
+        else:
             return None
-        self.draw_grid(event.grid)
-        self._record_event('restore', meta={'source': n}, grid=event.grid)
+        self._record_event(
+            'restore',
+            meta={'source': n},
+            grid=event.grid,
+            brightness_grid=event.brightness_grid,
+        )
         return event
 
     # --- Brightness wrapper -------------------------------------------------------

@@ -60,6 +60,110 @@ def test_get_brightness_grid_propagates_errors(monkeypatch, controller):
         controller.get_brightness_grid()
 
 
+def _raw_grid(fill=0):
+    """Return a valid 9×34 raw brightness test grid."""
+    return [[fill for _ in range(HEIGHT)] for _ in range(WIDTH)]
+
+
+def test_set_brightness_grid_raw_updates_defensive_cache(monkeypatch, controller):
+    """A committed raw grid establishes defensively copied controller state."""
+    recorded = {}
+    monkeypatch.setattr(
+        brightness_manager_module,
+        '_set_framebuffer_brightness_raw',
+        lambda dev, grid: recorded.setdefault('grid', grid),
+    )
+    grid = _raw_grid()
+    grid[3][4] = 127
+
+    controller.set_brightness_grid_raw(grid)
+
+    assert recorded['grid'][3][4] == 127
+    assert controller.has_pixel_brightness_state is True
+    snapshot = controller.pixel_brightness_grid
+    snapshot[3][4] = 0
+    assert controller.pixel_brightness_grid[3][4] == 127
+
+
+def test_set_percentage_grid_converts_to_raw(monkeypatch, controller):
+    """Percentage framebuffers are converted to native byte values."""
+    recorded = {}
+    monkeypatch.setattr(
+        brightness_manager_module,
+        '_set_framebuffer_brightness_raw',
+        lambda dev, grid: recorded.setdefault('grid', grid),
+    )
+    grid = _raw_grid()
+    grid[1][2] = 50
+
+    controller.set_brightness_grid(grid)
+
+    assert recorded['grid'][1][2] == brightness_manager_module.percentage_to_value(
+        max_value=255,
+        percent=50,
+    )
+
+
+def test_single_pixel_update_preserves_neighbors(monkeypatch, controller):
+    """A partial update resends known neighbors unchanged."""
+    writes = []
+    monkeypatch.setattr(
+        brightness_manager_module,
+        '_set_framebuffer_brightness_raw',
+        lambda dev, grid: writes.append([column[:] for column in grid]),
+    )
+    initial = _raw_grid(10)
+    controller.set_brightness_grid_raw(initial)
+
+    controller.set_pixel_brightness_raw(2, 3, 200)
+
+    assert writes[-1][2][3] == 200
+    assert writes[-1][2][4] == 10
+    assert writes[-1][1][3] == 10
+
+
+def test_single_pixel_update_fails_when_framebuffer_unknown(monkeypatch, controller):
+    """Unknown framebuffer state blocks unsafe partial hardware writes."""
+    monkeypatch.setattr(
+        brightness_manager_module,
+        '_set_framebuffer_brightness_raw',
+        lambda *_: pytest.fail('hardware must not be called'),
+    )
+
+    with pytest.raises(brightness_manager_module.FramebufferStateUnknownError):
+        controller.set_pixel_brightness(0, 0, 50)
+
+
+def test_failed_framebuffer_write_does_not_update_cache(monkeypatch, controller):
+    """Failed transactions leave framebuffer state unknown."""
+    def fail(*_):
+        raise IOError('partial write')
+
+    monkeypatch.setattr(
+        brightness_manager_module,
+        '_set_framebuffer_brightness_raw',
+        fail,
+    )
+
+    with pytest.raises(IOError):
+        controller.set_brightness_grid_raw(_raw_grid())
+
+    assert controller.has_pixel_brightness_state is False
+
+
+def test_binary_grid_sync_and_invalidation(controller):
+    """Binary draws map to 0/255 state and firmware output invalidates it."""
+    binary = [[0 for _ in range(HEIGHT)] for _ in range(WIDTH)]
+    binary[4][5] = 1
+
+    controller._sync_pixel_brightness_from_binary_grid(binary)
+    assert controller.get_pixel_brightness_raw(4, 5) == 255
+    assert controller.get_pixel_brightness_raw(4, 6) == 0
+
+    controller._invalidate_pixel_brightness_cache()
+    assert controller.has_pixel_brightness_state is False
+
+
 def test_set_brightness_valid(monkeypatch, controller):
     recorded = {}
 
