@@ -21,10 +21,11 @@ hardware, tools for building animations, and utilities such as progress bars.
   horizontally or vertically with `TextScroller` and bitmap font maps
 - **Firmware games** — launch Snake, Pong, Tetris, and Game of Life
   (with classic start patterns like glider, blinker, and toad) on the matrix
-- **Audio visualizer**, plus notification sounds via the bundled `notify` module
-- **Designer tools** — a PySimpleGUI desktop designer and a Streamlit
-  web-based pixel-grid animation editor, plus a JSON preset system with
-  verified installs
+- **Audio tools** — notification sounds via the bundled `notify` module, plus
+  an optional audio visualizer for live input and audio files
+- **Designer tools** — a PySimpleGUI desktop designer, a JSON preset system
+  with verified installs, and an optional Streamlit web-based pixel-grid
+  animation editor
 - **Progress bars** — a `tqdm`-style helper that renders progress on the matrix
 - **CLI** — `led-matrix` console entry point with an `identify-matrices`
   subcommand for identifying connected devices
@@ -48,6 +49,23 @@ This project requires Python 3.12 or newer and the following dependencies:
 - inspyre-toolbox (>=1.6.0) - Utility functions
 - pillow (>=11.2.1,<12.0.0) - Image processing
 - opencv-python (>=4.11.0.86,<5.0.0.0) - Image processing
+
+### Optional Tool Dependencies
+
+The Streamlit editor and audio visualizer are included in the source tree but
+their third-party dependencies are not installed by `poetry install` or
+`pip install .`. Install only the dependencies for the tools you intend to use:
+
+```shell
+# Streamlit pixel-grid editor
+pip install streamlit
+
+# Audio visualizer (live input and audio-file playback)
+pip install sounddevice soundfile
+```
+
+When using Poetry, run these commands after `poetry shell` so the packages are
+installed in the project's virtual environment.
 
 ## Installation Instructions
 
