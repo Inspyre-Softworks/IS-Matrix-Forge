@@ -8,45 +8,26 @@
 9×34 LED matrix displays.  It provides high level helpers for talking to the
 hardware, tools for building animations, and utilities such as progress bars.
 
-## Project Overview
+## Features
 
-Matrix Forge is focused on making it easy to create rich LED matrix
-experiences from Python. You can design custom frames, display scrolling text,
-run animations, and integrate the LED matrix with your own applications.
-
-Highlighted features include:
-- Device discovery and control via `pyserial`
-- Drawing grids and patterns with the `Grid` class
-- Built-in and custom animations
-- Progress bars that render on the matrix
-
-## What It Tracks and Where Data Comes From
-
-IS Matrix Forge focuses on **local hardware and UI inputs** that drive the LED
-matrix, not on ingesting external telemetry streams.
-
-**Primary inputs and events**
-- **LED matrix commands** such as grids, patterns, text, animations, and
-  brightness changes. The controller can record these display events to support
-  history and restore operations.【F:is_matrix_forge/led_matrix/controller/components/history/manager.py†L13-L199】
-- **Local UI events** from the included PySimpleGUI tools (designer) for
-  controlling what the matrix displays.【F:is_matrix_forge/designer_gui/main_window/__init__.py†L165-L272】
-
-## How “Real-Time” Updates Work
-
-The real-time behavior is **local polling and rendering**: the controller reacts
-to commands and display events, immediately updating the matrix.
-
-## Scope and Use Cases
-
-Matrix Forge is designed for **device UI, hardware status, and visual
-notifications**, such as:
-- LED matrix dashboards for a workstation or appliance
-- Custom animations, text banners, or progress indicators
-
-It is **not** a SOC/observability platform and does **not** ingest or correlate
-network logs, SIEM feeds, or remote sensor telemetry out of the box. Its inputs
-are primarily local hardware state and user-driven UI events.
+- **Hardware control** — device discovery and control over serial via
+  `pyserial`, with support for multiple connected matrices
+- **Mixin-based controller** — `LEDMatrixController` composes device access,
+  keep-alive pings, brightness and "breather" management, device
+  identification, and command history with restore support; optional
+  `thread_safe=True` mode guards device operations behind an `RLock`
+- **Display engine** — draw grids and patterns with the `Grid` class, build
+  frame-based `Animation`s (rewind, fast-forward, seek), and scroll text
+  horizontally or vertically with `TextScroller` and bitmap font maps
+- **Firmware games** — launch Snake, Pong, Tetris, and Game of Life
+  (with classic start patterns like glider, blinker, and toad) on the matrix
+- **Audio visualizer and notification sounds** via the bundled notify module
+- **Designer tools** — a PySimpleGUI desktop designer and a Streamlit
+  web-based pixel-grid animation editor, plus a JSON preset system with
+  verified installs
+- **Progress bars** — a `tqdm`-style helper that renders progress on the matrix
+- **CLI** — `led-matrix` console entry point and a threaded device-identify
+  tool
 
 ## Hardware Requirements
 
