@@ -21,7 +21,7 @@ hardware, tools for building animations, and utilities such as progress bars.
   horizontally or vertically with `TextScroller` and bitmap font maps
 - **Firmware games** — launch Snake, Pong, Tetris, and Game of Life
   (with classic start patterns like glider, blinker, and toad) on the matrix
-- **Audio visualizer and notification sounds** via the bundled notify module
+- **Audio visualizer**, plus notification sounds via the bundled `notify` module
 - **Designer tools** — a PySimpleGUI desktop designer and a Streamlit
   web-based pixel-grid animation editor, plus a JSON preset system with
   verified installs
