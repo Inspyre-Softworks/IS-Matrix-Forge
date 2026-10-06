@@ -39,6 +39,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -48,4 +50,73 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff
-        run: ruff check .
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          diff = subprocess.run(
+              ["git", "diff", "--unified=0", os.environ["BASE_SHA"], "HEAD", "--", "*.py"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout
+          changed_lines = {}
+          current_file = None
+          for line in diff.splitlines():
+              if line.startswith("+++ b/"):
+                  current_file = line[6:]
+                  changed_lines.setdefault(current_file, set())
+              elif line.startswith("+++ "):
+                  current_file = None
+              elif line.startswith("@@") and current_file:
+                  match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+                  if match:
+                      start = int(match.group(1))
+                      count = int(match.group(2) or 1)
+                      changed_lines[current_file].update(range(start, start + count))
+
+          files = sorted(path for path, lines in changed_lines.items() if lines)
+          if not files:
+              print("No changed Python lines to lint.")
+              sys.exit(0)
+
+          result = subprocess.run(
+              [
+                  "ruff",
+                  "check",
+                  "--select",
+                  "E4,E7,E9,F",
+                  "--output-format",
+                  "json",
+                  *files,
+              ],
+              capture_output=True,
+              text=True,
+          )
+          if result.returncode not in (0, 1):
+              print(result.stderr, file=sys.stderr)
+              sys.exit(result.returncode)
+
+          root = Path.cwd()
+          diagnostics = []
+          for issue in json.loads(result.stdout):
+              path = Path(issue["filename"])
+              if path.is_absolute():
+                  path = path.relative_to(root)
+              row = issue["location"]["row"]
+              if row in changed_lines.get(path.as_posix(), set()):
+                  diagnostics.append(
+                      f"{path}:{row}: {issue['code']} {issue['message']}"
+                  )
+
+          if diagnostics:
+              print("\n".join(diagnostics), file=sys.stderr)
+              sys.exit(1)
+          PY
