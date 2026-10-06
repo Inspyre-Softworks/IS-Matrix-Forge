@@ -26,8 +26,8 @@ hardware, tools for building animations, and utilities such as progress bars.
   web-based pixel-grid animation editor, plus a JSON preset system with
   verified installs
 - **Progress bars** — a `tqdm`-style helper that renders progress on the matrix
-- **CLI** — `led-matrix` console entry point and a threaded device-identify
-  tool
+- **CLI** — `led-matrix` console entry point with an `identify-matrices`
+  subcommand for identifying connected devices
 
 ## Hardware Requirements
 
