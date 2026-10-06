@@ -27,8 +27,8 @@ hardware, tools for building animations, and utilities such as progress bars.
   with verified installs, and an optional Streamlit web-based pixel-grid
   animation editor
 - **Progress bars** — a `tqdm`-style helper that renders progress on the matrix
-- **CLI** — `led-matrix` console entry point with an `identify-matrices`
-  subcommand for identifying connected devices
+- **CLI** — `led-matrix` console entry point with a threaded
+  `identify-matrices` subcommand that identifies connected devices concurrently
 
 ## Hardware Requirements
 

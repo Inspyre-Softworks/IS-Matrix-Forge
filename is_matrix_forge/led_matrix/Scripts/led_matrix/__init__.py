@@ -426,12 +426,14 @@ def identify_matrices_command(cli_args):
     """
     controllers = execute_get_controllers(cli_args)
 
-    for controller in controllers:
+    def identify(controller):
         controller.identify(
             skip_clear=cli_args.skip_clear,
             duration=float(cli_args.runtime),
             cycles=int(cli_args.cycle_count),
         )
+
+    _run_operation(controllers, identify, concurrent=True)
 
 
 def bootloader_command(cli_args):
