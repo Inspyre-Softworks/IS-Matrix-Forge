@@ -6,6 +6,8 @@ import threading
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 
 class _Controller:
     def __init__(self, barrier: threading.Barrier) -> None:
@@ -38,3 +40,28 @@ def test_identify_matrices_runs_controllers_concurrently() -> None:
     worker_thread_ids = {controller.thread_id for controller in controllers}
     assert len(worker_thread_ids) == 2
     assert threading.get_ident() not in worker_thread_ids
+
+
+def test_identify_matrices_propagates_controller_errors() -> None:
+    """A failed worker makes the command fail after concurrent work completes."""
+    from is_matrix_forge.led_matrix.Scripts.led_matrix import identify_matrices_command
+
+    completed = []
+
+    class FailingController:
+        def identify(self, **kwargs) -> None:
+            raise RuntimeError("identification failed")
+
+    class SuccessfulController:
+        def identify(self, **kwargs) -> None:
+            completed.append(True)
+
+    cli_args = SimpleNamespace(skip_clear=True, runtime="4.5", cycle_count="3")
+    with patch(
+        "is_matrix_forge.led_matrix.Scripts.led_matrix.execute_get_controllers",
+        return_value=[FailingController(), SuccessfulController()],
+    ):
+        with pytest.raises(RuntimeError, match="identification failed"):
+            identify_matrices_command(cli_args)
+
+    assert completed == [True]

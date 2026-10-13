@@ -61,8 +61,17 @@ jobs:
           import sys
           from pathlib import Path
 
+          base_sha = os.environ["BASE_SHA"]
+          if not base_sha.strip("0"):
+              base_sha = subprocess.run(
+                  ["git", "hash-object", "-t", "tree", "/dev/null"],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout.strip()
+
           diff = subprocess.run(
-              ["git", "diff", "--unified=0", os.environ["BASE_SHA"], "HEAD", "--", "*.py"],
+              ["git", "diff", "--unified=0", base_sha, "HEAD", "--", "*.py"],
               check=True,
               capture_output=True,
               text=True,
