@@ -259,15 +259,25 @@ def _run_operation(controllers: Iterable, operation: Callable, *, concurrent: bo
     """Run an operation against one or more controllers, optionally in parallel."""
 
     if concurrent and len(controllers) > 1:
+        errors = [None] * len(controllers)
         threads = []
 
-        for controller in controllers:
-            thread = threading.Thread(target=operation, args=(controller,), daemon=True)
+        def run(controller, index):
+            try:
+                operation(controller)
+            except BaseException as error:
+                errors[index] = error
+
+        for index, controller in enumerate(controllers):
+            thread = threading.Thread(target=run, args=(controller, index), daemon=True)
             thread.start()
             threads.append(thread)
 
         for thread in threads:
             thread.join()
+        for error in errors:
+            if error is not None:
+                raise error
         return
 
     for controller in controllers:
@@ -426,12 +436,14 @@ def identify_matrices_command(cli_args):
     """
     controllers = execute_get_controllers(cli_args)
 
-    for controller in controllers:
+    def identify(controller):
         controller.identify(
             skip_clear=cli_args.skip_clear,
             duration=float(cli_args.runtime),
             cycles=int(cli_args.cycle_count),
         )
+
+    _run_operation(controllers, identify, concurrent=True)
 
 
 def bootloader_command(cli_args):
