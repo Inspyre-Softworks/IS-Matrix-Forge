@@ -4,7 +4,7 @@ from collections import deque
 from time import time
 from typing import Any, Deque, Optional
 
-from .event import DisplayEvent
+from .event import DisplayEvent, DisplayEventKind
 
 
 class DisplayHistoryManager:
@@ -14,9 +14,15 @@ class DisplayHistoryManager:
     """
 
     def __init__(self, *, history_maxlen: int = 256, **kwargs):
+        if not isinstance(history_maxlen, int) or isinstance(history_maxlen, bool):
+            raise TypeError('history_maxlen must be an integer')
+        if history_maxlen < 1:
+            raise ValueError('history_maxlen must be at least 1')
+
         # History fields must exist before any parent init triggers draws.
         self._display_history: Deque[DisplayEvent] = deque(maxlen=history_maxlen)
         self._maxlen = history_maxlen
+        self._current_event: Optional[DisplayEvent] = None
 
         # Brightness tracking
         self._current_brightness: Optional[int] = self._get_brightness()
@@ -54,10 +60,15 @@ class DisplayHistoryManager:
             new (int):
                 The new maximum length of the history.
         """
+        if not isinstance(new, int) or isinstance(new, bool):
+            raise TypeError('max_history_len must be an integer')
+        if new < 1:
+            raise ValueError('max_history_len must be at least 1')
+
         log = self.method_logger
         log.debug(f"Setting history max length to {new} from {self._maxlen}")
         self._maxlen = new
-        self._display_history = deque(maxlen=new)
+        self._display_history = deque(self._display_history, maxlen=new)
 
     def restore_last_brightness(self) -> Optional[int]:
         """
@@ -75,7 +86,7 @@ class DisplayHistoryManager:
 
     def _record_event(
             self,
-            kind: DisplayEvent.__annotations__['kind'],
+            kind: DisplayEventKind,
             *,
             meta: Optional[dict[str, Any]] = None,
             grid: Optional[list[list[int]]] = None,
@@ -119,16 +130,23 @@ class DisplayHistoryManager:
         Restore the display from n steps back in history.
         Returns the event restored, or None if invalid / no grid snapshot.
         """
-        if not self._display_history:
+        if not isinstance(n, int) or isinstance(n, bool):
+            raise TypeError('n must be an integer')
+        if n < 1:
+            raise ValueError('n must be at least 1')
+        if len(self._display_history) <= n:
             return None
         try:
-            event = self._display_history[-n] if n > 0 else self._display_history[n]
+            event = self._display_history[-(n + 1)]
         except IndexError:
             return None
         if event.grid is None:
             return None
-        self.draw_grid(event.grid)
-        self._record_event('restore', meta={'source': n}, grid=event.grid)
+        # Bypass this mixin's draw hook so the restore is represented by one
+        # history event instead of an intermediate duplicate "grid" event.
+        super().draw_grid(event.grid)  # type: ignore[misc]
+        snapshot = [row[:] for row in event.grid]
+        self._record_event('restore', meta={'steps': n}, grid=snapshot)
         return event
 
     # --- Brightness wrapper -------------------------------------------------------

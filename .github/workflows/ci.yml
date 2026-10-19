@@ -33,6 +33,36 @@ jobs:
       - name: Run tests
         run: poetry run pytest
 
+      - name: Build and smoke-test wheel entry points
+        run: |
+          poetry build --format wheel
+          SMOKE_DIR="$RUNNER_TEMP/is-matrix-forge-wheel"
+          PYTHON_BIN="$(poetry env info --executable)"
+          "$PYTHON_BIN" -m pip install --no-deps --target "$SMOKE_DIR" dist/*.whl
+          cd "$RUNNER_TEMP"
+          SMOKE_DIR="$SMOKE_DIR" "$PYTHON_BIN" - <<'PY'
+          import os
+          import sys
+          from importlib.metadata import distributions
+
+          target = os.environ["SMOKE_DIR"]
+          sys.path.insert(0, target)
+          distribution = next(
+              dist
+              for dist in distributions(path=[target])
+              if dist.metadata["Name"] == "IS-Matrix-Forge"
+          )
+          scripts = {
+              entry_point.name: entry_point
+              for entry_point in distribution.entry_points
+              if entry_point.group == "console_scripts"
+          }
+
+          for name in ("led-matrix", "pixel-grid"):
+              assert name in scripts, f"Missing console script: {name}"
+              assert callable(scripts[name].load()), f"Entry point is not callable: {name}"
+          PY
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

@@ -88,19 +88,19 @@ class AudioVisualizer:
 
     # ------------------------------------------------------------------- API --
     def start(self) -> None:
-        if sd is None:  # pragma: no cover - environment without sounddevice
-            raise RuntimeError("sounddevice is required for AudioVisualizer")
-
         if self._running:
             return
 
-        self._running = True
         if self._audio_source is not None:
             if sf is None:
                 raise RuntimeError("soundfile is required for file playback")
+            self._running = True
             self._thread = threading.Thread(target=self._file_loop, daemon=True)
             self._thread.start()
         else:
+            if sd is None:  # pragma: no cover - environment without sounddevice
+                raise RuntimeError("sounddevice is required for microphone input")
+            self._running = True
             self._stream = sd.InputStream(
                 channels=1,
                 samplerate=self.sample_rate,

@@ -3,6 +3,8 @@ import serial
 from serial.serialutil import SerialTimeoutError
 from typing import Optional
 from datetime import datetime
+from .base.answer import Answer
+from .base.request import Request
 
 
 class SerialExchange:
@@ -40,7 +42,9 @@ class SerialExchange:
                 received_at = datetime.now()
 
                 if not response:
-                    raise SerialTimeoutError(f"No response received for {request.__class__.__name__} within {timeout} seconds.')
+                    raise SerialTimeoutError(
+                        f'No response received for {request.__class__.__name__} within {timeout} seconds.'
+                    )
 
                 return answer_cls.from_bytes(response, sent_at, received_at)
 

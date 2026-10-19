@@ -26,8 +26,11 @@ pyserial = ">=3.5,<4.0"
 inspy-logger = ">=3.2.3,<4.0.0"
 inspyre-toolbox = ">=1.6.0.dev23"
 opencv-python = ">=4.11.0.86,<5.0.0.0"
+numpy = ">=2.0,<3.0"
 easy-exit-calls = ">=1.0.0.dev1,<2.0.0"
 clipboard = { version = "^0.0.4", optional = true }
+sounddevice = { version = ">=0.5,<1.0", optional = true }
+soundfile = { version = ">=0.13,<1.0", optional = true }
 pysimplegui-4-foss = "==4.60.4.1"
 pysimpleguiweb = "==0.39.0"
 imapclient = "==3.0.1"
@@ -42,6 +45,7 @@ rich = ">=13.9.4,<15"
 
 [tool.poetry.extras]
 clipboard_support = ["clipboard"]
+audio = ["sounddevice", "soundfile"]
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^9.1.0"

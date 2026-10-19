@@ -43,7 +43,7 @@ class AnimationManager(Aliases):
         halt_animation():
             Stop the hardware animation mode if active.
     """
-    running_animations: List[Animation] = []
+    running_animations: list[Animation] = []
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
@@ -94,6 +94,8 @@ class AnimationManager(Aliases):
 
     @synchronized
     def get_hw_is_animating(self):
+        from is_matrix_forge.led_matrix.hardware import get_animate
+
         return get_animate(self.device)
 
     # --- Animation playback --------------------------------------------------------
@@ -115,6 +117,20 @@ class AnimationManager(Aliases):
             raise TypeError(f'Expected Animation; got {type(animation)}')
         self._current_animation = animation
         animation.play(devices=[self])
+
+    @staticmethod
+    def available_animations() -> tuple[str, ...]:
+        """Return the names of the bundled animations."""
+        from is_matrix_forge.led_matrix.display.animations import available_animations
+
+        return available_animations()
+
+    @synchronized
+    def play_builtin_animation(self, name: str, **options) -> None:
+        """Play a bundled animation by name on this controller."""
+        from is_matrix_forge.led_matrix.display.animations import run_builtin_animation
+
+        run_builtin_animation(self, name, **options)
 
     # --- Text scrolling ------------------------------------------------------------
 

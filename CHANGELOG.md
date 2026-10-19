@@ -20,6 +20,9 @@ The publish workflow reads `poetry version -s` and rejects a different tag.
 ## [Unreleased]
 
 ### Added
+- Bundled animation discovery and playback by short name on controllers.
+- Optional `audio` installation extra, direct NumPy dependency, and a wheel entry-point smoke check in CI.
+- Regression tests for animation playback, audio file input, display history, and source syntax.
 - Controller docs: Architecture/MRO summary added to `README.md`.
 - ADR 0001: Controller MRO and cooperative initialization (`docs/adr/0001-controller-mro-and-cooperative-init.md`).
 - Contributing guide for authoring mixins (`docs/contributing-mixins.md`).
@@ -67,6 +70,10 @@ The publish workflow reads `poetry version -s` and rejects a different tag.
 - Easier to extend with new features in the future
 
 ### Fixed
+- Audio files can play without the microphone-only `sounddevice` dependency.
+- Display history initializes its current event, preserves events when resized, and restores the preceding grid once.
+- Removed an invalid, unused font stub and fixed missing imports in the animation manager.
+- Corrected four existing modules with invalid Python syntax found by the source check.
 - Removed an inactive release workflow that watched `main` and bypassed the documented tag publishing path.
 - Publishing rejects tags that disagree with the package version.
 - Identify: Validates `duration` and `cycles` to prevent division-by-zero and invalid intervals.

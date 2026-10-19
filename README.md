@@ -18,7 +18,8 @@ hardware, tools for building animations, and utilities such as progress bars.
   `thread_safe=True` mode guards device operations behind an `RLock`
 - **Display engine** — draw grids and patterns with the `Grid` class, build
   frame-based `Animation`s (rewind, fast-forward, seek), and scroll text
-  horizontally or vertically with `TextScroller` and bitmap font maps
+  horizontally or vertically with `TextScroller` and bitmap font maps. Bundled
+  animations can be listed and played by short name
 - **Firmware games** — launch Snake, Pong, Tetris, and Game of Life
   (with classic start patterns like glider, blinker, and toad) on the matrix
 - **Audio tools** — notification sounds via
@@ -64,11 +65,11 @@ their third-party dependencies are not installed by `poetry install` or
 pip install streamlit
 
 # Audio visualizer (live input and audio-file playback)
-pip install sounddevice soundfile
+pip install "IS-Matrix-Forge[audio]"
 ```
 
-When using Poetry, run these commands after `poetry shell` so the packages are
-installed in the project's virtual environment.
+For a source checkout using Poetry, install the audio extra with
+`poetry install -E audio`.
 
 ## Installation Instructions
 
@@ -104,6 +105,17 @@ installed in the project's virtual environment.
    ```
 
 ## Usage Examples
+
+### Run a Bundled Animation by Name
+
+```python
+from is_matrix_forge.led_matrix.controller.controller import LEDMatrixController
+
+controller = LEDMatrixController(device)
+print(controller.available_animations())
+controller.play_builtin_animation('flash', num_flashes=3, interval=0.2)
+controller.play_builtin_animation('checkerboard-cycle')
+```
 
 ### Identify Connected Devices
 
