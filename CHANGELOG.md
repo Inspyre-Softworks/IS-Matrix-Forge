@@ -14,7 +14,8 @@ metadata. Do not add a separate version constant to Python modules.
 Add user-facing changes under **Unreleased** as they land. For a release, run
 `poetry version <new-version>`, move the relevant entries to a dated
 `## [<new-version>]` section, and commit both files together. After the commit
-is reviewed and merged to `master`, tag it `v<new-version>` and push the tag.
+is reviewed and merged to `master` (the integration branch), tag it
+`v<new-version>` and push the tag.
 The publish workflow reads `poetry version -s` and rejects a different tag.
 
 ## [Unreleased]

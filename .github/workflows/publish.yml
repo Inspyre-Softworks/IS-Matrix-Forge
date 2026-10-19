@@ -16,10 +16,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history for changelog
+      - name: Verify release commit
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "Release tag $GITHUB_REF_NAME does not point to a commit merged into master" >&2
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
+
+      - name: Install release validation dependency
+        run: python -m pip install packaging
 
       - name: Determine release target
         id: vars
