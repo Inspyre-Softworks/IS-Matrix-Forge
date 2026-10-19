@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Release process
+
+`pyproject.toml` (`[tool.poetry].version`) is the single source for the package
+version. Source checkouts read that value; installed packages read their wheel
+metadata. Do not add a separate version constant to Python modules.
+
+Add user-facing changes under **Unreleased** as they land. For a release, run
+`poetry version <new-version>`, move the relevant entries to a dated
+`## [<new-version>]` section, and commit both files together. After the commit
+is reviewed and merged to `master`, tag it `v<new-version>` and push the tag.
+The publish workflow reads `poetry version -s` and rejects a different tag.
+
 ## [Unreleased]
 
 ### Added
@@ -55,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Easier to extend with new features in the future
 
 ### Fixed
+- Removed an inactive release workflow that watched `main` and bypassed the documented tag publishing path.
+- Publishing rejects tags that disagree with the package version.
 - Identify: Validates `duration` and `cycles` to prevent division-by-zero and invalid intervals.
 - Initialization robustness: Cooperative MRO chain and tests reduce risk of ordering regressions.
  - Controller init ordering bugs causing `AttributeError` during threaded creation:

@@ -21,16 +21,14 @@ jobs:
           python-version: '3.12'
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
 
-      - name: Install deps
-        run: poetry install --no-interaction --no-root
-
-      - name: Build dists
-        run: poetry build
-
       - name: Determine release target
         id: vars
         run: |
           VERSION=$(poetry version -s)
+          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match pyproject.toml version $VERSION" >&2
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           env VERSION=$VERSION python - <<'PY'
           from packaging.version import Version
@@ -42,6 +40,12 @@ jobs:
               url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
               fh.write(f"repository_url={url}\n")
           PY
+
+      - name: Install deps
+        run: poetry install --no-interaction --no-root
+
+      - name: Build dists
+        run: poetry build
 
       - name: Publish to PyPI / TestPyPI
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
