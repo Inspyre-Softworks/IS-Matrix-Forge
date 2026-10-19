@@ -16,13 +16,6 @@ from is_matrix_forge.log_engine import ROOT_LOGGER
 MOD_LOGGER = ROOT_LOGGER.get_child(__name__)
 
 
-def download_presets():
-    from is_matrix_forge.led_matrix.constants import PROJECT_URLS
-
-    url = PROJECT_URLS['github_api']
-
-
-
 def calculate_checksum(file_path):
     """
     Calculate the SHA-256 checksum of a file.
