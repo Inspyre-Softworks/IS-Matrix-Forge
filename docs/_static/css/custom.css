@@ -1,0 +1,35 @@
+:root {
+  --matrix-glow: rgba(91, 74, 232, 0.18);
+}
+
+body {
+  background: linear-gradient(180deg, var(--color-background-primary), var(--color-background-secondary));
+}
+
+.sidebar-brand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-brand-text {
+  color: var(--color-brand-content);
+}
+
+.bd-main .bd-content {
+  background: color-mix(in srgb, var(--color-background-primary) 92%, transparent);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 1px var(--matrix-glow);
+}
+
+code, pre {
+  border-radius: 0.5rem;
+}
+
+div.admonition, .highlight {
+  border-radius: 0.75rem;
+}
+
+html[data-theme="dark"] body {
+  background: radial-gradient(circle at top, rgba(149, 123, 255, 0.16), transparent 40%),
+    linear-gradient(180deg, var(--color-background-primary), var(--color-background-secondary));
+}

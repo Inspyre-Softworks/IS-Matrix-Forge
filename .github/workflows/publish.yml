@@ -2,8 +2,9 @@ name: Build and Publish
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,16 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history for changelog
-      - name: Verify release commit
-        run: |
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
-            echo "Release tag $GITHUB_REF_NAME does not point to a commit merged into master" >&2
-            exit 1
-          fi
+          fetch-depth: 0
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
 
       - name: Install release validation dependency
@@ -32,39 +29,75 @@ jobs:
 
       - name: Determine release target
         id: vars
+        shell: bash
         run: |
-          VERSION=$(poetry version -s)
-          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
-            echo "Tag $GITHUB_REF_NAME does not match pyproject.toml version $VERSION" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          env VERSION=$VERSION python - <<'PY'
-          from packaging.version import Version
+          set -euo pipefail
+
+          CURRENT_VERSION=$(poetry version -s)
+          LAST_TAG=$(git tag -l 'v*' --sort=-version:refname | head -n 1 || true)
+          LAST_TAG_VERSION="${LAST_TAG#v}"
+
+          if [[ -n "$LAST_TAG_VERSION" ]]; then
+            if CURRENT_VERSION="$CURRENT_VERSION" LAST_TAG_VERSION="$LAST_TAG_VERSION" python - <<'PY'
           import os
-          version = os.environ["VERSION"]
-          pr = Version(version).is_prerelease
+          from packaging.version import Version
+
+          current = Version(os.environ["CURRENT_VERSION"])
+          previous = Version(os.environ["LAST_TAG_VERSION"])
+          raise SystemExit(0 if current > previous else 1)
+          PY
+            then
+              echo "skip_release=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "skip_release=true" >> "$GITHUB_OUTPUT"
+              echo "Version $CURRENT_VERSION does not exceed latest tag v$LAST_TAG_VERSION; skipping release."
+              exit 0
+            fi
+          else
+            echo "skip_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          CURRENT_VERSION="$CURRENT_VERSION" python - <<'PY'
+          import os
+          from packaging.version import Version
+
+          version = os.environ["CURRENT_VERSION"]
+          prerelease = Version(version).is_prerelease
           with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write(f"prerelease={str(pr).lower()}\n")
-              url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
+              fh.write(f"prerelease={str(prerelease).lower()}\n")
+              url = "https://test.pypi.org/legacy/" if prerelease else "https://upload.pypi.org/legacy/"
               fh.write(f"repository_url={url}\n")
           PY
 
+      - name: Skip if version did not increase
+        if: steps.vars.outputs.skip_release == 'true'
+        run: echo "No release needed because the package version did not increase on master."
+
+      - name: Create release tag
+        if: steps.vars.outputs.skip_release != 'true'
+        run: |
+          git tag -a "v${{ steps.vars.outputs.version }}" -m "Release v${{ steps.vars.outputs.version }}"
+          git push origin "v${{ steps.vars.outputs.version }}"
+
       - name: Install deps
+        if: steps.vars.outputs.skip_release != 'true'
         run: poetry install --no-interaction --no-root
 
       - name: Build dists
+        if: steps.vars.outputs.skip_release != 'true'
         run: poetry build
 
       - name: Publish to PyPI / TestPyPI
+        if: steps.vars.outputs.skip_release != 'true'
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
         with:
           user: __token__
           password: ${{ steps.vars.outputs.prerelease == 'true' && secrets.TEST_PYPI_TOKEN || secrets.PYPI_TOKEN }}
           repository-url: ${{ steps.vars.outputs.repository_url }}
 
-      # Build a nice changelog from PRs/commits between tags
       - name: Generate changelog
+        if: steps.vars.outputs.skip_release != 'true'
         id: changelog
         uses: mikepenz/release-changelog-builder-action@c9dc8369bccbc41e0ac887f8fd674f5925d315f7 # v5
         env:
@@ -73,13 +106,14 @@ jobs:
           configurationJson: |
             {
               "template": "# Changelog for v${{ steps.vars.outputs.version }}\n\n{{CHANGELOG}}",
-              "toTag": "${{ github.ref_name }}"
+              "toTag": "v${{ steps.vars.outputs.version }}"
             }
 
       - name: Create GitHub Release with assets
+        if: steps.vars.outputs.skip_release != 'true'
         uses: softprops/action-gh-release@26994186c0ac3ef5cae75ac16aa32e8153525f77 # v1
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: v${{ steps.vars.outputs.version }}
           name: v${{ steps.vars.outputs.version }}
           prerelease: ${{ steps.vars.outputs.prerelease }}
           body: ${{ steps.changelog.outputs.changelog }}
