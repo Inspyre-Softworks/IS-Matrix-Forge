@@ -16,21 +16,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history for changelog
+      - name: Verify release commit
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "Release tag $GITHUB_REF_NAME does not point to a commit merged into master" >&2
+            exit 1
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - uses: abatilo/actions-poetry@fd0e6716a0de25ef6ade151b8b53190b0376acfd # v3
 
-      - name: Install deps
-        run: poetry install --no-interaction --no-root
-
-      - name: Build dists
-        run: poetry build
+      - name: Install release validation dependency
+        run: python -m pip install packaging
 
       - name: Determine release target
         id: vars
         run: |
           VERSION=$(poetry version -s)
+          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match pyproject.toml version $VERSION" >&2
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           env VERSION=$VERSION python - <<'PY'
           from packaging.version import Version
@@ -42,6 +49,12 @@ jobs:
               url = "https://test.pypi.org/legacy/" if pr else "https://upload.pypi.org/legacy/"
               fh.write(f"repository_url={url}\n")
           PY
+
+      - name: Install deps
+        run: poetry install --no-interaction --no-root
+
+      - name: Build dists
+        run: poetry build
 
       - name: Publish to PyPI / TestPyPI
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # release/v1
